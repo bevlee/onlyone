@@ -20,6 +20,15 @@ const io = new Server(server, {
 // list of connections per room
 const connections = {};
 let activeGames = {};
+
+//GAME VARS
+const categories = ["animals", "people", "places"];
+const secretWords = {
+  animals: ["dog", "cat", "rabbit", "cheetah"],
+  people: ["obama", "eminem", "stalin", "taylor swift", "bruno mars"],
+  places: ["tokyo", "kyoto", "nara", "seoul"],
+};
+
 // io.socket.removeAllListeners();
 io.on("connection", async (socket) => {
   socket.removeAllListeners("startGame");
@@ -73,12 +82,9 @@ io.on("connection", async (socket) => {
 
     const time = 20;
     console.log("startGame called by socket:", socket.id);
-    if (room in activeGames) {
+    if (!(room in activeGames)) {
       console.log("no active game currently");
-      activeGames[room] = {
-        stage: "chooseCategory",
-      };
-      startGame(io, room, time);
+      startGameLoop(io, room, time);
     } else {
       console.log("there is an active game currently");
     }
@@ -88,9 +94,22 @@ io.on("connection", async (socket) => {
     stopGame(socket, roomName);
   });
 
-  socket.on("guessWord", (word) => {
-    if (activeGames[roomName] && activeGames[roomName][stage] == "guessWord") {
-      activeGames[roomName][guess] = word;
+  socket.on("chooseCategory", (category) => {
+    console.log("choosing category with activegames:", activeGames);
+    if (activeGames[room] && activeGames[room]["stage"] == "chooseCategory") {
+      activeGames[room]["category"] = category;
+    }
+  });
+  socket.on("submitClue", (clue) => {
+    console.log("submitting clue with activegames:", activeGames);
+    if (activeGames[room] && activeGames[room]["stage"] == "writeClues") {
+      activeGames[room]["clues"].push(clue);
+    }
+  });
+  socket.on("guessWord", (guess) => {
+    console.log("guessing word with activegames:", activeGames);
+    if (activeGames[room] && activeGames[room]["stage"] == "guessWord") {
+      activeGames[room]["guess"] = guess;
     }
   });
 
@@ -104,16 +123,19 @@ server.listen(3000, () => {
 });
 
 const getRandomSelection = (upperBound) => {
-  return Math.floor(Math.random() * upperBound) - 1;
+  return Math.floor(Math.random() * upperBound);
 };
 const finishGame = (room) => {
   // activeGames.remove(room);
 };
+const startGameLoop = async (io, room, timeLimit) => {
+  let gameFinished = false;
 
-const startGame = async (io, room, timer) => {
-  console.log("startGame called");
-  console.log("active games", activeGames);
-  // game loop here
+  activeGames[room] = {
+    stage: "chooseCategory",
+    category: "",
+  };
+
   const writerRoom = room + ".writer";
   const guesserRoom = room + ".guesser";
 
@@ -133,91 +155,92 @@ const startGame = async (io, room, timer) => {
       writers.push([playerKey, playerValue]);
     }
   }
-
-  let rooms = io.sockets.adapter.rooms;
-  // console.log("the current connected clients are ", rooms);
-  // stop processing if the game has exited
-  // if (!activeGames.has(room)) return;
-  console.log("going to choose category");
-  io.to(writerRoom).emit("changeScene", "chooseCategory", "writer");
-  io.to(guesserRoom).emit("changeScene", "chooseCategory", "guesser");
-
-  // console.log(writers, "are the writers");
-  // console.log(guesser, "si the guesser");
-  // console.log("current rooms", io.sockets.adapter.rooms);
-
-  // give users prompts
-  // guesser chooses a category
-  // const categoryResponse = await socket.to(writerRoom).timeout(21000).emitWithAck("chooseCategory", ["a","b","c"], 20)
-  const categories = ["a", "b", "c"];
-  const secretWords = {
-    a: [1, 2, 3, 4, 5],
-    b: [11, 12, 13, 14, 15],
-    c: [21, 22, 23, 24, 25],
-  };
-  // wait for guesser to choose a category
-  // io.to(room).emit("chooseCategory", categories, timer);
-  const categoryResponse = await getCategoryChoice(
-    socket,
-    guesserRoom,
-    categories,
-    timer
-  );
-  let category;
-  if (categoryResponse) {
-    category = categoryResponse;
-  } else {
-    // get a random category
-    category = categories[getRandomSelection(categories.length)];
+  // wait for the guesser to choose a category
+  io.to(writerRoom).emit("chooseCategory", "writer", []);
+  io.to(guesserRoom).emit("chooseCategory", "guesser", categories);
+  await waitForCondition(() => {
+    return activeGames[room]["category"] !== "";
+  }, timeLimit);
+  console.log("chooseCategory condition finished");
+  // set the category to a random one if not picked
+  if (activeGames[room]["category"] === "") {
+    activeGames[room]["category"] = "a";
   }
-  const secretWord = secretWords[getRandomSelection(secretWords.length)];
+  const category = activeGames[room]["category"];
+  //get secret word from list of words in chosen category
+  console.log(activeGames[room]);
+  activeGames[room]["stage"] = "writeClues";
+  activeGames[room]["clues"] = [];
+  const secretWord =
+    secretWords[category][getRandomSelection(secretWords[category].length)];
+  console.log(secretWord, secretWords);
+  io.to(writerRoom).emit("writeClues", "writer", secretWord);
+  io.to(guesserRoom).emit("writeClues", "guesser", "");
 
-  // Let writers enter their clues
+  // wait for the writers to submit clues
+  await waitForCondition(() => {
+    return activeGames[room]["clues"].length >= writers.length;
+  }, timeLimit);
 
-  // console.log("the current connected clients are ", rooms);
-  // stop processing if the game has exited
-  // if (!activeGames.has(room)) return;
-  // console.log("going to change scenee");
-  // console.log("the current connected clients are ", rooms);
-  io.to(writerRoom).emit("changeScene", "writeClues", "writer");
-  io.to(guesserRoom).emit("changeScene", "writeClues", "guesser");
-  // io.to(room).emit("writeClues", secretWord, timer);
-  let clues = await getClueChoice(
-    socket,
-    secretWord,
-    writerRoom,
-    writers.length,
-    timer
-  );
-  while (clues.length < writers.length) {
-    clues.push("lol");
+  // set the category to a random one if not picked
+  if (activeGames[room]["clues"].length < writers.length) {
+    for (let i = activeGames[room]["clues"].length; i < writers.length; i++) {
+      activeGames[room]["clues"].push("lmao" + i);
+    }
   }
-  // console.log("all the clues are", clues);
-  // // }
-  // console.log("the current connected clients are ", rooms);
-
-  // stop processing if the game has exited
-  // if (!activeGames.has(room)) return;
-  console.log("going to guess word scenee");
-  io.to(writerRoom).emit("changeScene", "guessWord", "writer");
-  io.to(guesserRoom).emit("changeScene", "guessWord", "guesser");
-  // await new Promise(async (resolve) => {
-  //   setTimeout(() => {
-  //     resolve();
-  //     console.log("waiteed 5sec");
-  //   }, 5000);
-  // });
-  let guess = await getGuessedWord(
-    socket,
-    secretWord,
-    writerRoom,
-    writers.length,
-    timer
-  );
-  io.to(room).emit("endGame", secretWord, guess);
-  // stopGame(io, room);
-  console.log("GAME ENDED ");
+  const clues = activeGames[room]["clues"];
+  const dedupedClues = clues.slice();
+  for (let i = 0; i < clues.length; i++) {
+    for (let j = 0; j < clues.length; j++) {
+      if (i != j) {
+        if (sameWord(clues[i], clues[j])) {
+          dedupedClues[i] = "<redacted>";
+          dedupedClues[j] = "<redacted>";
+        }
+      }
+    }
+  }
+  console.log(dedupedClues, clues);
+  io.to(writerRoom).emit("guessWord", "writer", dedupedClues, clues);
+  io.to(guesserRoom).emit("guessWord", "guesser", dedupedClues, []);
+  activeGames[room]["stage"] = "guessWord";
+  activeGames[room]["guess"] = "";
+  // wait for the writers to submit clues
+  await waitForCondition(() => {
+    return activeGames[room]["guess"] !== "";
+  }, timeLimit);
+  const guess = activeGames[room]["guess"] || "how";
+  console.log(`ending game`, dedupedClues, clues, guess, category, secretWord);
+  io.to(room).emit("endGame", dedupedClues, clues, guess, category, secretWord);
 };
+
+const sameWord = (wordA, wordB) => {
+  let stemmedA = getStem(wordA);
+  let stemmedB = getStem(wordB);
+  return stemmedA == stemmedB;
+};
+const getStem = (word) => {
+  return word.trim().toLowerCase();
+};
+
+function waitForCondition(checkCondition, timeoutSeconds = 20) {
+  const timeout = timeoutSeconds * 1000;
+  return new Promise((resolve, reject) => {
+    const intervalId = setInterval(() => {
+      console.log("checking for condition ");
+      if (checkCondition()) {
+        clearInterval(intervalId);
+        resolve("Condition met!");
+      }
+    }, 1000);
+
+    setTimeout(() => {
+      clearInterval(intervalId);
+      resolve("Timeout: Condition not met within the given time");
+    }, timeout);
+  });
+}
+
 const addConnection = (socket) => {
   console.log("adding connection to ", connections);
   const auth = socket.handshake.auth;
@@ -251,67 +274,6 @@ const removeConnection = (socket) => {
     }
   }
 };
-
-function getCategoryChoice(socket, room, categories, timer) {
-  return new Promise((resolve) => {
-    const time = 20;
-
-    // Timeout after 20 seconds
-    setTimeout(() => {
-      console.log("Client did not respond in time.");
-      socket.off("userChoice", () => {});
-      resolve(null); // Proceed with no response
-    }, timer * 1000);
-
-    // Listen for the client's choice
-    socket.once("userChoice", (choice) => {
-      socket.off("userChoice", () => {});
-      resolve(choice);
-    });
-  });
-}
-
-function getClueChoice(socket, secretWord, room, maxClues, timer) {
-  return new Promise((resolve) => {
-    let clues = [];
-
-    // Timeout after 20 seconds
-    setTimeout(() => {
-      console.log(
-        "Client did not respond in time.",
-        socket.handshake.auth?.username
-      );
-      socket.off("submitClue", () => {});
-      resolve(clues); // Proceed with no response
-    }, timer * 1000);
-
-    // Listen for the client's choice
-    socket.on("submitClue", (choice) => {
-      clues.push(choice);
-      if (clues.length >= maxClues) {
-        io.off("submitClue", () => {});
-        resolve(clues);
-      }
-    });
-  });
-}
-
-function getGuessedWord(io, room, categories, timer) {
-  return new Promise((resolve) => {
-    // Timeout after 20 seconds
-    setTimeout(() => {
-      console.log("Client did not respond in time.");
-      socket.off("guessWord", () => {});
-      resolve(null); // Proceed with no response
-    }, timer * 1000);
-
-    // Listen for the guesser's choice
-    socket.once("guessWord", (word) => {
-      socket.off("guessWord", () => {});
-      resolve(word);
-    });
-  });
-}
 
 function stopGame(io, roomName) {
   console.log("stopping game in room ", roomName);
