@@ -21,7 +21,7 @@
 {:else}
 
 
-    <Timer count=5 {submitAnswer}/>
+    <Timer count=20 submitAnswer={()=>{}}/>
     <h2>Please wait... the guesser is choosing the category</h2>
 
 

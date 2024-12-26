@@ -1,6 +1,6 @@
 <script>
     import Timer from "./Timer.svelte";
-    const { clues, role, submitAnswer, leaveGame} = $props();
+    const { dedupedClues, clues, role, submitAnswer, leaveGame} = $props();
     const sameWord = (wordA, wordB) => {
         let stemmedA = getStem(wordA)
         let stemmedB = getStem(wordB)
@@ -25,34 +25,34 @@
             }
         }
     }
-    let displayedClues = $state(updatedClues);
+    let displayedClues = $state(dedupedClues);
     let hidden = false
     const hide = () => {
         hidden = !hidden;
-        displayedClues = hidden ? clues : updatedClues
+        displayedClues = hidden ? clues : dedupedClues
     }
 </script>
 
 
 
 {#if role=="guesser"}
-    <Timer count=5 {submitAnswer}/>
+    <Timer count=20 {submitAnswer}/>
     <h2>Your clues are: </h2>
-    {#each displayedClues as clue }
+    {#each dedupedClues as clue }
     <h3>{clue}</h3>
     {/each}
     <input type="text" maxlength="100" bind:value={text}/>
     <button onclick={() => submitAnswer(text)}>Submit</button>
 
 
-    {:else}
+{:else}
     
-    <Timer count=5 {submitAnswer}/>
+    <Timer count=20 submitAnswer={()=>{}}/>
     <h2>Your clues are: </h2>
     {#each displayedClues as clue }
     <h3>{clue}</h3>
     {/each}
-    <button onclick={hide}>Toggle redacted clues</button>
+    <button onclick={hide}>Toggle duplicate clues</button>
 
 {/if}
     <!-- <button onclick={() => leaveGame()}>Leave Game</button> -->

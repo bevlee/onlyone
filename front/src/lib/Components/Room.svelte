@@ -1,8 +1,7 @@
 <script lang="ts">
-    import { io, Socket } from "socket.io-client"
+    import { io } from "socket.io-client"
     import {SvelteSet} from "svelte/reactivity"
     import _ from "lodash"
-    import Timer from "./Timer.svelte";
     import ChooseCategory from "./ChooseCategory.svelte";
     import GuessWord from "./GuessWord.svelte";
   import WriteClues from "./WriteClues.svelte";
@@ -14,7 +13,9 @@
         let username = $state<string>(localStorage.getItem('username'))
 
         let categories: Array<string> = ["a","b","c"]
+        let category: string = ""
         let clues: Array<string> = ["a","b","a"]
+        let dedupedClues: Array<string> = []
         let timer: Number = 20;
         let secretWord: string = "hehexd";
         let guess: string = "";
@@ -46,9 +47,7 @@
             console.log(`user ${socket.id} disconnected`);
         });
         socket.on("connect", () => {
-            //send the username to the server
             console.log(socket.auth);
-            //join the current room
         });
 
         socket.on("joinRoom", (roomDetails:Object) => {
@@ -69,15 +68,6 @@
             console.log($state.snapshot(players))
         })
 
-        //////// GAME EVENTS  socket.on('chat message', async (msg, username, clientOffset, callback) => {
-        // socket.on("chooseCategory", async (wordCategories, seconds) => {
-        //     categories = wordCategories;
-        //     timer = seconds;
-        //     setTimeout(() => {
-                
-        //     }, seconds * 1000)
-        // })
-
         socket.on("changeScene", (scene, gameRole:string) => {
             console.log(`changing scene to ${scene} with role ${gameRole}`)
             role = gameRole
@@ -86,12 +76,35 @@
                 gameStarted = false
             }
         })
-        
-        socket.on("endGame", (secretWord: string, guess:string) => {
-            console.log(`ending game`)
-            secretWord = secretWord
+
+        socket.on("chooseCategory", (gameRole:string, wordCategories = []) => {
+            console.log(`changing scene to chooseCategory with role ${gameRole}`)
+            role = gameRole
+            categories= wordCategories
+            currentScene = "chooseCategory"
+        })
+        socket.on("writeClues", (gameRole:string, word: string = "") => {
+            console.log(`changing scene to writeClues with role ${gameRole}`, word)
+            role = gameRole
+            secretWord = word
+            currentScene = "writeClues"
+        })
+        socket.on("guessWord", (gameRole:string, guesserClues:Array<string>, writerClues: Array<string> = []) => {
+            console.log(`changing scene to guessWord with role ${gameRole}`)
+            role = gameRole
+            clues= writerClues
+            dedupedClues = guesserClues
+            currentScene = "guessWord"
+        })
+
+        socket.on("endGame", ( guesserClues:Array<string>,writerClues: Array<string>, writerGuess:string, chosenCategory: string, word: string) => {
+            console.log(`ending game`, dedupedClues, clues, guess, category, word)
+            clues= writerClues
+            dedupedClues = guesserClues
+            guess = writerGuess
+            secretWord = word
+            category=chosenCategory
             currentScene = "endGame"
-            guess = guess
         })
 
         //////// FUNCTIONS
@@ -128,11 +141,11 @@
         // submit event to server and proceed to next scene
         const submitAnswer = (input: string) => {
             if (currentScene === "chooseCategory") {
-                socket.emit("userChoice", input)
+                socket.emit("chooseCategory", input)
                 // currentScene = "writePrompt"
                 console.log(`submitted ${input} for` ,currentScene)
             }
-            else if (currentScene === "writePrompt") {
+            else if (currentScene === "writeClues") {
                 socket.emit("submitClue", input)
                 // currentScene = "guessWord"
                 console.log(`submitted ${input} for` ,currentScene)
@@ -206,9 +219,9 @@
 
 {:else if currentScene == "guessWord"}
 
-    <GuessWord {clues} {role} {submitAnswer} {leaveGame}/>
+    <GuessWord {dedupedClues} {clues} {role} {submitAnswer} {leaveGame}/>
 {:else if currentScene == "endGame"}
-<EndGame  {guess} {secretWord}/>
+    <EndGame  {category} {dedupedClues} {clues}  {guess} {secretWord}  />
 
 {/if}
 
