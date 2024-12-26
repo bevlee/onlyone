@@ -19,6 +19,7 @@
         let timer: Number = 20;
         let secretWord: string = "hehexd";
         let guess: string = "";
+        let wordGuessed: boolean = false;
         let role: string = $state("");
         if (!username) {
             username = "user" + Math.floor(Math.random() * 10000)
@@ -97,7 +98,7 @@
             currentScene = "guessWord"
         })
 
-        socket.on("endGame", ( guesserClues:Array<string>,writerClues: Array<string>, writerGuess:string, chosenCategory: string, word: string) => {
+        socket.on("endGame", ( guesserClues:Array<string>,writerClues: Array<string>, writerGuess:string, chosenCategory: string, word: string, success:boolean) => {
             console.log(`ending game`, dedupedClues, clues, guess, category, word)
             clues= writerClues
             dedupedClues = guesserClues
@@ -105,6 +106,7 @@
             secretWord = word
             category=chosenCategory
             currentScene = "endGame"
+            wordGuessed = success
         })
 
         //////// FUNCTIONS
@@ -184,9 +186,7 @@
         }
     </script>
     
-    
-    
-    <button onclick={()=>leave()}>back</button>
+    <button onclick={()=>leave()}>Leave room</button>
     <h3>Room: 
         <strong>{roomName}</strong>
     </h3>
@@ -205,7 +205,7 @@
 
 {#if currentScene == "main"}
     
-    <button  onclick={() => startGame()}>Start</button>
+    <button  onclick={startGame}>Start</button>
     <!-- <GuessWord {clues} {role} {submitAnswer}/>  -->
 
 {:else if currentScene == "chooseCategory"}
@@ -221,7 +221,7 @@
 
     <GuessWord {dedupedClues} {clues} {role} {submitAnswer} {leaveGame}/>
 {:else if currentScene == "endGame"}
-    <EndGame  {category} {dedupedClues} {clues}  {guess} {secretWord}  />
+    <EndGame  {category} {dedupedClues} {clues}  {guess} {secretWord} {wordGuessed} playAgain={startGame}/>
 
 {/if}
 

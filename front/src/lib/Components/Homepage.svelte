@@ -1,7 +1,7 @@
 <script>
     let playerSocket = $state({});
     const { joinRoom } = $props();
-    let roomName = $state();
+    let roomName = $state("testRoom");
     const submit = (e) => {
         e.preventDefault()
         joinRoom(roomName);

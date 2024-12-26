@@ -7,11 +7,9 @@
         return stemmedA == stemmedB;
     }
 
-
     const getStem = (word) => {
         return word.trim().toLowerCase();
     }
-
 
     let text = $state("")
     let updatedClues = clues.slice()
@@ -33,22 +31,20 @@
     }
 </script>
 
-
-
 {#if role=="guesser"}
     <Timer count=20 {submitAnswer}/>
-    <h2>Your clues are: </h2>
+    <h2>Guess the word!</h2>
+    <h3>Your clues are: </h3>
     {#each dedupedClues as clue }
     <h3>{clue}</h3>
     {/each}
     <input type="text" maxlength="100" bind:value={text}/>
     <button onclick={() => submitAnswer(text)}>Submit</button>
 
-
 {:else}
     
     <Timer count=20 submitAnswer={()=>{}}/>
-    <h2>Your clues are: </h2>
+    <h3>Your clues are: </h3>
     {#each displayedClues as clue }
     <h3>{clue}</h3>
     {/each}

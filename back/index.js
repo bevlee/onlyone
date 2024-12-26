@@ -7,6 +7,10 @@ import cors from "cors";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 
+// const db = await open({
+//   filename: "onlyone.db",
+//   driver: sqlite3.Database,
+// });
 const app = express();
 app.use(cors());
 const server = createServer(app);
@@ -164,7 +168,8 @@ const startGameLoop = async (io, room, timeLimit) => {
   console.log("chooseCategory condition finished");
   // set the category to a random one if not picked
   if (activeGames[room]["category"] === "") {
-    activeGames[room]["category"] = "a";
+    activeGames[room]["category"] =
+      categories[getRandomSelection(categories.length)];
   }
   const category = activeGames[room]["category"];
   //get secret word from list of words in chosen category
@@ -210,8 +215,26 @@ const startGameLoop = async (io, room, timeLimit) => {
     return activeGames[room]["guess"] !== "";
   }, timeLimit);
   const guess = activeGames[room]["guess"] || "how";
-  console.log(`ending game`, dedupedClues, clues, guess, category, secretWord);
-  io.to(room).emit("endGame", dedupedClues, clues, guess, category, secretWord);
+  const success = getStem(guess) === secretWord;
+  console.log(
+    `ending game`,
+    dedupedClues,
+    clues,
+    guess,
+    category,
+    secretWord,
+    success
+  );
+  io.to(room).emit(
+    "endGame",
+    dedupedClues,
+    clues,
+    guess,
+    category,
+    secretWord,
+    success
+  );
+  delete activeGames[room];
 };
 
 const sameWord = (wordA, wordB) => {

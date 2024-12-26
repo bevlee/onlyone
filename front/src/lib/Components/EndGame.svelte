@@ -1,5 +1,5 @@
 <script>
-    const { category, dedupedClues ,clues,  guess, secretWord} = $props();
+    const { category, dedupedClues ,clues,  guess, secretWord, wordGuessed, playAgain } = $props();
     console.log(`ending game`, dedupedClues, clues, guess, category)
 
     let displayedClues = $state(dedupedClues);
@@ -24,5 +24,13 @@
     <h2>Your guess was: {guess}</h2>
     <h2>The secret word was: {secretWord}</h2>
 
+    {#if wordGuessed}
+
+    <h2>YAy you got it</h2>
+    {:else}
+    <h2>You did not manage to guess the word :/</h2>
+    {/if}
+
 </div>
+<button onclick={playAgain}>Play Again</button>
 

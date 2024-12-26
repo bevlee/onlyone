@@ -29,7 +29,7 @@
 
     <input type="text" maxlength="100" bind:value={text}/>
 
-    <button disabled={submitted} onclick={() => submit(text)}>Submit</button>
+    <button disabled={submitted} onclick={() => submit(text)}>{submitted? "Answer submitted" : "Submit"}</button>
 
 {/if}
 
