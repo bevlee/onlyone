@@ -17,8 +17,8 @@ const server = createServer(app);
 const io = new Server(server, {
   connectionStateRecovery: {},
   cors: {
-    origin: "http://localhost:4173",
-    methods: ["GET"],
+    origin: "http://bevsoft.com:4173",
+    methods: ["GET", "POST"],
   },
 });
 // list of connections per room
