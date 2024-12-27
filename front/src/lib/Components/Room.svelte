@@ -35,7 +35,7 @@
 
 
         // init socket
-        const socket = io("bevsoft.com:3000", {
+        const socket = io("http://bevsoft.com:3000", {
                 auth: {
                     serverOffset: 0,
                     username: username,
