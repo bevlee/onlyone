@@ -140,6 +140,7 @@ const startGameLoop = async (io, room, timeLimit) => {
   const playerCount = Object.keys(connections[room]).length;
   // one round of each player being the guesser
   for (let guesser of Object.keys(connections[room])) {
+    //set room state
     activeGames[room] = {
       stage: "chooseCategory",
       category: "",
@@ -147,16 +148,13 @@ const startGameLoop = async (io, room, timeLimit) => {
       gamesWon: winCount,
       playerCount: playerCount,
     };
-    // const guesser = Object.keys(connections[room])[
-    //   getRandomSelection(playerCount)
-    // ];
     // set up by creating new room for guesser and writers
     connections[room][guesser].joinRoom(guesserRoom);
     connections[room][guesser].leaveRoom(writerRoom);
+
     let writers = [];
     let allPlayers = Object.entries(connections[room]);
     for (let [playerKey, playerValue] of allPlayers) {
-      // console.log(`${playerKey} is playerkey and ${guesser} is guesser`);
       if (playerKey != guesser) {
         playerValue.joinRoom(writerRoom);
         playerValue.leaveRoom(guesserRoom);
