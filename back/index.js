@@ -133,16 +133,19 @@ const finishGame = (room) => {
   // activeGames.remove(room);
 };
 const startGameLoop = async (io, room, timeLimit) => {
-  let gamesPlayed = 0;
-  let gamesWon = 0;
+  let round = 0;
+  let winCount = 0;
   const writerRoom = room + ".writer";
   const guesserRoom = room + ".guesser";
-  // const playerCount = Object.keys(connections[room]).length;
+  const playerCount = Object.keys(connections[room]).length;
   // one round of each player being the guesser
   for (let guesser of Object.keys(connections[room])) {
     activeGames[room] = {
       stage: "chooseCategory",
       category: "",
+      gamesPlayed: round,
+      gamesWon: winCount,
+      playerCount: playerCount,
     };
     // const guesser = Object.keys(connections[room])[
     //   getRandomSelection(playerCount)
@@ -179,6 +182,7 @@ const startGameLoop = async (io, room, timeLimit) => {
     activeGames[room]["clues"] = [];
     const secretWord =
       secretWords[category][getRandomSelection(secretWords[category].length)];
+    activeGames[room]["secretWord"] = secretWord;
     console.log(secretWord, secretWords);
     io.to(writerRoom).emit("writeClues", "writer", secretWord);
     io.to(guesserRoom).emit("writeClues", "guesser", "");
@@ -215,26 +219,16 @@ const startGameLoop = async (io, room, timeLimit) => {
     await waitForCondition(() => {
       return activeGames[room]["guess"] !== "";
     }, timeLimit);
-    const guess = activeGames[room]["guess"] || "how";
+    const guess = activeGames[room]["guess"] || "did not make a guess :(";
     const success = getStem(guess) === secretWord;
-    console.log(
-      `ending game`,
-      dedupedClues,
-      clues,
-      guess,
-      category,
-      secretWord,
-      success
-    );
-    io.to(room).emit(
-      "endGame",
-      dedupedClues,
-      clues,
-      guess,
-      category,
-      secretWord,
-      success
-    );
+    activeGames[room]["success"] = success;
+    activeGames[room]["dedupedClues"] = dedupedClues;
+    activeGames[room]["gamesPlayed"] = ++round;
+    if (success) activeGames[room]["gamesWon"] = ++winCount;
+
+    console.log(`ending game`);
+    io.to(room).emit("endGame", activeGames[room]);
+
     await new Promise((resolve) => setTimeout(() => resolve(), 5000));
   }
   delete activeGames[room];
