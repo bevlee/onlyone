@@ -1,5 +1,7 @@
 <script>
-    const { category, dedupedClues ,clues,  guess, secretWord, wordGuessed, playAgain } = $props();
+  import Timer from "./Timer.svelte";
+
+    const { category, dedupedClues ,clues,  guess, secretWord, wordGuessed, gamesPlayed, gamesWon, totalRounds, playAgain } = $props();
     console.log(`ending game`, dedupedClues, clues, guess, category)
 
     let displayedClues = $state(dedupedClues);
@@ -8,6 +10,7 @@
         hidden = !hidden;
         displayedClues = hidden ? clues : dedupedClues
     }
+    console.log("played:", gamesPlayed, " total", totalRounds)
 </script>
 
 
@@ -30,7 +33,12 @@
     {:else}
     <h2>You did not manage to guess the word :/</h2>
     {/if}
+    <h4>Your team has won {gamesWon} games out of {gamesPlayed} total!</h4>
 
 </div>
+{#if gamesPlayed < totalRounds }
+<Timer count=5 submitAnswer={()=>{}} text="The next round is starting in: "/>
+    {:else}
 <button onclick={playAgain}>Play Again</button>
+{/if}
 

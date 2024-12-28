@@ -20,7 +20,14 @@
         let secretWord: string = "hehexd";
         let guess: string = "";
         let wordGuessed: boolean = false;
+        let gamesWon: number = 0;
+        let gamesPlayed: number = 0;
         let role: string = $state("");
+        let totalRounds: number = 0;
+
+
+
+
         if (!username) {
             username = "user" + Math.floor(Math.random() * 10000)
             setUsername(username)
@@ -98,15 +105,22 @@
             currentScene = "guessWord"
         })
 
-        socket.on("endGame", ( guesserClues:Array<string>,writerClues: Array<string>, writerGuess:string, chosenCategory: string, word: string, success:boolean) => {
-            console.log(`ending game`, dedupedClues, clues, guess, category, word)
-            clues= writerClues
-            dedupedClues = guesserClues
-            guess = writerGuess
-            secretWord = word
-            category=chosenCategory
-            currentScene = "endGame"
-            wordGuessed = success
+        socket.on("endGame", ( gameState: object) => {
+            try { 
+            console.log(`ending game`, gameState)
+                clues= gameState.clues
+                dedupedClues = gameState.dedupedClues
+                guess = gameState.guess
+                secretWord = gameState.secretWord
+                category=gameState.category
+                currentScene = "endGame"
+                wordGuessed = gameState.success
+                gamesWon = gameState.gamesWon
+                gamesPlayed = gameState.gamesPlayed
+                totalRounds = gameState.playerCount
+            } catch (error) {
+                console.log("errored on end game", error)
+            }
         })
 
         //////// FUNCTIONS
@@ -221,7 +235,7 @@
 
     <GuessWord {dedupedClues} {clues} {role} {submitAnswer} {leaveGame}/>
 {:else if currentScene == "endGame"}
-    <EndGame  {category} {dedupedClues} {clues}  {guess} {secretWord} {wordGuessed} playAgain={startGame}/>
+    <EndGame  {category} {dedupedClues} {clues}  {guess} {secretWord} {wordGuessed} {gamesPlayed} {gamesWon} {totalRounds} playAgain={startGame}/>
 
 {/if}
 

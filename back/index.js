@@ -17,7 +17,7 @@ const server = createServer(app);
 const io = new Server(server, {
   connectionStateRecovery: {},
   cors: {
-    origin: "http://localhost:5173",
+    origin: "http://localhost:4173",
     methods: ["GET"],
   },
 });
@@ -133,107 +133,102 @@ const finishGame = (room) => {
   // activeGames.remove(room);
 };
 const startGameLoop = async (io, room, timeLimit) => {
-  let gameFinished = false;
-
-  activeGames[room] = {
-    stage: "chooseCategory",
-    category: "",
-  };
-
+  let round = 0;
+  let winCount = 0;
   const writerRoom = room + ".writer";
   const guesserRoom = room + ".guesser";
-
+  const playerCount = Object.keys(connections[room]).length;
   // one round of each player being the guesser
-  // for (let guesser of Object.keys(connections[room])) {
-  const guesser = Object.keys(connections[room])[0];
-  // set up by creating new room for guesser and writers
-  connections[room][guesser].joinRoom(guesserRoom);
-  connections[room][guesser].leaveRoom(writerRoom);
-  let writers = [];
-  let allPlayers = Object.entries(connections[room]);
-  for (let [playerKey, playerValue] of allPlayers) {
-    // console.log(`${playerKey} is playerkey and ${guesser} is guesser`);
-    if (playerKey != guesser) {
-      playerValue.joinRoom(writerRoom);
-      playerValue.leaveRoom(guesserRoom);
-      writers.push([playerKey, playerValue]);
-    }
-  }
-  // wait for the guesser to choose a category
-  io.to(writerRoom).emit("chooseCategory", "writer", []);
-  io.to(guesserRoom).emit("chooseCategory", "guesser", categories);
-  await waitForCondition(() => {
-    return activeGames[room]["category"] !== "";
-  }, timeLimit);
-  console.log("chooseCategory condition finished");
-  // set the category to a random one if not picked
-  if (activeGames[room]["category"] === "") {
-    activeGames[room]["category"] =
-      categories[getRandomSelection(categories.length)];
-  }
-  const category = activeGames[room]["category"];
-  //get secret word from list of words in chosen category
-  console.log(activeGames[room]);
-  activeGames[room]["stage"] = "writeClues";
-  activeGames[room]["clues"] = [];
-  const secretWord =
-    secretWords[category][getRandomSelection(secretWords[category].length)];
-  console.log(secretWord, secretWords);
-  io.to(writerRoom).emit("writeClues", "writer", secretWord);
-  io.to(guesserRoom).emit("writeClues", "guesser", "");
+  for (let guesser of Object.keys(connections[room])) {
+    //set room state
+    activeGames[room] = {
+      stage: "chooseCategory",
+      category: "",
+      gamesPlayed: round,
+      gamesWon: winCount,
+      playerCount: playerCount,
+    };
+    // set up by creating new room for guesser and writers
+    connections[room][guesser].joinRoom(guesserRoom);
+    connections[room][guesser].leaveRoom(writerRoom);
 
-  // wait for the writers to submit clues
-  await waitForCondition(() => {
-    return activeGames[room]["clues"].length >= writers.length;
-  }, timeLimit);
-
-  // set the category to a random one if not picked
-  if (activeGames[room]["clues"].length < writers.length) {
-    for (let i = activeGames[room]["clues"].length; i < writers.length; i++) {
-      activeGames[room]["clues"].push("lmao" + i);
+    let writers = [];
+    let allPlayers = Object.entries(connections[room]);
+    for (let [playerKey, playerValue] of allPlayers) {
+      if (playerKey != guesser) {
+        playerValue.joinRoom(writerRoom);
+        playerValue.leaveRoom(guesserRoom);
+        writers.push([playerKey, playerValue]);
+      }
     }
-  }
-  const clues = activeGames[room]["clues"];
-  const dedupedClues = clues.slice();
-  for (let i = 0; i < clues.length; i++) {
-    for (let j = 0; j < clues.length; j++) {
-      if (i != j) {
-        if (sameWord(clues[i], clues[j])) {
-          dedupedClues[i] = "<redacted>";
-          dedupedClues[j] = "<redacted>";
+    // wait for the guesser to choose a category
+    io.to(writerRoom).emit("chooseCategory", "writer", []);
+    io.to(guesserRoom).emit("chooseCategory", "guesser", categories);
+    await waitForCondition(() => {
+      return activeGames[room]["category"] !== "";
+    }, timeLimit);
+    console.log("chooseCategory condition finished");
+    // set the category to a random one if not picked
+    if (activeGames[room]["category"] === "") {
+      activeGames[room]["category"] =
+        categories[getRandomSelection(categories.length)];
+    }
+    const category = activeGames[room]["category"];
+    //get secret word from list of words in chosen category
+    console.log(activeGames[room]);
+    activeGames[room]["stage"] = "writeClues";
+    activeGames[room]["clues"] = [];
+    const secretWord =
+      secretWords[category][getRandomSelection(secretWords[category].length)];
+    activeGames[room]["secretWord"] = secretWord;
+    console.log(secretWord, secretWords);
+    io.to(writerRoom).emit("writeClues", "writer", secretWord);
+    io.to(guesserRoom).emit("writeClues", "guesser", "");
+
+    // wait for the writers to submit clues
+    await waitForCondition(() => {
+      return activeGames[room]["clues"].length >= writers.length;
+    }, timeLimit);
+
+    // set the category to a random one if not picked
+    if (activeGames[room]["clues"].length < writers.length) {
+      for (let i = activeGames[room]["clues"].length; i < writers.length; i++) {
+        activeGames[room]["clues"].push("lmao" + i);
+      }
+    }
+    const clues = activeGames[room]["clues"];
+    const dedupedClues = clues.slice();
+    for (let i = 0; i < clues.length; i++) {
+      for (let j = 0; j < clues.length; j++) {
+        if (i != j) {
+          if (sameWord(clues[i], clues[j])) {
+            dedupedClues[i] = "<redacted>";
+            dedupedClues[j] = "<redacted>";
+          }
         }
       }
     }
+    console.log(dedupedClues, clues);
+    io.to(writerRoom).emit("guessWord", "writer", dedupedClues, clues);
+    io.to(guesserRoom).emit("guessWord", "guesser", dedupedClues, []);
+    activeGames[room]["stage"] = "guessWord";
+    activeGames[room]["guess"] = "";
+    // wait for the writers to submit clues
+    await waitForCondition(() => {
+      return activeGames[room]["guess"] !== "";
+    }, timeLimit);
+    const guess = activeGames[room]["guess"] || "did not make a guess :(";
+    const success = getStem(guess) === secretWord;
+    activeGames[room]["success"] = success;
+    activeGames[room]["dedupedClues"] = dedupedClues;
+    activeGames[room]["gamesPlayed"] = ++round;
+    if (success) activeGames[room]["gamesWon"] = ++winCount;
+
+    console.log(`ending game`);
+    io.to(room).emit("endGame", activeGames[room]);
+
+    await new Promise((resolve) => setTimeout(() => resolve(), 5000));
   }
-  console.log(dedupedClues, clues);
-  io.to(writerRoom).emit("guessWord", "writer", dedupedClues, clues);
-  io.to(guesserRoom).emit("guessWord", "guesser", dedupedClues, []);
-  activeGames[room]["stage"] = "guessWord";
-  activeGames[room]["guess"] = "";
-  // wait for the writers to submit clues
-  await waitForCondition(() => {
-    return activeGames[room]["guess"] !== "";
-  }, timeLimit);
-  const guess = activeGames[room]["guess"] || "how";
-  const success = getStem(guess) === secretWord;
-  console.log(
-    `ending game`,
-    dedupedClues,
-    clues,
-    guess,
-    category,
-    secretWord,
-    success
-  );
-  io.to(room).emit(
-    "endGame",
-    dedupedClues,
-    clues,
-    guess,
-    category,
-    secretWord,
-    success
-  );
   delete activeGames[room];
 };
 
