@@ -110,6 +110,21 @@ io.on("connection", async (socket) => {
       activeGames[room]["clues"].push(clue);
     }
   });
+  socket.on("updateVotes", (index, value) => {
+    console.log("adding updates to votese:", index, value);
+    if (activeGames[room] && activeGames[room]["stage"] == "filterClues") {
+      // update the player votes
+      activeGames[room]["votes"][index] += value;
+      console.log("emitting update to votes", index, value);
+      socket.to(room).emit("updateVotes", index, value);
+    }
+  });
+  socket.on("finishVoting", () => {
+    console.log("finishing voting for duplicate clues:", activeGames);
+    if (activeGames[room] && activeGames[room]["stage"] == "filterClues") {
+      activeGames[room]["finishedVoting"] = true;
+    }
+  });
   socket.on("guessWord", (guess) => {
     console.log("guessing word with activegames:", activeGames);
     if (activeGames[room] && activeGames[room]["stage"] == "guessWord") {
@@ -190,24 +205,46 @@ const startGameLoop = async (io, room, timeLimit) => {
       return activeGames[room]["clues"].length >= writers.length;
     }, timeLimit);
 
-    // set the category to a random one if not picked
+    // fill in answers if writers did not submit
     if (activeGames[room]["clues"].length < writers.length) {
       for (let i = activeGames[room]["clues"].length; i < writers.length; i++) {
-        activeGames[room]["clues"].push("lmao" + i);
+        activeGames[room]["clues"].push("<no answer>");
       }
     }
+
     const clues = activeGames[room]["clues"];
-    const dedupedClues = clues.slice();
+    const machineDedupedClues = clues.slice();
     for (let i = 0; i < clues.length; i++) {
       for (let j = 0; j < clues.length; j++) {
         if (i != j) {
           if (sameWord(clues[i], clues[j])) {
-            dedupedClues[i] = "<redacted>";
-            dedupedClues[j] = "<redacted>";
+            machineDedupedClues[i] = "<redacted>";
+            machineDedupedClues[j] = "<redacted>";
           }
         }
       }
     }
+    // array of boolean to show users which answers are likely invalid
+    const clueVotes = machineDedupedClues.map((clue) =>
+      clue !== "<redacted>" ? 0 : -1
+    );
+    activeGames[room]["votes"] = clueVotes;
+    console.log("clueVotes array looks like", clueVotes);
+    activeGames[room]["finishedVoting"] = false;
+    io.to(writerRoom).emit("filterClues", "writer", clueVotes, clues);
+    io.to(guesserRoom).emit("filterClues", "guesser");
+    activeGames[room]["stage"] = "filterClues";
+
+    // wait for the writers to submit clues
+    await waitForCondition(() => {
+      return activeGames[room]["finishedVoting"];
+    }, timeLimit);
+    let dedupedClues = clues.slice();
+    // cancel out additional voted clues
+    for (let i = 0; i < clues.length; i++) {
+      dedupedClues[i] = clueVotes[i] >= 0 ? dedupedClues[i] : "<redacted>";
+    }
+
     console.log(dedupedClues, clues);
     io.to(writerRoom).emit("guessWord", "writer", dedupedClues, clues);
     io.to(guesserRoom).emit("guessWord", "guesser", dedupedClues, []);
@@ -217,7 +254,10 @@ const startGameLoop = async (io, room, timeLimit) => {
     await waitForCondition(() => {
       return activeGames[room]["guess"] !== "";
     }, timeLimit);
-    const guess = activeGames[room]["guess"] || "did not make a guess :(";
+    const guess =
+      activeGames[room]["guess"] !== ""
+        ? activeGames[room]["guess"]
+        : "<no guess>";
     const success = getStem(guess) === secretWord;
     activeGames[room]["success"] = success;
     activeGames[room]["dedupedClues"] = dedupedClues;
