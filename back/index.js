@@ -54,19 +54,24 @@ io.on("connection", async (socket) => {
   console.log("the current connected clients are ", rooms);
   socket.emit("joinRoom", connections[room]);
 
-  socket.on("changeName", async (newName, oldName, room, callback) => {
+  socket.on("changeName", (oldName, newName, room, callback) => {
     console.log("existing room connections:", connections[room]);
+    console.log("changing name:", oldName, newName, callback);
     if (connections[room][newName]) {
       callback({
         status: "nameExists",
       });
     } else {
       connections[room][newName] = connections[room][oldName];
-      connections[room].remove(oldName);
+      delete connections[room][oldName];
       callback({
         status: "ok",
       });
     }
+
+    console.log("new room connections:", connections[room]);
+    io.to(room).emit("playerLeft", oldName);
+    io.to(room).emit("playerJoined", newName);
   });
 
   socket.on("disconnect", (reason) => {

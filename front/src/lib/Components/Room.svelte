@@ -142,19 +142,22 @@
 
         //////// FUNCTIONS
         const changeName = async (newName: string) => {
-            const success = true
-            // const success = await socket.timeout(5000).emitWithAck("changeName", username, newName, roomName, (response) => {
-            //     if (response) {
-            //         return response.status === 'ok'
-            //     }
-            //     return false;
-            // })
+            const success = await new Promise(resolve=> {
+                socket.emit("changeName", username, newName, roomName, (response) => {
+                    if (response) {
+                        resolve(response.status === 'ok')
+                    }
+                    resolve(false);
+                })
+            })
             if (success) {
                 setUsername(newName)
                 return true;
             } 
             return false
+            
         }
+
 
         console.log("roomname is", roomName)
         const changeNamePrompt = async () => {
@@ -237,7 +240,9 @@
     <h4>Username: 
         <strong>{username}</strong>
     </h4>
-    <!-- <button onclick={changeNamePrompt}>Change Name</button> -->
+    {#if currentScene==="main" || currentScene==="endGame"}
+    <button onclick={changeNamePrompt}>Change Name</button>
+    {/if}
 
     <h4>Players in Lobby: 
         <ul>
