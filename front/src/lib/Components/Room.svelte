@@ -107,8 +107,10 @@
             votes = votesForDuplicate
             currentScene = "filterClues"
             socket.on("updateVotes", (index, vote: number) => {
-                console.log("getting updated votes", index, vote)
-                votes[index] += vote
+                if (votes && votes.length > 0) {
+                    console.log("getting updated votes", index, vote)
+                    votes[index] += vote
+                }
             })
         })
         socket.on("guessWord", (gameRole:string, guesserClues:Array<string>, writerClues: Array<string> = []) => {

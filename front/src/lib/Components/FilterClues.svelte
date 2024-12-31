@@ -1,7 +1,7 @@
 <script>
     import Timer from "./Timer.svelte";
     import _ from "lodash"
-    const { votes=$bindable(), clues, role, updateVotes, submitAnswer, leaveGame} = $props();
+    const { votes=$bindable(), clues=[], role, updateVotes, submitAnswer, leaveGame} = $props();
 
     let submitted = $state(false)
     let userVotes = $state(new Array(votes.length).fill(0));
@@ -51,7 +51,7 @@
 <br/>
 <br/>
 <br/>
-    <button disabled={submitted} onclick={() => submitAnswer}> {submitted? "Votes submitted" : "Submit"}</button>
+    <button disabled={submitted} onclick={() => submitAnswer()}> {submitted? "Votes submitted" : "Looks good to me!"}</button>
 
 {/if}
 

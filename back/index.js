@@ -213,20 +213,20 @@ const startGameLoop = async (io, room, timeLimit) => {
     }
 
     const clues = activeGames[room]["clues"];
-    const dedupedClues = clues.slice();
+    const machineDedupedClues = clues.slice();
     for (let i = 0; i < clues.length; i++) {
       for (let j = 0; j < clues.length; j++) {
         if (i != j) {
           if (sameWord(clues[i], clues[j])) {
-            dedupedClues[i] = "<redacted>";
-            dedupedClues[j] = "<redacted>";
+            machineDedupedClues[i] = "<redacted>";
+            machineDedupedClues[j] = "<redacted>";
           }
         }
       }
     }
     // array of boolean to show users which answers are likely invalid
-    const clueVotes = dedupedClues.map((clue) =>
-      clue !== "<redacted" ? 0 : -1
+    const clueVotes = machineDedupedClues.map((clue) =>
+      clue !== "<redacted>" ? 0 : -1
     );
     activeGames[room]["votes"] = clueVotes;
     console.log("clueVotes array looks like", clueVotes);
@@ -239,10 +239,10 @@ const startGameLoop = async (io, room, timeLimit) => {
     await waitForCondition(() => {
       return activeGames[room]["finishedVoting"];
     }, timeLimit);
-
+    let dedupedClues = clues.slice();
     // cancel out additional voted clues
     for (let i = 0; i < clues.length; i++) {
-      dedupedClues[i] = clueVotes[i] < 1 ? dedupedClues[i] : "<redacted>";
+      dedupedClues[i] = clueVotes[i] >= 0 ? dedupedClues[i] : "<redacted>";
     }
 
     console.log(dedupedClues, clues);
