@@ -4,6 +4,7 @@
     import _ from "lodash"
     import ChooseCategory from "./ChooseCategory.svelte";
     import GuessWord from "./GuessWord.svelte";
+    import FilterClues from "./FilterClues.svelte";
   import WriteClues from "./WriteClues.svelte";
   import EndGame from "./EndGame.svelte";
 
@@ -24,6 +25,8 @@
         let gamesPlayed: number = 0;
         let role: string = $state("");
         let totalRounds: number = 0;
+        let votes: Array<number> = $state([])
+
 
 
 
@@ -97,7 +100,19 @@
             secretWord = word
             currentScene = "writeClues"
         })
+        socket.on("filterClues", (gameRole:string, votesForDuplicate: Array<number>=[], writerClues: Array<string>=[] ) => {
+            
+            role = gameRole
+            clues = writerClues
+            votes = votesForDuplicate
+            currentScene = "filterClues"
+            socket.on("updateVotes", (index, vote: number) => {
+                console.log("getting updated votes", index, vote)
+                votes[index] += vote
+            })
+        })
         socket.on("guessWord", (gameRole:string, guesserClues:Array<string>, writerClues: Array<string> = []) => {
+            socket.off("updateVotes")
             console.log(`changing scene to guessWord with role ${gameRole}`)
             role = gameRole
             clues= writerClues
@@ -154,21 +169,27 @@
                 alert("Name must be between 1 and 30 chars and unique. Try again!")
             }
         }
+
         // submit event to server and proceed to next scene
         const submitAnswer = (input: string) => {
             if (currentScene === "chooseCategory") {
                 socket.emit("chooseCategory", input)
-                // currentScene = "writePrompt"
+                
                 console.log(`submitted ${input} for` ,currentScene)
             }
             else if (currentScene === "writeClues") {
                 socket.emit("submitClue", input)
-                // currentScene = "guessWord"
+                
+                console.log(`submitted ${input} for` ,currentScene)
+            }
+            else if (currentScene === "filterClues") {
+                socket.emit("finishVoting")
+                
                 console.log(`submitted ${input} for` ,currentScene)
             }
             else if (currentScene === "guessWord") {
                 socket.emit("guessWord", input)
-                // currentScene = "main"
+                
                 console.log(`submitted ${input} for` ,currentScene)
             }
             timer = 20
@@ -197,6 +218,12 @@
             console.log("stopping game")
             socket.emit("stopGame", roomName)
             currentScene = "main"
+        }
+
+
+        const updateVotes = (index, value) => {
+            socket.emit("updateVotes", index, value);
+
         }
     </script>
     
@@ -231,9 +258,12 @@
 
     <WriteClues word={secretWord} {role} {submitAnswer} {leaveGame}/>
 
-{:else if currentScene == "guessWord"}
+{:else if currentScene == "filterClues"}
+    <FilterClues bind:votes {clues}  {role} {updateVotes} {submitAnswer} {leaveGame}/>
 
+{:else if currentScene == "guessWord"}
     <GuessWord {dedupedClues} {clues} {role} {submitAnswer} {leaveGame}/>
+
 {:else if currentScene == "endGame"}
     <EndGame  {category} {dedupedClues} {clues}  {guess} {secretWord} {wordGuessed} {gamesPlayed} {gamesWon} {totalRounds} playAgain={startGame}/>
 
