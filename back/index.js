@@ -1,7 +1,7 @@
 import express from "express";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
-import { correctGuess, getStem, sameWord } from "./utils";
+import { correctGuess, getStem, sameWord } from "./utils.js";
 import cors from "cors";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
@@ -101,11 +101,11 @@ io.on("connection", async (socket) => {
       callback({
         status: "ok",
       });
-    }
 
-    console.log("new room connections:", connections[room]);
-    io.to(room).emit("playerLeft", oldName);
-    io.to(room).emit("playerJoined", newName);
+      console.log("new room connections:", connections[room]);
+      io.to(room).emit("playerLeft", oldName);
+      io.to(room).emit("playerJoined", newName);
+    }
   });
 
   socket.on("disconnect", (reason) => {
