@@ -226,6 +226,10 @@ const startGameLoop = async (io, room, timeLimit) => {
             machineDedupedClues[i] = "<redacted>";
             machineDedupedClues[j] = "<redacted>";
           }
+          // Don't let users write the secret word as a clue
+          if (clues[i] === secretWord) {
+            machineDedupedClues[i] = "<redacted>";
+          }
         }
       }
     }
@@ -236,7 +240,13 @@ const startGameLoop = async (io, room, timeLimit) => {
     activeGames[room]["votes"] = clueVotes;
     console.log("clueVotes array looks like", clueVotes);
     activeGames[room]["finishedVoting"] = false;
-    io.to(writerRoom).emit("filterClues", "writer", clueVotes, clues);
+    io.to(writerRoom).emit(
+      "filterClues",
+      "writer",
+      clueVotes,
+      clues,
+      secretWord
+    );
     io.to(guesserRoom).emit("filterClues", "guesser");
     activeGames[room]["stage"] = "filterClues";
 
