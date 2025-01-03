@@ -1,8 +1,7 @@
 import express from "express";
 import { createServer } from "node:http";
-
 import { Server } from "socket.io";
-
+import { correctGuess, getStem, sameWord } from "./utils";
 import cors from "cors";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
@@ -321,25 +320,6 @@ const startGameLoop = async (io, room, timeLimit) => {
     await new Promise((resolve) => setTimeout(() => resolve(), 5000));
   }
   delete activeGames[room];
-};
-
-const sameWord = (wordA, wordB) => {
-  let stemmedA = getStem(wordA);
-  let stemmedB = getStem(wordB);
-  return stemmedA == stemmedB;
-};
-const getStem = (word) => {
-  return word.trim().toLowerCase();
-};
-
-// return true if it matches the secret word or one of the words
-const correctGuess = (guess, secretWord) => {
-  let lowercaseGuess = guess.toLowerCase();
-  let lowerCaseWord = secretWord.toLowerCase();
-
-  if (lowerCaseWord === lowercaseGuess) return true;
-  if (lowerCaseWord.split(" ").includes(lowerCaseWord)) return true;
-  return false;
 };
 
 function waitForCondition(checkCondition, timeoutSeconds = 20) {
