@@ -1,7 +1,7 @@
 <script>
     import Timer from "./Timer.svelte";
     import _ from "lodash"
-    const { votes=$bindable(), clues=[], role, updateVotes, submitAnswer, leaveGame} = $props();
+    const { votes=$bindable(), clues=[], secretWord, role, updateVotes, submitAnswer, leaveGame} = $props();
 
     let submitted = $state(false)
     let userVotes = $state(new Array(votes.length).fill(0));
@@ -33,7 +33,7 @@
 {:else}
 
     <Timer count=20 {submitAnswer}/>
-    
+    <p>The secret word is {secretWord}</p>
     {#each clues as clue, index }
         <div>
         {#if votes[index] < 0}

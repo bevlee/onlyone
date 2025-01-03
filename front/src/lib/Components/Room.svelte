@@ -252,7 +252,12 @@
     </h4>
 
 {#if currentScene == "main"}
-    
+    <p>How to play: <br/>
+        One player is going to choose a category for a secret word.<br/>
+        All other players will see the word and write a one word clue to help that player guess the secret word.
+        Any duplicate clues will be cancelled out!
+        This is a team game and your goal is to get as many secret words right as possible!
+        </p>
     <button  onclick={startGame}>Start</button>
     <!-- <GuessWord {clues} {role} {submitAnswer}/>  -->
 
@@ -266,7 +271,7 @@
     <WriteClues word={secretWord} {role} {submitAnswer} {leaveGame}/>
 
 {:else if currentScene == "filterClues"}
-    <FilterClues bind:votes {clues}  {role} {updateVotes} {submitAnswer} {leaveGame}/>
+    <FilterClues bind:votes {clues}  {role} word={secretWord} {updateVotes}  {submitAnswer} {leaveGame}/>
 
 {:else if currentScene == "guessWord"}
     <GuessWord {dedupedClues} {clues} {role} {submitAnswer} {leaveGame}/>
