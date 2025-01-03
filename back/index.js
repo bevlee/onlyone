@@ -28,9 +28,44 @@ let activeGames = {};
 //GAME VARS
 const categories = ["animals", "people", "places"];
 const secretWords = {
-  animals: ["dog", "cat", "rabbit", "cheetah"],
-  people: ["obama", "eminem", "stalin", "taylor swift", "bruno mars"],
-  places: ["tokyo", "kyoto", "nara", "seoul"],
+  animals: [
+    "wolf",
+    "tiger",
+    "rabbit",
+    "cheetah",
+    "lion",
+    "zebra",
+    "hippopotamus",
+    "cricket",
+    "echidna",
+    "wallaby",
+    "kangaroo",
+  ],
+  people: [
+    "Obama",
+    "Eminem",
+    "Greta Thunberg",
+    "Ghengis Khan",
+    "Napoleon",
+    "Kevin Rudd",
+    "Santa",
+    "Legolas",
+    "Gimli",
+    "King Arthur",
+    "Cleopatra",
+    "Elon Musk",
+  ],
+  places: [
+    "Hungary",
+    "Turkey",
+    "New Zealand",
+    "Europe",
+    "London",
+    "Russia",
+    "Taiwan",
+    "Hawaii",
+    "Hell",
+  ],
 };
 
 // io.socket.removeAllListeners();
@@ -273,7 +308,8 @@ const startGameLoop = async (io, room, timeLimit) => {
       activeGames[room]["guess"] !== ""
         ? activeGames[room]["guess"]
         : "<no guess>";
-    const success = getStem(guess) === secretWord;
+    const success = correctGuess(guess, secretWord);
+
     activeGames[room]["success"] = success;
     activeGames[room]["dedupedClues"] = dedupedClues;
     activeGames[room]["gamesPlayed"] = ++round;
@@ -294,6 +330,16 @@ const sameWord = (wordA, wordB) => {
 };
 const getStem = (word) => {
   return word.trim().toLowerCase();
+};
+
+// return true if it matches the secret word or one of the words
+const correctGuess = (guess, secretWord) => {
+  let lowercaseGuess = guess.toLowerCase();
+  let lowerCaseWord = secretWord.toLowerCase();
+
+  if (lowerCaseWord === lowercaseGuess) return true;
+  if (lowerCaseWord.split(" ").includes(lowerCaseWord)) return true;
+  return false;
 };
 
 function waitForCondition(checkCondition, timeoutSeconds = 20) {
