@@ -1,5 +1,6 @@
 <script>
     import Timer from "./Timer.svelte";
+    import { defaultTimer } from "../config";
     import _ from "lodash"
     const { votes=$bindable(), clues=[], secretWord, role, updateVotes, submitAnswer, leaveGame} = $props();
 
@@ -25,14 +26,14 @@
 
     <h2>
         
-        <Timer count=20 submitAnswer={()=>{}}/>
+        <Timer count={defaultTimer} submitAnswer={()=>{}}/>
         Removing duplicate clues... 
     </h2>
 
 
 {:else}
 
-    <Timer count=20 {submitAnswer}/>
+    <Timer count={defaultTimer} {submitAnswer}/>
     <p>The secret word is {secretWord}</p>
     {#each clues as clue, index }
         <div>

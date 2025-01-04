@@ -2,6 +2,7 @@
     import { io } from "socket.io-client"
     import {SvelteSet} from "svelte/reactivity"
     import _ from "lodash"
+    import Timer from "./Timer.svelte";
     import ChooseCategory from "./ChooseCategory.svelte";
     import GuessWord from "./GuessWord.svelte";
     import FilterClues from "./FilterClues.svelte";
@@ -27,7 +28,8 @@
         let totalRounds: number = 0;
         let votes: Array<number> = $state([])
 
-
+        let testComponent = $state(false);
+            let testingText = $state("")
 
 
 
@@ -230,6 +232,11 @@
             socket.emit("updateVotes", index, value);
 
         }
+
+        const testFn = () => {
+            console.log("testing fn", testingText)
+            testComponent = false
+        }
     </script>
     
     <button onclick={()=>leave()}>Leave room</button>
@@ -250,6 +257,16 @@
             <li>{player}</li>
         {/each}</ul>
     </h4>
+<button onclick={() => testComponent = !testComponent}>test</button>
+
+
+{#if testComponent }
+<p>test for entering text</p>
+    <Timer count=1 submitAnswer={() => testFn()}/>
+        
+    <input type="text" maxlength="100" bind:value={testingText}/>
+{/if}
+
 
 {#if currentScene == "main"}
     <p>How to play: <br/>

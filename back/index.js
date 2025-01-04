@@ -123,7 +123,7 @@ io.on("connection", async (socket) => {
       socket.listenerCount("startGame")
     );
 
-    const time = 20;
+    const time = 21;
     console.log("startGame called by socket:", socket.id);
     if (!(room in activeGames)) {
       console.log("no active game currently");
