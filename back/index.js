@@ -3,13 +3,7 @@ import { createServer } from "node:http";
 import { Server } from "socket.io";
 import { correctGuess, getStem, sameWord } from "./utils.js";
 import cors from "cors";
-import sqlite3 from "sqlite3";
-import { open } from "sqlite";
-
-// const db = await open({
-//   filename: "onlyone.db",
-//   driver: sqlite3.Database,
-// });
+import { DatabaseController } from "./db.js";
 const app = express();
 app.use(cors());
 const server = createServer(app);
@@ -66,7 +60,7 @@ const secretWords = {
     "Hell",
   ],
 };
-
+DatabaseController.init();
 // io.socket.removeAllListeners();
 io.on("connection", async (socket) => {
   socket.removeAllListeners("startGame");
