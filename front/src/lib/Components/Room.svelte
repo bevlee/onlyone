@@ -45,7 +45,7 @@
 
 
         // init socket
-        const socket = io("http://bevsoft.com:3000", {
+        const socket = io("https://bevsoft.com/socket.io/", {
                 auth: {
                     serverOffset: 0,
                     username: username,
@@ -252,8 +252,19 @@
     </h4>
 
 {#if currentScene == "main"}
-    
-    <button  onclick={startGame}>Start</button>
+<div>
+    <h4>How to play: </h4>
+        <div class="justify-start">
+            <ol class="list-decimal list-inside inline-block">
+                <li>One player gets the "guesser" role and chooses a category for a secret word.</li>
+                <li>All other players will see the word and write a one word clue to help that player guess the secret word.</li>
+                <li>Any duplicate clues will be cancelled out!</li>
+            </ol>
+        <br/> <br/>
+        This is a team game and your goal is to get as many guesses right as possible!
+        </div>
+</div>
+    <button class="startButton" onclick={startGame}>Start</button>
     <!-- <GuessWord {clues} {role} {submitAnswer}/>  -->
 
 {:else if currentScene == "chooseCategory"}

@@ -1,16 +1,9 @@
 import express from "express";
 import { createServer } from "node:http";
-
 import { Server } from "socket.io";
-
+import { correctGuess, getStem, sameWord } from "./utils.js";
 import cors from "cors";
-import sqlite3 from "sqlite3";
-import { open } from "sqlite";
-
-// const db = await open({
-//   filename: "onlyone.db",
-//   driver: sqlite3.Database,
-// });
+import { DatabaseController } from "./db.js";
 const app = express();
 app.use(cors());
 const server = createServer(app);
@@ -28,11 +21,46 @@ let activeGames = {};
 //GAME VARS
 const categories = ["animals", "people", "places"];
 const secretWords = {
-  animals: ["dog", "cat", "rabbit", "cheetah"],
-  people: ["obama", "eminem", "stalin", "taylor swift", "bruno mars"],
-  places: ["tokyo", "kyoto", "nara", "seoul"],
+  animals: [
+    "wolf",
+    "tiger",
+    "rabbit",
+    "cheetah",
+    "lion",
+    "zebra",
+    "hippopotamus",
+    "cricket",
+    "echidna",
+    "wallaby",
+    "kangaroo",
+  ],
+  people: [
+    "Obama",
+    "Eminem",
+    "Greta Thunberg",
+    "Ghengis Khan",
+    "Napoleon",
+    "Kevin Rudd",
+    "Santa",
+    "Legolas",
+    "Gimli",
+    "King Arthur",
+    "Cleopatra",
+    "Elon Musk",
+  ],
+  places: [
+    "Hungary",
+    "Turkey",
+    "New Zealand",
+    "Europe",
+    "London",
+    "Russia",
+    "Taiwan",
+    "Hawaii",
+    "Hell",
+  ],
 };
-
+DatabaseController.init();
 // io.socket.removeAllListeners();
 io.on("connection", async (socket) => {
   socket.removeAllListeners("startGame");
@@ -67,6 +95,10 @@ io.on("connection", async (socket) => {
       callback({
         status: "ok",
       });
+
+      console.log("new room connections:", connections[room]);
+      io.to(room).emit("playerLeft", oldName);
+      io.to(room).emit("playerJoined", newName);
     }
 
     console.log("new room connections:", connections[room]);
@@ -89,7 +121,7 @@ io.on("connection", async (socket) => {
       socket.listenerCount("startGame")
     );
 
-    const time = 20;
+    const time = 21;
     console.log("startGame called by socket:", socket.id);
     if (!(room in activeGames)) {
       console.log("no active game currently");
@@ -226,6 +258,10 @@ const startGameLoop = async (io, room, timeLimit) => {
             machineDedupedClues[i] = "<redacted>";
             machineDedupedClues[j] = "<redacted>";
           }
+          // Don't let users write the secret word as a clue
+          if (clues[i] === secretWord) {
+            machineDedupedClues[i] = "<redacted>";
+          }
         }
       }
     }
@@ -236,7 +272,13 @@ const startGameLoop = async (io, room, timeLimit) => {
     activeGames[room]["votes"] = clueVotes;
     console.log("clueVotes array looks like", clueVotes);
     activeGames[room]["finishedVoting"] = false;
-    io.to(writerRoom).emit("filterClues", "writer", clueVotes, clues);
+    io.to(writerRoom).emit(
+      "filterClues",
+      "writer",
+      clueVotes,
+      clues,
+      secretWord
+    );
     io.to(guesserRoom).emit("filterClues", "guesser");
     activeGames[room]["stage"] = "filterClues";
 
@@ -263,7 +305,8 @@ const startGameLoop = async (io, room, timeLimit) => {
       activeGames[room]["guess"] !== ""
         ? activeGames[room]["guess"]
         : "<no guess>";
-    const success = getStem(guess) === secretWord;
+    const success = correctGuess(guess, secretWord);
+
     activeGames[room]["success"] = success;
     activeGames[room]["dedupedClues"] = dedupedClues;
     activeGames[room]["gamesPlayed"] = ++round;
@@ -275,15 +318,6 @@ const startGameLoop = async (io, room, timeLimit) => {
     await new Promise((resolve) => setTimeout(() => resolve(), 5000));
   }
   delete activeGames[room];
-};
-
-const sameWord = (wordA, wordB) => {
-  let stemmedA = getStem(wordA);
-  let stemmedB = getStem(wordB);
-  return stemmedA == stemmedB;
-};
-const getStem = (word) => {
-  return word.trim().toLowerCase();
 };
 
 function waitForCondition(checkCondition, timeoutSeconds = 20) {

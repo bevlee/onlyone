@@ -5,15 +5,22 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "mocha",
     "dev": "node index.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "better-sqlite3": "^11.7.2",
+    "chai": "^5.1.2",
     "express": "^4.21.2",
+    "js-levenshtein": "^1.1.6",
+    "mocha": "^11.0.1",
     "socket.io": "^4.8.1",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2"
   }
 }
