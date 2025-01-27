@@ -1,1 +1,1 @@
-export var defaultTimer = 5;
+export var defaultTimer = 20;
