@@ -1,12 +1,11 @@
 <script lang="ts">
-    import { io } from "socket.io-client"
-    import {SvelteSet} from "svelte/reactivity"
-    import _ from "lodash"
+    import { io } from "socket.io-client";
+    import { SvelteSet } from "svelte/reactivity";
     import ChooseCategory from "./ChooseCategory.svelte";
-    import GuessWord from "./GuessWord.svelte";
+    import EndGame from "./EndGame.svelte";
     import FilterClues from "./FilterClues.svelte";
-  import WriteClues from "./WriteClues.svelte";
-  import EndGame from "./EndGame.svelte";
+    import GuessWord from "./GuessWord.svelte";
+    import WriteClues from "./WriteClues.svelte";
 
     let {roomName, leaveRoom} = $props();
     console.log("Room name in child:", roomName); 
@@ -45,12 +44,13 @@
 
 
         // init socket
-        const socket = io("https://bevsoft.com/socket.io/", {
+        const socket = io("https://bevsoft.com", {
                 auth: {
                     serverOffset: 0,
                     username: username,
                     room: roomName
-                }
+                },
+                path: "/socket1/"
             });
     
         socket.on("disconnect", () => {
