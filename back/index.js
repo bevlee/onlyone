@@ -1,18 +1,19 @@
+import cors from "cors";
 import express from "express";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
-import { correctGuess, getStem, sameWord } from "./utils.js";
-import cors from "cors";
 import { DatabaseController } from "./db.js";
+import { correctGuess, sameWord } from "./utils.js";
 const app = express();
 app.use(cors());
 const server = createServer(app);
 const io = new Server(server, {
   connectionStateRecovery: {},
   cors: {
-    origin: "http://bevsoft.com:4173",
+    origin: "http://bevsoft.com",
     methods: ["GET", "POST"],
   },
+  path: "/socket1/"
 });
 // list of connections per room
 const connections = {};
