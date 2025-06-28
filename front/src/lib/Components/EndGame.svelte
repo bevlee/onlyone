@@ -1,6 +1,7 @@
 <script>
   import Timer from "./Timer.svelte";
 
+  import { Button } from "$lib/components/ui/button/index.js";
     const { category, dedupedClues ,clues,  guess, secretWord, wordGuessed, gamesPlayed, gamesWon, totalRounds, playAgain } = $props();
     console.log(`ending game`, dedupedClues, clues, guess, category)
 
@@ -21,7 +22,7 @@
     {#each displayedClues as clue }
         <h3>{clue}</h3>
     {/each}
-    <button onclick={hide}>Toggle redacted clues</button>
+    <Button onclick={hide}>Toggle redacted clues</Button>
 
 
     <h2>Your guess was: {guess}</h2>
@@ -37,8 +38,8 @@
 
 </div>
 {#if gamesPlayed < totalRounds }
-<Timer count=5 submitAnswer={()=>{}} text="The next round is starting in: "/>
+<Timer count={defaultTimer} submitAnswer={()=>{}} text="The next round is starting in: "/>
     {:else}
-<button onclick={playAgain}>Play Again</button>
+<Button onclick={playAgain}>Play Again</Button>
 {/if}
 

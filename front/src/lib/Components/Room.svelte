@@ -1,12 +1,12 @@
 <script lang="ts">
-    import { io } from "socket.io-client"
-    import {SvelteSet} from "svelte/reactivity"
-    import _ from "lodash"
+    import { Button } from "$lib/components/ui/button/index.js";
+    import { io } from "socket.io-client";
+    import { SvelteSet } from "svelte/reactivity";
     import ChooseCategory from "./ChooseCategory.svelte";
-    import GuessWord from "./GuessWord.svelte";
+    import EndGame from "./EndGame.svelte";
     import FilterClues from "./FilterClues.svelte";
-  import WriteClues from "./WriteClues.svelte";
-  import EndGame from "./EndGame.svelte";
+    import GuessWord from "./GuessWord.svelte";
+    import WriteClues from "./WriteClues.svelte";
 
     let {roomName, leaveRoom} = $props();
     console.log("Room name in child:", roomName); 
@@ -45,12 +45,12 @@
 
 
         // init socket
-        const socket = io("localhost:3000", {
+        const socket = io("http://localhost:3000", {
                 auth: {
                     serverOffset: 0,
                     username: username,
                     room: roomName
-                }
+                },
             });
     
         socket.on("disconnect", () => {
@@ -232,7 +232,8 @@
         }
     </script>
     
-    <button onclick={()=>leave()}>Leave room</button>
+<div class="flex flex-col items-center justify-center"> 
+    <Button variant="destructive" onclick={()=>leave()}>Leave room</Button>
     <h3>Room: 
         <strong>{roomName}</strong>
     </h3>
@@ -241,7 +242,7 @@
         <strong>{username}</strong>
     </h4>
     {#if currentScene==="main" || currentScene==="endGame"}
-    <button onclick={changeNamePrompt}>Change Name</button>
+    <Button onclick={changeNamePrompt}>Change Name</Button>
     {/if}
 
     <h4>Players in Lobby: 
@@ -252,8 +253,19 @@
     </h4>
 
 {#if currentScene == "main"}
-    
-    <button  onclick={startGame}>Start</button>
+    <div>
+        <h4>How to play: </h4>
+            <div class="justify-start">
+                <ol class="list-decimal list-inside inline-block">
+                    <li>One player gets the "guesser" role and chooses a category for a secret word.</li>
+                    <li>All other players will see the word and write a one word clue to help that player guess the secret word.</li>
+                    <li>Any duplicate clues will be cancelled out!</li>
+                </ol>
+            <br/> <br/>
+            This is a team game and your goal is to get as many guesses right as possible!
+            </div>
+    </div>
+    <Button class="startButton" onclick={startGame}>Start</Button>
     <!-- <GuessWord {clues} {role} {submitAnswer}/>  -->
 
 {:else if currentScene == "chooseCategory"}
@@ -275,5 +287,6 @@
     <EndGame  {category} {dedupedClues} {clues}  {guess} {secretWord} {wordGuessed} {gamesPlayed} {gamesWon} {totalRounds} playAgain={startGame}/>
 
 {/if}
+</div>
 
 

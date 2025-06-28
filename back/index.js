@@ -4,8 +4,6 @@ import { createServer } from "node:http";
 import { Server } from "socket.io";
 
 import cors from "cors";
-import sqlite3 from "sqlite3";
-import { open } from "sqlite";
 
 // const db = await open({
 //   filename: "onlyone.db",
@@ -17,7 +15,7 @@ const server = createServer(app);
 const io = new Server(server, {
   connectionStateRecovery: {},
   cors: {
-    origin: "http://localhost:4173",
+    origin: "https://localhost:5173",
     methods: ["GET"],
   },
 });
