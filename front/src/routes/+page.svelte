@@ -26,9 +26,9 @@
   </h1>    
   {#if isMobileDevice}
 
-  <div class="aspect-[4/3] w-5/6 mx-auto m-6 bg-emerald-400">
+  <div class="aspect-[4/3] w-5/6 mx-auto m-6 bg-emerald-400 overflow-hidden">
     <!-- Mobile-optimized content -->
-    <p>hello lorem ipsum la da dee toaih  as f ahofa sia as assdf khlnaf</p>
+    <p>Mobile View</p>
 
     {#if !roomSelected}
     <RoomSelection 
@@ -43,8 +43,8 @@
   </div>
     {:else}
     <!-- Desktop content -->
-    <div class="aspect-[4/3] w-5/6 mx-auto bg-yellow-400 overflow:hidden;">
-        <p>hello lorem ipsum la da dee toaih gqhwoirhoiasdfkhlnaf</p>
+    <div class="aspect-[4/3] w-5/6 mx-auto bg-yellow-400 overflow-hidden">
+        <p>Desktop View</p>
         
         {#if !roomSelected}
         <RoomSelection 
