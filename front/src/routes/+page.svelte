@@ -2,10 +2,7 @@
     import RoomSelection from "$lib/Components/Homepage.svelte";
     import Room from "$lib/Components/Room.svelte";
   
-
-    let isMobileDevice = window.screen.width < 768;
-    let maxWidth = window.screen.width - 100;
-    console.log(maxWidth)
+    const { maxWidth } = $props();
 
     let roomName: string = $state("");
     let roomSelected: boolean = $state(false);
@@ -21,11 +18,6 @@
         roomName = ""
     }
   </script>
-  {#if isMobileDevice}
-
-  <div class="aspect-[4/3] w-5/6 mx-auto m-6 bg-emerald-400 overflow-hidden">
-    <!-- Mobile-optimized content -->
-    <p>Mobile View</p>
 
     {#if !roomSelected}
     <RoomSelection 
@@ -36,24 +28,6 @@
     {roomName}
     {leaveRoom}
     />
-    {/if}
-  </div>
-    {:else}
-    <!-- Desktop content -->
-    <div class="aspect-[4/3] w-5/6 mx-auto bg-yellow-400 overflow-hidden">
-        <p>Desktop View</p>
-        
-        {#if !roomSelected}
-        <RoomSelection 
-            {joinRoom}
-            />
-            {:else}
-        <Room
-        {roomName}
-        {leaveRoom}
-        />
-        {/if}
-    </div>
     {/if}
   
   <style>
