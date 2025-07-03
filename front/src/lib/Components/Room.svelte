@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { env } from '$env/dynamic/public';
     import { Button } from "$lib/components/ui/button/index.js";
     import { io } from "socket.io-client";
     import { SvelteSet } from "svelte/reactivity";
@@ -45,13 +46,13 @@
 
 
         // init socket
-        const socket = io("http://localhost:3000", {
-                auth: {
-                    serverOffset: 0,
-                    username: username,
-                    room: roomName
-                },
-            });
+        const socket = io(env.PUBLIC_SOCKET_ENDPOINT, {
+            auth: {
+                serverOffset: 0,
+                username: username,
+                room: roomName
+            },
+        });
     
         socket.on("disconnect", () => {
             //send the username to the server
