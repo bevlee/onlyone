@@ -21,9 +21,6 @@
         roomName = ""
     }
   </script>
-  <h1 class="my-12  scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl text-center">
-    Only One
-  </h1>    
   {#if isMobileDevice}
 
   <div class="aspect-[4/3] w-5/6 mx-auto m-6 bg-emerald-400 overflow-hidden">
