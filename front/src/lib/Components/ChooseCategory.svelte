@@ -1,30 +1,38 @@
 <script>
+    import { Button } from "$lib/components/ui/button/index.js";
+    import * as RadioGroup from "$lib/components/ui/radio-group/index.js";
+    import { defaultTimer } from "../config";
     import Timer from "./Timer.svelte";
     const { categories, role, submitAnswer, leaveGame} = $props();
     let selectedOption = $state(categories[0])
+
+    const submit = () => {
+        submitAnswer(selectedOption)
+    }
 </script>
 
 
 
 {#if role=="guesser"}
-    <Timer count=20 {submitAnswer}/>
+    <Timer count={defaultTimer} submitAnswer={() => submit()}/>
     <div>
         <h2>Choose a category for your secret word</h2>
-        {#each categories as category }
-        <input type="radio" bind:group={selectedOption} id={category} value={category}>
-            <label for={category}>{category}</label>
-        
-        {/each}
+        <RadioGroup.Root bind:value={selectedOption}>
+            {#each categories as category}
+            <div class="flex items-center space-x-2">
+                <RadioGroup.Item id={category} value={category} />
+                <label for={category}>{category}</label>
+              </div>
+            
+            
+            {/each}
+        </RadioGroup.Root>
     </div>
-    <button onclick={() => submitAnswer(selectedOption)}>Select</button>
+    <Button onclick={() => submit()}>Select</Button>
 
 {:else}
-
-
-    <Timer count=20 submitAnswer={()=>{}}/>
+    <Timer count={defaultTimer} submitAnswer={()=>{}}/>
     <h2>Please wait... the guesser is choosing the category</h2>
-
-
 {/if}
 
 

@@ -1,7 +1,7 @@
 <script>
-    import {onDestroy} from "svelte"
+    import { onDestroy } from "svelte";
     let timer = null;
-    let {count, submitAnswer, text="Time left:" } = $props();
+    let {count, submitAnswer, timerText="Time left:" } = $props();
     $effect(() => {
         timer = setInterval(() => {
             if (count > 0) {
@@ -22,8 +22,6 @@
         timer = null;
         submitAnswer()
     }
-
-
 </script>
 
 
@@ -32,7 +30,7 @@
 <h3>Time's UP!</h3>
 {:else}
 <h3>
-    { text }
+    { timerText }
 </h3>
 <h3>{count.toString()}</h3>
 {/if}
