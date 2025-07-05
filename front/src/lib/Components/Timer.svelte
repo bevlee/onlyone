@@ -1,5 +1,5 @@
 <script>
-    import {onDestroy} from "svelte"
+    import { onDestroy } from "svelte";
     let timer = null;
     let {count, submitAnswer, timerText="Time left:" } = $props();
     $effect(() => {
@@ -22,8 +22,6 @@
         timer = null;
         submitAnswer()
     }
-
-
 </script>
 
 

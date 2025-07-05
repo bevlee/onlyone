@@ -8,7 +8,7 @@
     import FilterClues from "./FilterClues.svelte";
     import GuessWord from "./GuessWord.svelte";
     import WriteClues from "./WriteClues.svelte";
-
+    
     let {roomName, leaveRoom} = $props();
     console.log("Room name in child:", roomName); 
         let gameStarted = $state<boolean>(false)
@@ -28,10 +28,6 @@
         let totalRounds: number = 0;
         let votes: Array<number> = $state([])
 
-
-
-
-
         if (!username) {
             username = "user" + Math.floor(Math.random() * 10000)
             setUsername(username)
@@ -43,8 +39,7 @@
             localStorage.setItem('username', newUsername);
             username = newUsername;
         }   
-
-
+        
         // init socket
         const socket = io(env.PUBLIC_SOCKET_ENDPOINT, {
             auth: {
@@ -151,14 +146,13 @@
                     resolve(false);
                 })
             })
+            
             if (success) {
                 setUsername(newName)
                 return true;
             } 
-            return false
-            
+            return false;
         }
-
 
         console.log("roomname is", roomName)
         const changeNamePrompt = async () => {
