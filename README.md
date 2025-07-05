@@ -1,6 +1,6 @@
 # Cooperative Party game based on guessing words
 
-This is a inspirted by the board game Just One: https://en.wikipedia.org/wiki/Just_One_(board_game)
+This is a inspired by the board game Just One: https://en.wikipedia.org/wiki/Just_One_(board_game)
 
 Written in Svelte and Express using Socket.IO
 
