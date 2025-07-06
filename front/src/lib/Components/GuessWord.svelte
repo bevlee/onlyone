@@ -4,14 +4,14 @@
     import { defaultTimer } from "../config";
     import Timer from "./Timer.svelte";
     const { clues, role, submitAnswer, leaveGame} = $props();
-    const sameWord = (wordA, wordB) => {
+    export const sameWord = (wordA, wordB) => {
         let stemmedA = getStem(wordA)
         let stemmedB = getStem(wordB)
         return stemmedA == stemmedB;
     }
 
 
-    const getStem = (word) => {
+    export const getStem = (word) => {
         return word.trim().toLowerCase();
     }
 
