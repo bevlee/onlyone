@@ -156,7 +156,7 @@
     console.log("roomname is", roomName)
     const changeNamePrompt = async () => {
         console.log("changing name")
-        let newName: string = prompt("Please enter your username", username);
+        let newName: string | null = prompt("Please enter your username", username);
         if (newName) {
             if (newName.length > 0 && newName.length < 30 && newName != username) {
 
