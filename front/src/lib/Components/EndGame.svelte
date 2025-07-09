@@ -1,7 +1,7 @@
 <script>
-  import Timer from "./Timer.svelte";
-
   import { Button } from "$lib/components/ui/button/index.js";
+  import { defaultTimer } from "../config";
+  import Timer from "./Timer.svelte";
     const { category, dedupedClues ,clues,  guess, secretWord, wordGuessed, gamesPlayed, gamesWon, totalRounds, playAgain } = $props();
     console.log(`ending game`, dedupedClues, clues, guess, category)
 
