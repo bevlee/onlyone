@@ -156,16 +156,18 @@
     console.log("roomname is", roomName)
     const changeNamePrompt = async () => {
         console.log("changing name")
-        let newName: string = prompt("Please enter your username", username)
-        if (newName.length > 0 && newName.length < 30 && newName != username) {
+        let newName: string = prompt("Please enter your username", username);
+        if (newName) {
+            if (newName.length > 0 && newName.length < 30 && newName != username) {
 
-            const nameChangeSuccess = await changeName(newName);
-            if (!nameChangeSuccess) {
-                alert("Error: There is already a player in the room with the name: ");
-                await changeNamePrompt()
-            } 
-        } else {
-            alert("Name must be between 1 and 30 chars and unique. Try again!")
+                const nameChangeSuccess = await changeName(newName);
+                if (!nameChangeSuccess) {
+                    alert("Error: There is already a player in the room with the name: ");
+                    await changeNamePrompt()
+                } 
+            } else {
+                alert("Name must be between 1 and 30 chars and unique. Try again!")
+            }
         }
     }
 
