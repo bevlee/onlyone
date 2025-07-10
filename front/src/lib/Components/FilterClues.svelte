@@ -13,25 +13,25 @@
 	}: Props = $props();
 
 	type Props = {
-		votes: string[];
+		votes: number[];
 		clues: string[];
 		secretWord: string;
 		role: string;
-		updateVotes: () => void;
-		submitAnswer: (answer: string) => void;
+		updateVotes: (index: number, value: number) => void;
+		submitAnswer: () => void;
 		leaveGame: () => void;
 	};
 	let submitted = $state(false);
 	let userVotes = $state(new Array(votes.length).fill(0));
 
-	const voteOnClue = (index, value) => {
+	const voteOnClue = (index: number, value: number) => {
 		console.log(index, value);
 		userVotes[index] += value;
 
 		votes[index] += value;
 		updateVotes(index, value);
 	};
-	const hasVoted = (index, value) => {
+	const hasVoted = (index: number, value: number) => {
 		return userVotes[index] === value;
 	};
 </script>
@@ -47,7 +47,7 @@
 	{#each clues as clue, index}
 		<div>
 			{#if votes[index] < 0}
-				{clue} is sus with {votes[index]} votes
+				{clue} is a duplicate with {votes[index]} votes
 			{:else}
 				{clue} is good with {votes[index]} votes
 			{/if}
