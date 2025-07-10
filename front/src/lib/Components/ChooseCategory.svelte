@@ -1,39 +1,31 @@
-<script>
-    import { Button } from "$lib/components/ui/button/index.js";
-    import * as RadioGroup from "$lib/components/ui/radio-group/index.js";
-    import { defaultTimer } from "../config";
-    import Timer from "./Timer.svelte";
-    const { categories, role, submitAnswer, leaveGame} = $props();
-    let selectedOption = $state(categories[0])
+<script lang="ts">
+	import { Button } from '$lib/components/ui/button/index.js';
+	import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
+	import { defaultTimer } from '../config';
+	import Timer from '../components/Timer.svelte';
+	const { categories, role, submitAnswer, leaveGame } = $props();
+	let selectedOption = $state(categories[0]);
 
-    const submit = () => {
-        submitAnswer(selectedOption)
-    }
+	const submit = (): void => {
+		submitAnswer(selectedOption);
+	};
 </script>
 
-
-
-{#if role=="guesser"}
-    <Timer count={defaultTimer} submitAnswer={() => submit()}/>
-    <div>
-        <h2>Choose a category for your secret word</h2>
-        <RadioGroup.Root bind:value={selectedOption}>
-            {#each categories as category}
-            <div class="flex items-center space-x-2">
-                <RadioGroup.Item id={category} value={category} />
-                <label for={category}>{category}</label>
-              </div>
-            
-            
-            {/each}
-        </RadioGroup.Root>
-    </div>
-    <Button onclick={() => submit()}>Select</Button>
-
+{#if role == 'guesser'}
+	<Timer count={defaultTimer} submitAnswer={() => submit()} />
+	<div>
+		<h2>Choose a category for your secret word</h2>
+		<RadioGroup.Root bind:value={selectedOption}>
+			{#each categories as category}
+				<div class="flex items-center space-x-2">
+					<RadioGroup.Item id={category} value={category} />
+					<label for={category}>{category}</label>
+				</div>
+			{/each}
+		</RadioGroup.Root>
+	</div>
+	<Button onclick={() => submit()}>Select</Button>
 {:else}
-    <Timer count={defaultTimer} submitAnswer={()=>{}}/>
-    <h2>Please wait... the guesser is choosing the category</h2>
+	<Timer count={defaultTimer} submitAnswer={() => {}} />
+	<h2>Please wait... the guesser is choosing the category</h2>
 {/if}
-
-
-<!-- <button onclick={() => leaveGame()}>Leave Game</button> -->
