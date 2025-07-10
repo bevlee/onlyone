@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import { Server } from "socket.io";
 
 import cors from "cors";
-
+import { dedupeClues } from "./wordOperations.js";
 // const db = await open({
 //   filename: "onlyone.db",
 //   driver: sqlite3.Database,
@@ -216,17 +216,7 @@ const startGameLoop = async (io, room, timeLimit) => {
     }
 
     const clues = activeGames[room]["clues"];
-    const machineDedupedClues = clues.slice();
-    for (let i = 0; i < clues.length; i++) {
-      for (let j = 0; j < clues.length; j++) {
-        if (i != j) {
-          if (sameWord(clues[i], clues[j])) {
-            machineDedupedClues[i] = "<redacted>";
-            machineDedupedClues[j] = "<redacted>";
-          }
-        }
-      }
-    }
+    const machineDedupedClues = dedupeClues(clues);
     // array of boolean to show users which answers are likely invalid
     const clueVotes = machineDedupedClues.map((clue) =>
       clue !== "<redacted>" ? 0 : -1

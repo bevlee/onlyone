@@ -10,10 +10,6 @@
     }
 </script>
 
-<!-- <div class="w-m ">
-    <AspectRatio ratio={16 / 9} class="bg-muted">
-    </AspectRatio>
-  </div> -->
 <div class="flex flex-col items-center justify-center"> 
 
     <p class="leading-7 my-6"> Please enter the room you want to join:</p>
