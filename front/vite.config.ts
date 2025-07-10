@@ -14,7 +14,7 @@ export default defineConfig({
 			key: fs.readFileSync('./localhost-key.pem'),
 			cert: fs.readFileSync('./localhost.pem')
 		},
-		http2: false, // Disable HTTP/2
+		// http2: false, // Disable HTTP/2
 		proxy: {}
 	},
 	test: {
@@ -22,16 +22,16 @@ export default defineConfig({
 			{
 				extends: './vite.config.ts',
 				test: {
-				  name: 'unit',
-				  environment: 'jsdom', 
-				  globals: true,
-				  include: [
-					'src/lib/components/**/*.{test,spec}.{js,ts}', 
-					'src/lib/components/**/*.{test,spec}.svelte.{js,ts}', 
-					'src/lib/utils/**/*.{test,spec}.{js,ts}'
+					name: 'unit',
+					environment: 'jsdom',
+					globals: true,
+					include: [
+						'src/lib/components/**/*.{test,spec}.{js,ts}',
+						'src/lib/components/**/*.{test,spec}.svelte.{js,ts}',
+						'src/lib/utils/**/*.{test,spec}.{js,ts}'
 					],
-				  exclude: ['src/tests/*.i{test,spec}.{js,ts}'],
-				  setupFiles: ['./vitest-setup-unit.ts']
+					exclude: ['src/tests/*.i{test,spec}.{js,ts}'],
+					setupFiles: ['./vitest-setup-unit.ts']
 				}
 			},
 			{
@@ -44,7 +44,7 @@ export default defineConfig({
 						provider: 'playwright',
 						instances: [{ browser: 'chromium' }]
 					},
-					include: ['src/tests/*.i{test,spec}.{js,ts}'],
+					include: ['src/tests/*.{test,spec}.{js,ts}'],
 					exclude: ['src/lib/server/**'],
 					setupFiles: ['./vitest-setup-client.ts']
 				}

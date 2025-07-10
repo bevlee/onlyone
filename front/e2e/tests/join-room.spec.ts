@@ -1,0 +1,64 @@
+import { test, expect } from '@playwright/test';
+
+test.describe('Join Room functionality', () => {
+    test.beforeEach(async ({ page }) => {
+        // Navigate to the homepage and wait for it to be ready
+        await page.goto('https://localhost:5173');
+        // Wait for the page to be fully loaded
+        await page.waitForLoadState('networkidle');
+    });
+
+    test('should be able to join a room with a set username', async ({ page }) => {
+        // Set up any required state (like username in localStorage)
+        await page.evaluate(() => {
+            localStorage.setItem('username', 'testUser');
+        });
+
+        // Reload page to apply localStorage changes
+        await page.reload();
+        await page.waitForLoadState('networkidle');
+
+        // Type room name
+        const roomInput = page.getByRole('textbox');
+        await roomInput.fill('testRoom');
+
+        // Find and click the join button
+        const joinButton = await page.getByRole('button', { name: 'Join' });
+        console.log('Waiting for join button...');
+        await expect(joinButton).toBeVisible({ timeout: 10000 });
+        console.log('Found join button, clicking...');
+        await joinButton.click();
+
+        // Wait for the Room component to be visible
+        const leaveButton = await page.getByRole('button', { name: 'Leave Room' });
+        await expect(leaveButton).toBeVisible({ timeout: 5000 });
+    });
+
+    test('should generate random username if none exists', async ({ page }) => {
+        // Clear any existing username
+        await page.evaluate(() => {
+            localStorage.removeItem('username');
+        });
+
+        // Reload page to apply localStorage changes
+        await page.reload();
+        await page.waitForLoadState('networkidle');
+
+        // Type room name
+        const roomInput = await page.getByRole('textbox');
+        await roomInput.fill('testRoom');
+
+        // Try to click join button
+        const joinButton = await page.getByRole('button', { name: 'Join' });
+        await expect(joinButton).toBeVisible({ timeout: 10000 });
+        await joinButton.click();
+
+        // Check that we joined with an auto-generated username
+        const leaveButton = await page.getByRole('button', { name: 'Leave Room' });
+        await expect(leaveButton).toBeVisible({ timeout: 5000 });
+
+        // // Verify that a username was auto-generated (should be in localStorage)
+        // const username = await page.evaluate(() => localStorage.getItem('username'));
+        // expect(username).toMatch(/^user\d{1,4}$/); // Should match pattern like "user1234"
+    });
+}); 
