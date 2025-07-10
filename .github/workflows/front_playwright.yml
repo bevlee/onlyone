@@ -30,4 +30,5 @@ jobs:
       with:
         name: playwright-report
         path: playwright-report/
+        working-directory: front
         retention-days: 30
