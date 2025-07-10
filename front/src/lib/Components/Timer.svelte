@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
-	let timer: number | null = null;
+	let timer: number | undefined = undefined;
 	let { count, submitAnswer, timerText = 'Time left:' } = $props();
 	$effect(() => {
 		timer = setInterval(() => {
@@ -20,7 +20,7 @@
 	});
 	const stopTimer = () => {
 		clearInterval(timer);
-		timer = null;
+		timer = undefined;
 		submitAnswer();
 	};
 </script>

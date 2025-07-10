@@ -11,14 +11,19 @@
 		"strict": true,
 		"moduleResolution": "bundler",
 		// for shadcn
-		"baseUrl": ".",
-		"paths": {
-			"$lib": ["./src/lib"],
-			"$lib/*": ["./src/lib/*"]
-		}
+		// "baseUrl": ".",
+		// "paths": {
+		// 	"$lib": ["./src/lib"],
+		// 	"$lib/*": ["./src/lib/*"]
+		// }
 	},
-	"include": ["**/*.ts", "**/*.tsx"],
-	"exclude": ["node_modules"]
+	"include": [
+		"**/*.ts",
+		"**/*.tsx"
+	],
+	"exclude": [
+		"node_modules"
+	]
 	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
 	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
 	//

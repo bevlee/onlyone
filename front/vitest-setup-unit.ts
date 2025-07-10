@@ -1,13 +1,8 @@
-import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/svelte';
-import { afterEach, vi } from 'vitest';
-afterEach(() => {
-  cleanup();
-});
+import '@testing-library/jest-dom';
 
-vi.mock('$env/dynamic/public', () => ({
-  env: {
-    PUBLIC_SOCKET_URL: 'http://localhost:3000',
-    PUBLIC_API_URL: 'http://localhost:3000/api'
-  }
-}));
+// Configure testing-library
+import { configure } from '@testing-library/svelte';
+
+configure({
+    testIdAttribute: 'data-testid',
+}); 
