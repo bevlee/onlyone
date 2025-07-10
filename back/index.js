@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import { Server } from "socket.io";
 
 import cors from "cors";
-import { dedupeClues } from "./wordOperations.ts";
+import { dedupeClues } from "./wordOperations.js";
 // const db = await open({
 //   filename: "onlyone.db",
 //   driver: sqlite3.Database,
