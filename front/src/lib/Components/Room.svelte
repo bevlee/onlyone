@@ -14,6 +14,11 @@
 	let gameStarted = $state<boolean>(false);
 	let username = $state<string | null>(localStorage.getItem('username'));
 
+	// These need $state because they're mutated in callbacks/socket events
+	let role = $state('');
+	let votes = $state([]);
+
+	// These don't need $state because they're handled by Svelte's built-in reactivity
 	let categories: Array<string> = ['a', 'b', 'c'];
 	let category: string = '';
 	let clues: Array<string> = ['a', 'b', 'a'];
@@ -24,9 +29,7 @@
 	let wordGuessed: boolean = false;
 	let gamesWon: number = 0;
 	let gamesPlayed: number = 0;
-	let role: string = $state('');
 	let totalRounds: number = 0;
-	let votes: Array<number> = $state([]);
 
 	if (!username) {
 		username = 'user' + Math.floor(Math.random() * 10000);
