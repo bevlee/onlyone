@@ -7,7 +7,7 @@
 	import EndGame from '../components/EndGame.svelte';
 	import FilterClues from '../components/FilterClues.svelte';
 	import GuessWord from '../components/GuessWord.svelte';
-	import WriteClues from '../components/WriteClues.svelte';
+	import WriteClues from './WriteClues.svelte';
 
 	let { roomName, leaveRoom } = $props();
 	console.log('Room name in child:', roomName);

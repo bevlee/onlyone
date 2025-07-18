@@ -1,5 +1,4 @@
-<script>
-	let playerSocket = $state({});
+<script lang="ts">
 	import { Button } from '$lib/components/ui/button/index';
 	import { Input } from '$lib/components/ui/input/index';
 	const { joinRoom } = $props();

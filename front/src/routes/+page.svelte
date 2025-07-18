@@ -1,30 +1,24 @@
-<script lang=ts>
-    import HomePage from "$lib/components/Homepage.svelte";
-    import Room from "$lib/Components/Room.svelte";
+<script lang="ts">
+	import HomePage from '$lib/components/Homepage.svelte';
+	import Room from '$lib/components/Room.svelte';
 
-    let roomName: string = $state("");
-    let roomSelected: boolean = $state(false);
-    
-    const joinRoom = (name: string) => {
-        console.log("joining ", name)
-        roomSelected = true;
-        roomName = name
-    }
-    const leaveRoom = () => {
-        console.log("leaving room ")
-        roomSelected = false;
-        roomName = ""
-    }
-  </script>
+	let roomName: string = $state('');
+	let roomSelected: boolean = $state(false);
 
-  {#if !roomSelected}
-    <HomePage 
-      {joinRoom}
-      />
-  {:else}
-    <Room
-      {roomName}
-      {leaveRoom}
-    />
-  {/if}
-  
+	const joinRoom = (name: string) => {
+		console.log('joining ', name);
+		roomSelected = true;
+		roomName = name;
+	};
+	const leaveRoom = () => {
+		console.log('leaving room ');
+		roomSelected = false;
+		roomName = '';
+	};
+</script>
+
+{#if !roomSelected}
+	<HomePage {joinRoom} />
+{:else}
+	<Room {roomName} {leaveRoom} />
+{/if}
