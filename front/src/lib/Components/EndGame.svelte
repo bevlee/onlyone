@@ -1,5 +1,5 @@
 <script>
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Button } from '$lib/components/ui/button/index';
 	import { defaultTimer } from '../config';
 	import Timer from '../components/Timer.svelte';
 	const {

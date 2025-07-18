@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
+	import { Button } from '$lib/components/ui/button/index';
+	import { Input } from '$lib/components/ui/input/index';
 	import { defaultTimer } from '../config';
 	import Timer from '../components/Timer.svelte';
 	const { word, role, submitAnswer, leaveGame } = $props();
