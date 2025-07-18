@@ -22,8 +22,11 @@ jobs:
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
       working-directory: front
+    - name: Run unit tests
+      run: npm run test:unit
+      working-directory: front
     - name: Run Playwright tests
-      run: npm run test
+      run: npm run test:e2e
       working-directory: front
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
