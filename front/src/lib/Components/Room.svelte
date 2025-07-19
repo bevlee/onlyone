@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { env } from '$env/dynamic/public';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Button } from '$lib/components/ui/button/index';
 	import { io } from 'socket.io-client';
 	import { SvelteSet } from 'svelte/reactivity';
 	import ChooseCategory from '../components/ChooseCategory.svelte';
 	import EndGame from '../components/EndGame.svelte';
 	import FilterClues from '../components/FilterClues.svelte';
 	import GuessWord from '../components/GuessWord.svelte';
-	import WriteClues from '../components/WriteClues.svelte';
+	import WriteClues from './WriteClues.svelte';
 
 	let { roomName, leaveRoom } = $props();
 	console.log('Room name in child:', roomName);

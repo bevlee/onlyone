@@ -1,7 +1,8 @@
-<script>
-	import { Button } from '$lib/components/ui/button/index.js';
+<script lang="ts">
+	import { Button } from '$lib/components/ui/button/index';
 	import { defaultTimer } from '../config';
-	import Timer from '../components/Timer.svelte';
+	import Timer from './Timer.svelte';
+
 	const {
 		category,
 		dedupedClues,
