@@ -3,29 +3,29 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'front/**'
+      - "front/**"
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
-      - 'front/**'
+      - "front/**"
 jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with:
-        node-version: lts/*
-    - name: Install dependencies
-      run: npm ci
-      working-directory: front
-    - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
-      working-directory: front
-    - name: Run unit tests
-      run: npm run test:unit
-      working-directory: front
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install dependencies
+        run: npm ci
+        working-directory: front
+      # - name: Install Playwright Browsers
+      #   run: npx playwright install --with-deps
+      #   working-directory: front
+      - name: Run unit tests
+        run: npm run test:unit
+        working-directory: front
     # - name: Run Playwright tests
     #   run: npm run test:e2e
     #   working-directory: front
