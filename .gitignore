@@ -129,6 +129,8 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-# OS
+# macOS system files
 .DS_Store
-Thumbs.db
+
+# Claude files
+.claude
