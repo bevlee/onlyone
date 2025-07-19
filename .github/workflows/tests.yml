@@ -5,6 +5,7 @@ on:
     paths:
       - 'front/**'
   pull_request:
+    types: [opened, synchronize, reopened]
     paths:
       - 'front/**'
 jobs:
