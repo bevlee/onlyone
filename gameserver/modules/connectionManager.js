@@ -2,6 +2,43 @@ import { logger } from '../config/logger.js';
 
 /**
  * Manages player connections across different game rooms
+ * 
+ * Example connection state structure:
+ * this.connections = {
+ *   "room123": {
+ *     "alice": {
+ *       role: "writer",              // Current role: "writer" | "guesser" | ""
+ *       playerId: "socket_abc123",   // Socket.IO socket ID
+ *       joinRoom: function(roomName) { socket.join(roomName) },  // Socket room join method
+ *       leaveRoom: function(roomName) { socket.leave(roomName) } // Socket room leave method
+ *     },
+ *     "bob": {
+ *       role: "guesser",
+ *       playerId: "socket_def456",
+ *       joinRoom: function(roomName) { socket.join(roomName) },
+ *       leaveRoom: function(roomName) { socket.leave(roomName) }
+ *     },
+ *     "charlie": {
+ *       role: "writer",
+ *       playerId: "socket_ghi789",
+ *       joinRoom: function(roomName) { socket.join(roomName) },
+ *       leaveRoom: function(roomName) { socket.leave(roomName) }
+ *     }
+ *   },
+ *   "room456": {
+ *     "diana": {
+ *       role: "",
+ *       playerId: "socket_jkl012",
+ *       joinRoom: function(roomName) { socket.join(roomName) },
+ *       leaveRoom: function(roomName) { socket.leave(roomName) }
+ *     }
+ *   }
+ * }
+ * 
+ * Socket room organization:
+ * - "room123" - All players in the room
+ * - "room123.writer" - Only writers (alice, charlie)
+ * - "room123.guesser" - Only current guesser (bob)
  */
 export class ConnectionManager {
   constructor() {
