@@ -66,7 +66,8 @@ export function handleUpdateVotes(activeGames, room, socket) {
   return (index, value) => {
     if (activeGames[room] && activeGames[room]["stage"] == "filterClues") {
       activeGames[room]["votes"][index] += value;
-      socket.to(room).emit("updateVotes", index, value);
+      const writerRoom = room + ".writer";
+      socket.to(writerRoom).emit("updateVotes", index, value);
     }
   };
 }
