@@ -1,10 +1,12 @@
+import { logger } from '../config/logger.js';
+
 /**
  * Handler for the 'chat message' socket event. Processes incoming chat messages.
  * @returns {Function} The event handler function.
  */
 export function handleChatMessage() {
   return (msg, username, callback) => {
-    console.log("received chat message", msg, username);
+    logger.info({ msg, username }, 'Received chat message');
     callback("nice");
   };
 }
@@ -24,8 +26,7 @@ export function handleChangeName(connections, io) {
       delete connections[room][oldName];
       callback({ status: "ok" });
     }
-    io.to(room).emit("playerLeft", oldName);
-    io.to(room).emit("playerJoined", newName);
+    io.to(room).emit("playerNameChanged", { oldName, newName });
   };
 }
 

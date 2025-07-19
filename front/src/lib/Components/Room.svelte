@@ -88,6 +88,13 @@
 		console.log($state.snapshot(players));
 	});
 
+	socket.on('playerNameChanged', ({ oldName, newName }: { oldName: string; newName: string }) => {
+		console.log(`user ${oldName} changed name to ${newName}`);
+		players.delete(oldName);
+		players.add(newName);
+		console.log($state.snapshot(players));
+	});
+
 	socket.on('changeScene', (scene, gameRole: string) => {
 		console.log(`changing scene to ${scene} with role ${gameRole}`);
 		role = gameRole;
