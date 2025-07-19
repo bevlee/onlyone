@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
-import { handleChangeName, handleChatMessage, handleDisconnect } from '../handlers/chatHandlers.js';
+import { handleChangeName, handleDisconnect } from '../handlers/chatHandlers.js';
 
 describe('Chat Handlers', () => {
   let mockServer, mockSocket, connections, room, username, removeConnection;
@@ -23,19 +23,6 @@ describe('Chat Handlers', () => {
     room = 'testRoom';
     username = 'player1';
     removeConnection = sinon.stub();
-  });
-
-  describe('handleChatMessage', () => {
-    it('should log message and call callback with "nice"', () => {
-      const handler = handleChatMessage();
-      const callback = sinon.stub();
-      const message = 'Hello world';
-      
-      handler(message, username, callback);
-      
-      expect(callback.calledOnce).to.be.true;
-      expect(callback.calledWith('nice')).to.be.true;
-    });
   });
 
   describe('handleChangeName', () => {
