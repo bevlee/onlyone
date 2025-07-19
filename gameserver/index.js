@@ -20,7 +20,7 @@ import {
 } from "./handlers/chatHandlers.js";
 
 // Game configuration and utilities
-import { categories, secretWords } from "./config.js";
+import { categories, secretWords } from "./data/data.js";
 import { getStem } from "./wordOperations.js";
 
 // Modular components
