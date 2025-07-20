@@ -30,7 +30,7 @@ export const dedupeClues = (clues) => {
             updatedClues[indicies[0]] = word;
         } else {
             for (let index of indicies) {
-                updatedClues[index] = "Duplicate Clue :(";
+                updatedClues[index] = "<redacted>";
             }
         }
     }
