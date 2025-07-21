@@ -1,17 +1,6 @@
 // Core server imports
 import { createServer } from "node:http";
 
-// Game event handlers
-import { 
-  handleStartGame, 
-  handleStopGame, 
-  handleChooseCategory, 
-  handleSubmitClue, 
-  handleUpdateVotes, 
-  handleFinishVoting, 
-  handleGuessWord 
-} from "./handlers/gameHandlers.js";
-
 // Chat event handlers
 import { 
   handleChatMessage, 
@@ -76,19 +65,39 @@ io.on("connection", async (socket) => {
   };
 
   // Game flow event handlers
-  socket.on("startGame", handleStartGame(io, room, gameStateManager.activeGames, startGameLoopBound));
+  socket.on("startGame", () => {
+    if (!(room in gameStateManager.activeGames)) {
+      startGameLoopBound(io, room, 20);
+    }
+  });
   
-  socket.on("stopGame", handleStopGame(io, (io, roomName) => stopGame(io, roomName, gameStateManager, connectionManager)));
+  socket.on("stopGame", (roomName) => stopGame(io, roomName, gameStateManager, connectionManager));
   
-  socket.on("chooseCategory", handleChooseCategory(gameStateManager.activeGames, room));
+  socket.on("chooseCategory", async (category) => {
+    await gameStateManager.setCategory(room, category);
+  });
   
-  socket.on("submitClue", handleSubmitClue(gameStateManager.activeGames, room));
+  socket.on("submitClue", async (clue) => {
+    const result = await gameStateManager.addValidatedClue(room, clue, getStem);
+    // Note: Could emit validation result back to client if needed
+    // socket.emit("clueValidationResult", result);
+  });
   
-  socket.on("updateVotes", handleUpdateVotes(gameStateManager.activeGames, room, socket));
+  socket.on("updateVotes", async (index, value) => {
+    const result = await gameStateManager.updateVote(room, index, value);
+    if (result.success) {
+      const writerRoom = room + ".writer";
+      socket.to(writerRoom).emit("updateVotes", index, value);
+    }
+  });
   
-  socket.on("finishVoting", handleFinishVoting(gameStateManager.activeGames, room));
+  socket.on("finishVoting", async () => {
+    await gameStateManager.setFinishedVoting(room, true);
+  });
   
-  socket.on("guessWord", handleGuessWord(gameStateManager.activeGames, room));
+  socket.on("guessWord", async (guess) => {
+    await gameStateManager.setGuess(room, guess);
+  });
 
   // Handle socket recovery (for connection state recovery)
   if (!socket.recovered) {
