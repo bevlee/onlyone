@@ -99,7 +99,7 @@ describe('GameLoop', () => {
       expect(writers).to.have.length(2);
       expect(writers[0][0]).to.equal('player2');
       expect(writers[1][0]).to.equal('player3');
-      // Should not have any side effects (no room joining/leaving)
+      
       expect(mockSocket2.joinRoom.called).to.be.false;
       expect(mockSocket2.leaveRoom.called).to.be.false;
       expect(mockSocket.joinRoom.called).to.be.false;
@@ -221,14 +221,14 @@ describe('GameLoop', () => {
 
   describe('votingPhase', () => {
     beforeEach(() => {
-      mockGameStateManager.getGame.returns({
-        clues: ['furry', 'pet', 'animal'],
-        finishedVoting: true
-      });
       sinon.stub(gameLoop, 'waitForCondition').resolves('Condition met!');
     });
 
     it('should process clues and initialize voting', async () => {
+      mockGameStateManager.getGame.returns({
+        clues: ['furry', 'pet', 'animal'],
+        finishedVoting: true
+      });
       await gameLoop.votingPhase(mockIo, room, writerRoom, guesserRoom, 20);
 
       expect(mockGameStateManager.setVotes.called).to.be.true;
@@ -237,12 +237,74 @@ describe('GameLoop', () => {
     });
 
     it('should emit filterClues events to both rooms', async () => {
+      mockGameStateManager.getGame.returns({
+        clues: ['furry', 'pet', 'animal'],
+        finishedVoting: true
+      });
       await gameLoop.votingPhase(mockIo, room, writerRoom, guesserRoom, 20);
 
       expect(mockIo.to.calledWith(writerRoom)).to.be.true;
       expect(mockIo.emit.calledWith('filterClues', 'writer')).to.be.true;
       expect(mockIo.to.calledWith(guesserRoom)).to.be.true;
       expect(mockIo.emit.calledWith('filterClues', 'guesser')).to.be.true;
+    });
+
+    it('should initialize votes with 0 for all clues (no <redacted> clues)', async () => {
+      mockGameStateManager.getGame.returns({
+        clues: ['furry', 'pet', 'furry', 'animal'], // 'furry' is duplicated but becomes "<redacted>" after dedupeClues
+        finishedVoting: true
+      });
+
+      await gameLoop.votingPhase(mockIo, room, writerRoom, guesserRoom, 20);
+
+      // Check that setVotes was called with correct initial vote array
+      const setVotesCall = mockGameStateManager.setVotes.getCall(0);
+      const votes = setVotesCall.args[1];
+      
+      expect(votes).to.deep.equal([-1, 0, -1, 0]);
+    });
+
+    it('should handle duplicate clues correctly after deduplication', async () => {
+      mockGameStateManager.getGame.returns({
+        clues: ['same', 'valid', 'same', 'another'], // 'same' will become '<redacted>'
+        finishedVoting: true
+      });
+
+      await gameLoop.votingPhase(mockIo, room, writerRoom, guesserRoom, 20);
+
+      const setVotesCall = mockGameStateManager.setVotes.getCall(0);
+      const votes = setVotesCall.args[1];
+      
+      expect(votes).to.deep.equal([-1, 0, -1, 0]);
+    });
+
+    it('should only set -1 for literal "<redacted>" strings in input', async () => {
+      mockGameStateManager.getGame.returns({
+        clues: ['<redacted>', 'valid', 'duplicate', 'duplicate'], // literal "<redacted>" plus duplicates
+        finishedVoting: true
+      });
+
+      await gameLoop.votingPhase(mockIo, room, writerRoom, guesserRoom, 20);
+
+      const setVotesCall = mockGameStateManager.setVotes.getCall(0);
+      const votes = setVotesCall.args[1];
+      
+      // Only the literal "<redacted>" should get -1, duplicates become "<redacted>" and get 0
+      expect(votes).to.deep.equal([-1, 0, 0, 0]);
+    });
+
+    it('should handle all normal clues correctly', async () => {
+      mockGameStateManager.getGame.returns({
+        clues: ['furry', 'pet', 'mammal', 'cute'],
+        finishedVoting: true
+      });
+
+      await gameLoop.votingPhase(mockIo, room, writerRoom, guesserRoom, 20);
+
+      const setVotesCall = mockGameStateManager.setVotes.getCall(0);
+      const votes = setVotesCall.args[1];
+      
+      expect(votes).to.deep.equal([0, 0, 0, 0]); // All should be 0
     });
   });
 
@@ -292,6 +354,95 @@ describe('GameLoop', () => {
       const success = await gameLoop.guessingPhase(mockIo, room, writerRoom, guesserRoom, 20, getStem);
 
       expect(getStem.calledWith('<no guess>')).to.be.true;
+    });
+
+    it('should hide clues with negative votes and show clues with non-negative votes', async () => {
+      mockGameStateManager.getGame.returns({
+        clues: ['furry', 'pet', 'mammal', 'cute'],
+        votes: [0, -1, 1, -2], // Keep, hide, keep, hide
+        guess: 'cat',
+        secretWord: 'cat'
+      });
+
+      await gameLoop.guessingPhase(mockIo, room, writerRoom, guesserRoom, 20, getStem);
+
+      // Check the emit call for guesser room to see filtered clues
+      const guesserEmitCall = mockIo.emit.getCalls().find(call => 
+        call.args[0] === 'guessWord' && call.args[1] === 'guesser'
+      );
+      
+      expect(guesserEmitCall).to.exist;
+      const dedupedClues = guesserEmitCall.args[2];
+      expect(dedupedClues).to.deep.equal(['furry', '<redacted>', 'mammal', '<redacted>']);
+    });
+
+    it('should show all clues when all votes are non-negative', async () => {
+      mockGameStateManager.getGame.returns({
+        clues: ['furry', 'pet', 'mammal'],
+        votes: [0, 1, 2], // All positive or zero
+        guess: 'cat',
+        secretWord: 'cat'
+      });
+
+      await gameLoop.guessingPhase(mockIo, room, writerRoom, guesserRoom, 20, getStem);
+
+      const guesserEmitCall = mockIo.emit.getCalls().find(call => 
+        call.args[0] === 'guessWord' && call.args[1] === 'guesser'
+      );
+      
+      expect(guesserEmitCall).to.exist;
+      const dedupedClues = guesserEmitCall.args[2];
+      expect(dedupedClues).to.deep.equal(['furry', 'pet', 'mammal']);
+    });
+
+    it('should hide all clues when all votes are negative', async () => {
+      mockGameStateManager.getGame.returns({
+        clues: ['furry', 'pet', 'mammal'],
+        votes: [-1, -2, -3], // All negative
+        guess: 'cat',
+        secretWord: 'cat'
+      });
+
+      await gameLoop.guessingPhase(mockIo, room, writerRoom, guesserRoom, 20, getStem);
+
+      const guesserEmitCall = mockIo.emit.getCalls().find(call => 
+        call.args[0] === 'guessWord' && call.args[1] === 'guesser'
+      );
+      
+      expect(guesserEmitCall).to.exist;
+      const dedupedClues = guesserEmitCall.args[2];
+      expect(dedupedClues).to.deep.equal(['<redacted>', '<redacted>', '<redacted>']);
+    });
+
+    it('should provide original clues to writers and filtered clues to guesser', async () => {
+      mockGameStateManager.getGame.returns({
+        clues: ['furry', 'pet', 'mammal'],
+        votes: [0, -1, 0], // Keep, hide, keep
+        guess: 'cat',
+        secretWord: 'cat'
+      });
+
+      await gameLoop.guessingPhase(mockIo, room, writerRoom, guesserRoom, 20, getStem);
+
+      // Check writer room gets both filtered and original clues
+      const writerEmitCall = mockIo.emit.getCalls().find(call => 
+        call.args[0] === 'guessWord' && call.args[1] === 'writer'
+      );
+      expect(writerEmitCall).to.exist;
+      const writerDedupedClues = writerEmitCall.args[2];
+      const writerOriginalClues = writerEmitCall.args[3];
+      expect(writerDedupedClues).to.deep.equal(['furry', '<redacted>', 'mammal']);
+      expect(writerOriginalClues).to.deep.equal(['furry', 'pet', 'mammal']);
+
+      // Check guesser room gets only filtered clues
+      const guesserEmitCall = mockIo.emit.getCalls().find(call => 
+        call.args[0] === 'guessWord' && call.args[1] === 'guesser'
+      );
+      expect(guesserEmitCall).to.exist;
+      const guesserDedupedClues = guesserEmitCall.args[2];
+      const guesserOriginalClues = guesserEmitCall.args[3];
+      expect(guesserDedupedClues).to.deep.equal(['furry', '<redacted>', 'mammal']);
+      expect(guesserOriginalClues).to.deep.equal([]); // Empty array for guesser
     });
   });
 

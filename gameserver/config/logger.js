@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Create rotating file stream for application logs
-const appLogStream = createStream('app.log', {
+const appLogStream = createStream('gameserver.log', {
   interval: '1d', // rotate daily
   size: '10M',    // rotate when file reaches 10MB
   path: path.join(__dirname, '..', 'logs'),
@@ -16,7 +16,7 @@ const appLogStream = createStream('app.log', {
 });
 
 // Create rotating file stream for error logs
-const errorLogStream = createStream('error.log', {
+const errorLogStream = createStream('gameserver-error.log', {
   interval: '1d',
   size: '10M',
   path: path.join(__dirname, '..', 'logs'),
