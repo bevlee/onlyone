@@ -53,6 +53,12 @@ export class ConnectionManager {
   addConnection(socket) {
     logger.debug({ connections: this.connections }, 'Adding connection');
     const auth = socket.handshake.auth;
+    // Example structure of socket.handshake.auth:
+    // {
+    //   username: "alice",
+    //   room: "room1",
+    //   // ...any other custom authentication fields
+    // }
     const room = auth.room;
     
     // Create room if it doesn't exist
@@ -60,7 +66,7 @@ export class ConnectionManager {
       this.connections[room] = {};
     }
     
-    // Store connection data with socket methods
+    // Add socket methods to connection object so they can individually join and leave rooms
     this.connections[room][auth.username] = {
       role: "",
       playerId: socket.id,
