@@ -17,7 +17,6 @@ import { createExpressServer, createSocketServer, startServer } from "./config/s
 import { ConnectionManager } from "./modules/connectionManager.js";
 import { GameStateManager } from "./modules/gameStateManager.js";
 import { GameLoop } from "./modules/gameLoop.js";
-import { stopGame } from "./utils/gameUtils.js";
 import { logger } from "./config/logger.js";
 
 // Initialize Express app and HTTP server
@@ -71,10 +70,10 @@ io.on("connection", async (socket) => {
     }
   });
   
-  socket.on("stopGame", (roomName) => stopGame(io, roomName, gameStateManager, connectionManager));
+  socket.on("stopGame", async (roomName) => await gameStateManager.stopGame(io, roomName, connectionManager));
   
-  socket.on("chooseCategory", async (category) => {
-    await gameStateManager.setCategory(room, category);
+  socket.on("chooseCategory", (category) => {
+    gameStateManager.setCategory(room, category);
   });
   
   socket.on("submitClue", async (clue) => {
@@ -91,12 +90,12 @@ io.on("connection", async (socket) => {
     }
   });
   
-  socket.on("finishVoting", async () => {
-    await gameStateManager.setFinishedVoting(room, true);
+  socket.on("finishVoting", () => {
+    gameStateManager.setFinishedVoting(room, true);
   });
   
-  socket.on("guessWord", async (guess) => {
-    await gameStateManager.setGuess(room, guess);
+  socket.on("guessWord", (guess) => {
+    gameStateManager.setGuess(room, guess);
   });
 
   // Handle socket recovery (for connection state recovery)

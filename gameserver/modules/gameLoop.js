@@ -2,8 +2,8 @@ import { dedupeClues } from "../wordOperations.js";
 import { logger } from '../config/logger.js';
 
 /**
- * Manages the main game loop for OnlyOne word game
- * Orchestrates game phases: category selection, clue writing, voting, and guessing
+ * Manages the main game loop
+ * Game phases: category selection, clue writing, voting, and guessing
  */
 export class GameLoop {
   /**
@@ -18,10 +18,12 @@ export class GameLoop {
 
   /**
    * Main game loop - runs complete game with each player as guesser
+   * Game will run one guesser at a time, and the other players will be writers
+   * The game will run until all players have been guessers once
    * @param {Object} io - Socket.IO server instance
    * @param {string} room - Room name
    * @param {number} timeLimit - Time limit per phase in seconds
-   * @param {Array} categories - Available game categories
+   * @param {Array<string>} categories - Available game categories
    * @param {Object} secretWords - Secret words organized by category
    * @param {Function} getStem - Function to get word stem for comparison
    */
@@ -35,44 +37,46 @@ export class GameLoop {
     
     // Each player takes a turn as the guesser
     for (let guesser of Object.keys(connections)) {
-      this.gameStateManager.createGame(room, playerCount);
-      this.gameStateManager.setGameProgress(room, round, winCount);
+      await this.gameStateManager.createGame(room, playerCount);
+      await this.gameStateManager.setGameProgress(room, round, winCount);
       
+      // Clear all players from the rooms
+      io.to(writerRoom).socketsLeave(writerRoom);
+      io.to(guesserRoom).socketsLeave(guesserRoom);
+
       // Assign players to appropriate rooms (writer vs guesser)
-      this.setupGuesserRoom(connections, guesser, writerRoom, guesserRoom);
+      this.setupGuesserRoom(connections, guesser, guesserRoom);
       const writers = this.getWriters(connections, guesser);
       this.setupWriterRooms(writers, writerRoom, guesserRoom);
       
       // Run through all game phases
       await this.categoryPhase(io, room, writerRoom, guesserRoom, categories, timeLimit);
-      await this.cluePhase(io, room, writerRoom, guesserRoom, secretWords, timeLimit, writers);
+      await this.cluePhase(io, room, writerRoom, guesserRoom, secretWords, timeLimit, writers, getStem);
       await this.votingPhase(io, room, writerRoom, guesserRoom, timeLimit);
       const success = await this.guessingPhase(io, room, writerRoom, guesserRoom, timeLimit, getStem);
       
       // Record round results
-      this.gameStateManager.setGameResult(room, success, this.gameStateManager.getGame(room).dedupedClues);
+      await this.gameStateManager.setGameResult(room, success, this.gameStateManager.getGame(room).dedupedClues);
       round++;
       if (success) winCount++;
       
       // Show results and pause before next round
       io.to(room).emit("endGame", this.gameStateManager.getGame(room));
-      await new Promise((resolve) => setTimeout(() => resolve(), 5000));
+      await new Promise((resolve) => setTimeout(() => resolve(), 10000)); // wait 10 seconds before next round. TODO: add a button to skip this
     }
     
     // Clean up game state when complete
-    this.gameStateManager.deleteGame(room);
+    await this.gameStateManager.deleteGame(room);
   }
 
   /**
    * Move the current guesser to the guesser room
    * @param {Object} connections - Player connections object
    * @param {string} guesser - Username of current guesser
-   * @param {string} writerRoom - Writer room name
    * @param {string} guesserRoom - Guesser room name
    */
-  setupGuesserRoom(connections, guesser, writerRoom, guesserRoom) {
+  setupGuesserRoom(connections, guesser, guesserRoom) {
     connections[guesser].joinRoom(guesserRoom);
-    connections[guesser].leaveRoom(writerRoom);
   }
 
   /**
@@ -99,12 +103,10 @@ export class GameLoop {
    * Move writers to the writer room and out of guesser room
    * @param {Array} writers - Array of [username, connection] pairs
    * @param {string} writerRoom - Writer room name
-   * @param {string} guesserRoom - Guesser room name
    */
-  setupWriterRooms(writers, writerRoom, guesserRoom) {
+  setupWriterRooms(writers, writerRoom) {
     for (let [playerKey, playerValue] of writers) {
       playerValue.joinRoom(writerRoom);
-      playerValue.leaveRoom(guesserRoom);
     }
   }
 
@@ -118,7 +120,7 @@ export class GameLoop {
    * @param {number} timeLimit - Time limit in seconds
    */
   async categoryPhase(io, room, writerRoom, guesserRoom, categories, timeLimit) {
-    // Send different UI states to writers vs guesser
+    // Send different states to writers vs guesser
     io.to(writerRoom).emit("chooseCategory", "writer", []);
     io.to(guesserRoom).emit("chooseCategory", "guesser", categories);
     
@@ -145,13 +147,13 @@ export class GameLoop {
    * @param {Object} secretWords - Secret words by category
    * @param {number} timeLimit - Time limit in seconds
    * @param {Array} writers - Array of writer connections
+   * @param {Function} getStem - Function to normalize words for comparison
    */
-  async cluePhase(io, room, writerRoom, guesserRoom, secretWords, timeLimit, writers) {
+  async cluePhase(io, room, writerRoom, guesserRoom, secretWords, timeLimit, writers, getStem) {
     const game = this.gameStateManager.getGame(room);
     const category = game.category;
     
-    this.gameStateManager.updateGameStage(room, "writeClues");
-    this.gameStateManager.initializeClues(room);
+    await this.gameStateManager.transitionToStage(room, "writeClues");
     
     // Select random secret word from chosen category
     const secretWord = secretWords[category][this.getRandomSelection(secretWords[category].length)];
@@ -172,7 +174,7 @@ export class GameLoop {
     const currentGame = this.gameStateManager.getGame(room);
     if (currentGame.clues.length < writers.length) {
       for (let i = currentGame.clues.length; i < writers.length; i++) {
-        this.gameStateManager.addClue(room, "<no answer>");
+        await this.gameStateManager.addClue(room, "<no answer>");
       }
     }
   }
@@ -205,7 +207,7 @@ export class GameLoop {
     // Writers see voting interface, guesser waits
     io.to(writerRoom).emit("filterClues", "writer", clueVotes, clues);
     io.to(guesserRoom).emit("filterClues", "guesser");
-    this.gameStateManager.updateGameStage(room, "filterClues");
+    await this.gameStateManager.transitionToStage(room, "filterClues");
 
     // Wait for voting to complete
     await this.waitForCondition(() => {
@@ -228,7 +230,7 @@ export class GameLoop {
     const clues = game.clues;
     const clueVotes = game.votes;
     
-    // Apply voting results to create final clue list
+    // Apply voting results to remove duplicate clues from guesser
     let dedupedClues = clues.slice();
     for (let i = 0; i < clues.length; i++) {
       dedupedClues[i] = clueVotes[i] >= 0 ? dedupedClues[i] : "<redacted>";
@@ -240,8 +242,7 @@ export class GameLoop {
     io.to(writerRoom).emit("guessWord", "writer", dedupedClues, clues);
     io.to(guesserRoom).emit("guessWord", "guesser", dedupedClues, []);
     
-    this.gameStateManager.updateGameStage(room, "guessWord");
-    this.gameStateManager.setGuess(room, "");
+    await this.gameStateManager.transitionToStage(room, "guessWord");
     
     // Wait for guesser to submit their guess
     await this.waitForCondition(() => {

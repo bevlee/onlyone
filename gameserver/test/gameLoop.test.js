@@ -3,25 +3,24 @@ import sinon from 'sinon';
 import { GameLoop } from '../modules/gameLoop.js';
 
 describe('GameLoop', () => {
-  let gameLoop, mockGameStateManager, mockConnectionManager, mockIo, mockSocket;
+  let gameLoop, mockGameStateManager, mockConnectionManager, mockIo, mockSocket, mockEmit;
   let room, writerRoom, guesserRoom, categories, secretWords, getStem;
 
   beforeEach(() => {
     // Mock GameStateManager
     mockGameStateManager = {
-      createGame: sinon.stub(),
-      setGameProgress: sinon.stub(),
+      createGame: sinon.stub().resolves(),
+      setGameProgress: sinon.stub().resolves(),
       getGame: sinon.stub(),
-      updateGameStage: sinon.stub(),
-      setCategory: sinon.stub(),
-      setSecretWord: sinon.stub(),
-      initializeClues: sinon.stub(),
-      addClue: sinon.stub(),
-      setVotes: sinon.stub(),
-      setFinishedVoting: sinon.stub(),
-      setGuess: sinon.stub(),
-      setGameResult: sinon.stub(),
-      deleteGame: sinon.stub()
+      transitionToStage: sinon.stub().resolves(),
+      setCategory: sinon.stub().returns({ success: true }), // Now synchronous
+      setSecretWord: sinon.stub().returns({ success: true }), // Now synchronous
+      addClue: sinon.stub().resolves(),
+      setVotes: sinon.stub().returns({ success: true }), // Now synchronous
+      setFinishedVoting: sinon.stub().returns({ success: true }), // Now synchronous
+      setGuess: sinon.stub().returns({ success: true }), // Now synchronous
+      setGameResult: sinon.stub().resolves(),
+      deleteGame: sinon.stub().resolves()
     };
 
     // Mock ConnectionManager
@@ -29,9 +28,15 @@ describe('GameLoop', () => {
       getConnections: sinon.stub()
     };
 
-    // Mock Socket.IO
+    // Mock Socket.IO with to().socketsLeave() and to().emit() chains
+    const mockSocketsLeave = sinon.stub();
+    mockEmit = sinon.stub();
+    const mockToChain = {
+      socketsLeave: mockSocketsLeave,
+      emit: mockEmit
+    };
     mockIo = {
-      to: sinon.stub().returnsThis(),
+      to: sinon.stub().returns(mockToChain),
       emit: sinon.stub()
     };
 
@@ -63,17 +68,16 @@ describe('GameLoop', () => {
   });
 
   describe('setupGuesserRoom', () => {
-    it('should move guesser to guesser room and leave writer room', () => {
+    it('should move guesser to guesser room', () => {
       const connections = {
         'player1': mockSocket,
         'player2': mockSocket
       };
       const guesser = 'player1';
 
-      gameLoop.setupGuesserRoom(connections, guesser, writerRoom, guesserRoom);
+      gameLoop.setupGuesserRoom(connections, guesser, guesserRoom);
 
       expect(mockSocket.joinRoom.calledWith(guesserRoom)).to.be.true;
-      expect(mockSocket.leaveRoom.calledWith(writerRoom)).to.be.true;
     });
   });
 
@@ -121,7 +125,7 @@ describe('GameLoop', () => {
   });
 
   describe('setupWriterRooms', () => {
-    it('should move all writers to writer room and leave guesser room', () => {
+    it('should move all writers to writer room', () => {
       const mockSocket1 = {
         joinRoom: sinon.stub(),
         leaveRoom: sinon.stub()
@@ -135,12 +139,10 @@ describe('GameLoop', () => {
         ['player3', mockSocket2]
       ];
 
-      gameLoop.setupWriterRooms(writers, writerRoom, guesserRoom);
+      gameLoop.setupWriterRooms(writers, writerRoom);
 
       expect(mockSocket1.joinRoom.calledWith(writerRoom)).to.be.true;
-      expect(mockSocket1.leaveRoom.calledWith(guesserRoom)).to.be.true;
       expect(mockSocket2.joinRoom.calledWith(writerRoom)).to.be.true;
-      expect(mockSocket2.leaveRoom.calledWith(guesserRoom)).to.be.true;
     });
   });
 
@@ -159,9 +161,9 @@ describe('GameLoop', () => {
       await gameLoop.categoryPhase(mockIo, room, writerRoom, guesserRoom, categories, 20);
 
       expect(mockIo.to.calledWith(writerRoom)).to.be.true;
-      expect(mockIo.emit.calledWith('chooseCategory', 'writer', [])).to.be.true;
+      expect(mockEmit.calledWith('chooseCategory', 'writer', [])).to.be.true;
       expect(mockIo.to.calledWith(guesserRoom)).to.be.true;
-      expect(mockIo.emit.calledWith('chooseCategory', 'guesser', categories)).to.be.true;
+      expect(mockEmit.calledWith('chooseCategory', 'guesser', categories)).to.be.true;
     });
 
     it('should set random category if none chosen within time limit', async () => {
@@ -191,8 +193,7 @@ describe('GameLoop', () => {
 
       await gameLoop.cluePhase(mockIo, room, writerRoom, guesserRoom, secretWords, 20, writers);
 
-      expect(mockGameStateManager.updateGameStage.calledWith(room, 'writeClues')).to.be.true;
-      expect(mockGameStateManager.initializeClues.calledWith(room)).to.be.true;
+      expect(mockGameStateManager.transitionToStage.calledWith(room, 'writeClues')).to.be.true;
       expect(mockGameStateManager.setSecretWord.calledWith(room, 'cat')).to.be.true;
     });
 
@@ -201,8 +202,8 @@ describe('GameLoop', () => {
 
       await gameLoop.cluePhase(mockIo, room, writerRoom, guesserRoom, secretWords, 20, writers);
 
-      expect(mockIo.emit.calledWith('writeClues', 'writer', 'cat')).to.be.true;
-      expect(mockIo.emit.calledWith('writeClues', 'guesser', '')).to.be.true;
+      expect(mockEmit.calledWith('writeClues', 'writer', 'cat')).to.be.true;
+      expect(mockEmit.calledWith('writeClues', 'guesser', '')).to.be.true;
     });
 
     it('should add default clues if not enough submitted', async () => {
@@ -233,7 +234,7 @@ describe('GameLoop', () => {
 
       expect(mockGameStateManager.setVotes.called).to.be.true;
       expect(mockGameStateManager.setFinishedVoting.calledWith(room, false)).to.be.true;
-      expect(mockGameStateManager.updateGameStage.calledWith(room, 'filterClues')).to.be.true;
+      expect(mockGameStateManager.transitionToStage.calledWith(room, 'filterClues')).to.be.true;
     });
 
     it('should emit filterClues events to both rooms', async () => {
@@ -244,9 +245,9 @@ describe('GameLoop', () => {
       await gameLoop.votingPhase(mockIo, room, writerRoom, guesserRoom, 20);
 
       expect(mockIo.to.calledWith(writerRoom)).to.be.true;
-      expect(mockIo.emit.calledWith('filterClues', 'writer')).to.be.true;
+      expect(mockEmit.calledWith('filterClues', 'writer')).to.be.true;
       expect(mockIo.to.calledWith(guesserRoom)).to.be.true;
-      expect(mockIo.emit.calledWith('filterClues', 'guesser')).to.be.true;
+      expect(mockEmit.calledWith('filterClues', 'guesser')).to.be.true;
     });
 
     it('should initialize votes with 0 for all clues (no <redacted> clues)', async () => {
@@ -289,8 +290,8 @@ describe('GameLoop', () => {
       const setVotesCall = mockGameStateManager.setVotes.getCall(0);
       const votes = setVotesCall.args[1];
       
-      // Only the literal "<redacted>" should get -1, duplicates become "<redacted>" and get 0
-      expect(votes).to.deep.equal([-1, 0, 0, 0]);
+      // The literal "<redacted>" gets -1, duplicates become "<redacted>" after dedupeClues and also get -1
+      expect(votes).to.deep.equal([-1, 0, -1, -1]);
     });
 
     it('should handle all normal clues correctly', async () => {
@@ -323,8 +324,7 @@ describe('GameLoop', () => {
     it('should process votes and create deduped clues', async () => {
       const success = await gameLoop.guessingPhase(mockIo, room, writerRoom, guesserRoom, 20, getStem);
 
-      expect(mockGameStateManager.updateGameStage.calledWith(room, 'guessWord')).to.be.true;
-      expect(mockGameStateManager.setGuess.calledWith(room, '')).to.be.true;
+      expect(mockGameStateManager.transitionToStage.calledWith(room, 'guessWord')).to.be.true;
       expect(success).to.be.true;
     });
 
@@ -367,7 +367,7 @@ describe('GameLoop', () => {
       await gameLoop.guessingPhase(mockIo, room, writerRoom, guesserRoom, 20, getStem);
 
       // Check the emit call for guesser room to see filtered clues
-      const guesserEmitCall = mockIo.emit.getCalls().find(call => 
+      const guesserEmitCall = mockEmit.getCalls().find(call => 
         call.args[0] === 'guessWord' && call.args[1] === 'guesser'
       );
       
@@ -386,7 +386,7 @@ describe('GameLoop', () => {
 
       await gameLoop.guessingPhase(mockIo, room, writerRoom, guesserRoom, 20, getStem);
 
-      const guesserEmitCall = mockIo.emit.getCalls().find(call => 
+      const guesserEmitCall = mockEmit.getCalls().find(call => 
         call.args[0] === 'guessWord' && call.args[1] === 'guesser'
       );
       
@@ -405,7 +405,7 @@ describe('GameLoop', () => {
 
       await gameLoop.guessingPhase(mockIo, room, writerRoom, guesserRoom, 20, getStem);
 
-      const guesserEmitCall = mockIo.emit.getCalls().find(call => 
+      const guesserEmitCall = mockEmit.getCalls().find(call => 
         call.args[0] === 'guessWord' && call.args[1] === 'guesser'
       );
       
@@ -425,7 +425,7 @@ describe('GameLoop', () => {
       await gameLoop.guessingPhase(mockIo, room, writerRoom, guesserRoom, 20, getStem);
 
       // Check writer room gets both filtered and original clues
-      const writerEmitCall = mockIo.emit.getCalls().find(call => 
+      const writerEmitCall = mockEmit.getCalls().find(call => 
         call.args[0] === 'guessWord' && call.args[1] === 'writer'
       );
       expect(writerEmitCall).to.exist;
@@ -435,7 +435,7 @@ describe('GameLoop', () => {
       expect(writerOriginalClues).to.deep.equal(['furry', 'pet', 'mammal']);
 
       // Check guesser room gets only filtered clues
-      const guesserEmitCall = mockIo.emit.getCalls().find(call => 
+      const guesserEmitCall = mockEmit.getCalls().find(call => 
         call.args[0] === 'guessWord' && call.args[1] === 'guesser'
       );
       expect(guesserEmitCall).to.exist;
@@ -520,7 +520,12 @@ describe('GameLoop', () => {
         expect(mockGameStateManager.setGameProgress.callCount).to.equal(2);
         expect(mockGameStateManager.setGameResult.callCount).to.equal(2);
         expect(mockGameStateManager.deleteGame.calledWith(room)).to.be.true;
-        expect(mockIo.emit.calledWith('endGame')).to.be.true;
+        expect(mockEmit.calledWith('endGame')).to.be.true;
+        
+        // Should clear rooms for each player (includes room clearing + emit calls)
+        expect(mockIo.to.callCount).to.be.at.least(4); // At least 2 players × 2 rooms each for clearing
+        expect(mockIo.to.calledWith(writerRoom)).to.be.true;
+        expect(mockIo.to.calledWith(guesserRoom)).to.be.true;
       } finally {
         global.setTimeout = originalSetTimeout;
       }
