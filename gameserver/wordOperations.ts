@@ -28,7 +28,7 @@ export const dedupeClues = (clues: string[]): string[] => {
             updatedClues[indicies[0]] = word;
         } else {
             for (let index of indicies) {
-                updatedClues[index] = "Duplicate Clue :(";
+                updatedClues[index] = "<redacted>";
             }
         }
     }

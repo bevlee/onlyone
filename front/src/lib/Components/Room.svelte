@@ -15,20 +15,31 @@
 	let username = $state<string | null>(localStorage.getItem('username'));
 
 	// These need $state because they're mutated in callbacks/socket events
-	let role = $state('');
-	let votes = $state([]);
+	let role: string = $state('');
+	let votes: Array<number> = $state<Array<number>>([]);
 
 	// These don't need $state because they're handled by Svelte's built-in reactivity
+	// svelte-ignore non_reactive_update
 	let categories: Array<string> = ['a', 'b', 'c'];
+	// svelte-ignore non_reactive_update
 	let category: string = '';
+	// svelte-ignore non_reactive_update
 	let clues: Array<string> = ['a', 'b', 'a'];
+	// svelte-ignore non_reactive_update
 	let dedupedClues: Array<string> = [];
+	// svelte-ignore non_reactive_update
 	let timer: Number = 20;
+	// svelte-ignore non_reactive_update
 	let secretWord: string = 'hehexd';
+	// svelte-ignore non_reactive_update
 	let guess: string = '';
+	// svelte-ignore non_reactive_update
 	let wordGuessed: boolean = false;
+	// svelte-ignore non_reactive_update
 	let gamesWon: number = 0;
+	// svelte-ignore non_reactive_update
 	let gamesPlayed: number = 0;
+	// svelte-ignore non_reactive_update
 	let totalRounds: number = 0;
 
 	if (!username) {
@@ -74,6 +85,13 @@
 	socket.on('playerLeft', (player: string) => {
 		console.log(`user ${player} left`);
 		players.delete(player);
+		console.log($state.snapshot(players));
+	});
+
+	socket.on('playerNameChanged', ({ oldName, newName }: { oldName: string; newName: string }) => {
+		console.log(`user ${oldName} changed name to ${newName}`);
+		players.delete(oldName);
+		players.add(newName);
 		console.log($state.snapshot(players));
 	});
 
@@ -126,28 +144,41 @@
 		}
 	);
 
-	socket.on('endGame', (gameState: object) => {
-		try {
-			console.log(`ending game`, gameState);
-			clues = gameState.clues;
-			dedupedClues = gameState.dedupedClues;
-			guess = gameState.guess;
-			secretWord = gameState.secretWord;
-			category = gameState.category;
-			currentScene = 'endGame';
-			wordGuessed = gameState.success;
-			gamesWon = gameState.gamesWon;
-			gamesPlayed = gameState.gamesPlayed;
-			totalRounds = gameState.playerCount;
-		} catch (error) {
-			console.log('errored on end game', error);
+	socket.on(
+		'endGame',
+		(gameState: {
+			clues: Array<string>;
+			dedupedClues: Array<string>;
+			guess: string;
+			secretWord: string;
+			category: string;
+			success: boolean;
+			gamesWon: number;
+			gamesPlayed: number;
+			playerCount: number;
+		}) => {
+			try {
+				console.log(`ending game`, gameState);
+				clues = gameState.clues;
+				dedupedClues = gameState.dedupedClues;
+				guess = gameState.guess;
+				secretWord = gameState.secretWord;
+				category = gameState.category;
+				currentScene = 'endGame';
+				wordGuessed = gameState.success;
+				gamesWon = gameState.gamesWon;
+				gamesPlayed = gameState.gamesPlayed;
+				totalRounds = gameState.playerCount;
+			} catch (error) {
+				console.log('errored on end game', error);
+			}
 		}
-	});
+	);
 
 	//////// FUNCTIONS
 	const changeName = async (newName: string) => {
 		const success = await new Promise((resolve) => {
-			socket.emit('changeName', username, newName, roomName, (response) => {
+			socket.emit('changeName', username, newName, roomName, (response: { status: string }) => {
 				if (response) {
 					resolve(response.status === 'ok');
 				}
@@ -214,7 +245,7 @@
 			alert('must have at least 3 players to play!');
 		} else {
 			console.log('we got enough players nice');
-			socket.emit('startGame', (response) => {
+			socket.emit('startGame', (response: { status: string }) => {
 				console.log('callback was', response);
 			});
 			gameStarted = true;

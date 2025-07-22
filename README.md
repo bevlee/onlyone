@@ -6,14 +6,19 @@ Written in Svelte and Express using Socket.IO
 
 Supports multiple players on multiple devices.
 
+## Architecture
+
+The gameserver has been refactored into a modular architecture for better maintainability and debugging:
 
 ## Demo
+
 You can test the game out at http://bevsoft.com/onlyone
 
 Note that its a multiplayer game so there's not much to do as a single player
 
 ### TODO
+
 - add configs so the game can be self hosted.
 - unit testing
 - integration testing
-- improve  UI for mobile 
+- improve UI for mobile

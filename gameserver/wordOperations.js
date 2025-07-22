@@ -8,6 +8,10 @@ export const normalise = (word) => {
     return word.trim().toLowerCase();
 }
 
+export const getStem = (word) => {
+    return normalise(word);
+}
+
 export const dedupeClues = (clues) => {
     const wordIndexes = {};
 
@@ -26,7 +30,7 @@ export const dedupeClues = (clues) => {
             updatedClues[indicies[0]] = word;
         } else {
             for (let index of indicies) {
-                updatedClues[index] = "Duplicate Clue :(";
+                updatedClues[index] = "<redacted>";
             }
         }
     }
