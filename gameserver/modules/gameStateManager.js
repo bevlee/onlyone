@@ -275,7 +275,7 @@ export class GameStateManager {
    * Update a single vote (thread-safe)
    * @param {string} room - Room name
    * @param {number} index - Index of the clue to vote on
-   * @param {number} value - Vote value (0=keep, negative=eliminate)
+   * @param {number} value - Vote value (-1, +1)
    * @returns {Promise<Object>} Result of the operation
    */
   async updateVote(room, index, value) {

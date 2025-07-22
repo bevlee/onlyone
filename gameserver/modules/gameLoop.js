@@ -147,9 +147,8 @@ export class GameLoop {
    * @param {Object} secretWords - Secret words by category
    * @param {number} timeLimit - Time limit in seconds
    * @param {Array} writers - Array of writer connections
-   * @param {Function} getStem - Function to normalize words for comparison
    */
-  async cluePhase(io, room, writerRoom, guesserRoom, secretWords, timeLimit, writers, getStem) {
+  async cluePhase(io, room, writerRoom, guesserRoom, secretWords, timeLimit, writers) {
     const game = this.gameStateManager.getGame(room);
     const category = game.category;
     

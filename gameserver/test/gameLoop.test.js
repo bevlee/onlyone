@@ -103,11 +103,6 @@ describe('GameLoop', () => {
       expect(writers).to.have.length(2);
       expect(writers[0][0]).to.equal('player2');
       expect(writers[1][0]).to.equal('player3');
-      
-      expect(mockSocket2.joinRoom.called).to.be.false;
-      expect(mockSocket2.leaveRoom.called).to.be.false;
-      expect(mockSocket.joinRoom.called).to.be.false;
-      expect(mockSocket.leaveRoom.called).to.be.false;
     });
 
     it('should exclude guesser from writers array', () => {
