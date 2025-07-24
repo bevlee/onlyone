@@ -134,3 +134,11 @@ dist
 
 # Claude files
 .claude
+
+# SSL/TLS certificates
+certs/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
