@@ -52,17 +52,16 @@ RUN addgroup -g 1001 -S nodejs && \
 COPY --from=deps /app/node_modules ./node_modules
 
 # Copy application code from builder (excludes dev dependencies)
-COPY --from=builder /app/config ./config
+COPY --from=builder /app/data ./data
 COPY --from=builder /app/handlers ./handlers
 COPY --from=builder /app/modules ./modules
-COPY --from=builder /app/utils ./utils
-COPY --from=builder /app/index.js ./
-COPY --from=builder /app/config.js ./
-COPY --from=builder /app/wordOperations.js ./
+COPY --from=builder /app/index.js ./index.js
+COPY --from=builder /app/config ./config
+COPY --from=builder /app/wordOperations.js ./wordOperations.js
 COPY --from=builder /app/package*.json ./
 
-# Change ownership to non-root user
-RUN chown -R gameserver:nodejs /app
+# Create logs directory and change ownership to non-root user  
+RUN mkdir -p /app/logs && chown -R gameserver:nodejs /app
 
 # Switch to non-root user
 USER gameserver
