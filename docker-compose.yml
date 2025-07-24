@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # Frontend
+  frontend:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+      args:
+        - PUBLIC_GAMESERVER_URL=${GAMESERVER_URL:-http://localhost:3001}
+
+  # Game backend
+  gameserver:
+    build:
+      context: ./gameserver
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${GAMESERVER_PORT:-3001}
+    ports:
+      - "${GAMESERVER_PORT:-3001}:${GAMESERVER_PORT:-3001}"
+    user: "1001:1001"
+
+  # Nginx reverse proxy
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - SERVER_NAME=${SERVER_NAME:-localhost}
+      - GAMESERVER_HOST=gameserver
+      - GAMESERVER_PORT=${GAMESERVER_PORT:-3001}
+      - STATIC_CACHE_DURATION=${CACHE_DURATION:-1h}
+      - STATIC_ROOT=${STATIC_ROOT:-/usr/share/nginx/html}
+    volumes:
+      - ./certs:/etc/nginx/ssl:ro
+    depends_on:
+      - gameserver
+      - frontend
+
+volumes:
+  gameserver-logs:
