@@ -2,7 +2,7 @@
 
 A cooperative multiplayer word guessing game inspired by [Just One](<https://en.wikipedia.org/wiki/Just_One_(board_game)>).
 
-Built with Svelte frontend, Node.js backend, and Docker deployment.
+Built with Svelte frontend, Node.js backend, and container deployment.
 
 ## Demo
 
@@ -57,7 +57,7 @@ docker-compose down
 
 ## Services
 
-### Frontend (Port 80/443 via Nginx)
+### Frontend (Port 443 via Nginx)
 
 - Svelte SPA with real-time Socket.IO communication
 - Static file serving with aggressive caching
@@ -70,7 +70,7 @@ docker-compose down
 - Player connection and name change handling
 - Comprehensive test coverage
 
-### Nginx Reverse Proxy (Port 80/443)
+### Nginx Reverse Proxy (Port 443)
 
 - Routes `/socket.io/*` → gameserver WebSocket
 - Routes `/*` → frontend static files
@@ -187,20 +187,6 @@ NODE_ENV=production
 GAMESERVER_PORT=3001
 GAMESERVER_HOST=gameserver
 SERVER_NAME=your-domain.com
-```
-
-### Docker Compose Override
-
-For production customization, create `docker-compose.override.yml`:
-
-```yaml
-version: "3.8"
-services:
-  nginx:
-    ports:
-      - "443:443"
-    volumes:
-      - ./ssl:/etc/nginx/ssl:ro
 ```
 
 ## Features
