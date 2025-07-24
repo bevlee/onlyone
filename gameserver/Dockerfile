@@ -66,7 +66,7 @@ RUN mkdir -p /app/logs && chown -R gameserver:nodejs /app
 # Switch to non-root user
 USER gameserver
 
-EXPOSE 3000
+EXPOSE 3001
 
 # Start the application
 CMD ["npm", "start"]
