@@ -4,8 +4,8 @@ FROM nginx:alpine
 COPY nginx.conf /etc/nginx/nginx.conf.template
 COPY start-nginx.sh /start-nginx.sh
 
-# Copy frontend static files
-COPY --from=onlyone-frontend /app/build /usr/share/nginx/html
+# Copy frontend static files from the build image
+COPY --from=onlyone-frontend:latest /app/build /usr/share/nginx/html
 
 RUN chmod +x /start-nginx.sh
 
