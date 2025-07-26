@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Button } from './ui/button/index.ts';
-	import { Input } from './ui/input/index.ts';
+	import { Button } from './ui/button';
+	import { Input } from './ui/input';
 	const { joinRoom } = $props();
 	let roomName = $state('testRoom');
 	const submit = (e) => {

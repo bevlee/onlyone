@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button } from './ui/button/index.ts';
+	import { Button } from './ui/button';
 	import { defaultTimer } from '../config';
 	import Timer from './Timer.svelte';
 

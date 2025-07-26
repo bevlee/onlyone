@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { env } from '$env/dynamic/public';
-	import { Button } from './ui/button/index.ts';
+	import { Button } from './ui/button';
 	import { io } from 'socket.io-client';
 	import { SvelteSet } from 'svelte/reactivity';
 	import ChooseCategory from '../components/ChooseCategory.svelte';
