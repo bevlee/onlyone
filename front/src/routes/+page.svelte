@@ -1,6 +1,6 @@
 <script lang="ts">
-	import HomePage from '$lib/components/Homepage.svelte';
-	import Room from '$lib/components/Room.svelte';
+	import HomePage from '../lib/components/Homepage.svelte';
+	import Room from '../lib/components/Room.svelte';
 
 	let roomName: string = $state('');
 	let roomSelected: boolean = $state(false);
