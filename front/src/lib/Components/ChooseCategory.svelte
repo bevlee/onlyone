@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button/index';
-	import * as RadioGroup from '$lib/components/ui/radio-group/index';
+	import { Button } from '$lib/components/ui/button/index.ts';
+	import * as RadioGroup from '$lib/components/ui/radio-group/index.ts';
 	import { defaultTimer } from '../config';
 	import Timer from '../components/Timer.svelte';
 	const { categories, role, submitAnswer, leaveGame } = $props();
