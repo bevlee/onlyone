@@ -1,5 +1,5 @@
 # ---- Build Stage ----
-FROM node:20-alpine AS builder
+FROM node:20 AS builder
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ COPY . .
 RUN npm run build
 
 # ---- Test Stage ----
-FROM node:20-alpine AS test
+FROM node:20 AS test
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ RUN npm ci
 COPY . .
 RUN npm test:unit
 # ---- Artifacts Stage ----
-FROM node:20-alpine AS artifacts
+FROM node:20 AS artifacts
 
 WORKDIR /app
 
