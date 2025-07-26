@@ -8,12 +8,15 @@ import { defineConfig } from 'vite';
 /// <reference types="vitest/config" />
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit(), svelteTesting()],
-	resolve: { alias: { $lib: path.resolve('./src/lib') } },
+	resolve: { 
+		alias: { $lib: path.resolve('./src/lib') },
+		extensions: ['.ts', '.js', '.svelte', '.json']
+	},
 	server: {
-		https: {
+		https: fs.existsSync('./localhost-key.pem') && fs.existsSync('./localhost.pem') ? {
 			key: fs.readFileSync('./localhost-key.pem'),
 			cert: fs.readFileSync('./localhost.pem')
-		},
+		} : undefined,
 		// http2: false, // Disable HTTP/2
 		proxy: {}
 	},
