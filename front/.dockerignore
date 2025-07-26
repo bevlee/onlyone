@@ -1,0 +1,37 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Build outputs
+dist
+build
+.output
+
+# Development files
+.vite
+.svelte-kit/output
+.svelte-kit/generated
+
+# Testing
+coverage
+test-results
+playwright-report
+
+# Development tools
+.eslintcache
+.vscode
+.idea
+
+# Logs
+*.log
+
+# Environment and certificates
+.env*
+localhost*.pem
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
