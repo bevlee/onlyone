@@ -35,20 +35,25 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Build frontend locally AND push to registry
-      - name: Build and push frontend image
+      # Build frontend locally only
+      - name: Build frontend image locally
         uses: docker/build-push-action@v5
         with:
           context: ./front
           file: ./front/Dockerfile
-          push: true
-          load: true  # Keep local copy for nginx build
-          tags: |
-            bevdev1/onlyone-frontend:${{ github.ref_name }}
-            bevdev1/onlyone-frontend:latest
-            onlyone-frontend:latest
+          push: false
+          load: true
+          tags: onlyone-frontend:latest
 
-      # Build nginx locally AND push to registry  
+      # Push frontend to registry using local image
+      - name: Push frontend to registry
+        run: |
+          docker tag onlyone-frontend:latest bevdev1/onlyone-frontend:${{ github.ref_name }}
+          docker tag onlyone-frontend:latest bevdev1/onlyone-frontend:latest
+          docker push bevdev1/onlyone-frontend:${{ github.ref_name }}
+          docker push bevdev1/onlyone-frontend:latest
+
+      # Build and push nginx (depends on local onlyone-frontend:latest)
       - name: Build and push nginx image
         uses: docker/build-push-action@v5
         with:
