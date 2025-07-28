@@ -9,8 +9,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit(), svelteTesting()],
 	resolve: { 
-		alias: { $lib: path.resolve('./src/lib') },
-		extensions: ['.ts', '.js', '.svelte', '.json']
+		alias: { $lib: path.resolve('./src/lib') }
 	},
 	server: {
 		https: fs.existsSync('./localhost-key.pem') && fs.existsSync('./localhost.pem') ? {
