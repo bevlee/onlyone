@@ -3,6 +3,7 @@ version: '3.8'
 services:
   # Frontend
   frontend:
+    image: onlyone-frontend:latest
     build:
       context: ./front
       dockerfile: Dockerfile
@@ -27,6 +28,8 @@ services:
     build:
       context: ./nginx
       dockerfile: Dockerfile
+      args:
+        - FRONTEND_IMAGE=${FRONTEND_IMAGE:-onlyone-frontend:latest}
     restart: always
     ports:
       - "80:80"
