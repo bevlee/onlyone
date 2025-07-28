@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Button } from './ui/button';
-	import * as RadioGroup from './ui/radio-group';
-	import { defaultTimer } from '../config';
-	import Timer from '../components/Timer.svelte';
+	import { Button } from '$lib/components/ui/button';
+	import * as RadioGroup from '$lib/components/ui/radio-group';
+	import { defaultTimer } from '$lib/config';
+	import Timer from '$lib/components/Timer.svelte';
 	const { categories, role, submitAnswer, leaveGame } = $props();
 	let selectedOption = $state(categories[0]);
 

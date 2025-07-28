@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
-import Timer from './Timer.svelte';
+import Timer from '$lib/components/Timer.svelte';
 
 describe('Timer Component', () => {
     beforeEach(() => {
