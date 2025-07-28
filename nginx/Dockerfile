@@ -1,4 +1,5 @@
 # Combined nginx+frontend build
+# Note that this will run from the root of the project, not from the nginx directory
 FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app
@@ -18,8 +19,8 @@ FROM nginx:alpine AS final
 COPY --from=frontend-builder /app/build /usr/share/nginx/html
 
 # Copy nginx config
-COPY nginx.conf /etc/nginx/nginx.conf.template
-COPY start-nginx.sh /start-nginx.sh
+COPY nginx/nginx.conf /etc/nginx/nginx.conf.template
+COPY nginx/start-nginx.sh /start-nginx.sh
 
 RUN chmod +x /start-nginx.sh
 
