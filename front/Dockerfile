@@ -7,6 +7,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+RUN find src -name "*.svelte" -o -name "*.js" -o -name "*.ts" | head -50
 RUN npm run build
 
 # ---- Test Stage ----
