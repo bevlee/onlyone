@@ -1,11 +1,25 @@
-FROM nginx:alpine
+# Combined nginx+frontend build
+FROM node:20-alpine AS frontend-builder
 
-# Copy config
+WORKDIR /app
+
+# Copy frontend package files
+COPY front/package.json front/package-lock.json ./
+RUN npm ci
+
+# Copy frontend source
+COPY front/ .
+RUN npx svelte-kit sync && npm run build
+
+# Nginx stage
+FROM nginx:alpine AS final
+
+# Copy built frontend
+COPY --from=frontend-builder /app/build /usr/share/nginx/html
+
+# Copy nginx config
 COPY nginx.conf /etc/nginx/nginx.conf.template
 COPY start-nginx.sh /start-nginx.sh
-
-# Copy frontend static files from the build image
-COPY --from=onlyone-frontend:latest /app/build /usr/share/nginx/html
 
 RUN chmod +x /start-nginx.sh
 

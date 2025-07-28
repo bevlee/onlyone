@@ -1,15 +1,6 @@
 version: '3.8'
 
 services:
-  # Frontend
-  frontend:
-    image: onlyone-frontend:latest
-    build:
-      context: ./front
-      dockerfile: Dockerfile
-      args:
-        - PUBLIC_GAMESERVER_URL=${GAMESERVER_URL:-http://localhost:3001}
-
   # Game backend
   gameserver:
     build:
@@ -23,11 +14,11 @@ services:
       - "${GAMESERVER_PORT:-3001}:${GAMESERVER_PORT:-3001}"
     user: "1001:1001"
 
-  # Nginx reverse proxy
+  # Nginx reverse proxy (includes frontend build)
   nginx:
     build:
-      context: ./nginx
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./nginx/Dockerfile
     restart: always
     ports:
       - "80:80"
@@ -43,7 +34,6 @@ services:
       - ./certs:/etc/nginx/ssl:ro
     depends_on:
       - gameserver
-      - frontend
 
 volumes:
   gameserver-logs:
