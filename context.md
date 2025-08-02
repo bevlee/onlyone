@@ -97,7 +97,7 @@ Each player becomes the guesser in rotation:
 - **Word Processing**: Stem-based clue validation using `wordOperations.js`
 
 ### Environment Configuration
-- **Environment Variables**: Configurable ports, URLs, cache settings
+- **Environment Variables**: Configurable ports, URLs
 - **AWS Integration**: ECS service definitions with ALB target groups
 - **Docker Compose**: Orchestrates all three services with proper networking
 

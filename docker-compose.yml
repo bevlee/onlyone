@@ -22,16 +22,12 @@ services:
     restart: always
     ports:
       - "80:80"
-      - "443:443"
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - SERVER_NAME=${SERVER_NAME:-localhost}
       - GAMESERVER_HOST=gameserver
       - GAMESERVER_PORT=${GAMESERVER_PORT:-3000}
-      - STATIC_CACHE_DURATION=${CACHE_DURATION:-1h}
       - STATIC_ROOT=${STATIC_ROOT:-/usr/share/nginx/html}
-    volumes:
-      - ./certs:/etc/nginx/ssl:ro
     depends_on:
       - gameserver
 

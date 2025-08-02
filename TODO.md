@@ -147,10 +147,10 @@
     - [x] Update any hardcoded port references in configuration
 
 ### Docker Configuration
-- [ ] Remove port 443 and cert references from Dockerfiles
-  - [ ] Update nginx configuration to serve HTTP only
-  - [ ] Remove SSL/TLS configuration from nginx.conf
-  - [ ] Update exposed ports in docker-compose files
+- [x] Remove port 443 and cert references from Dockerfiles
+  - [x] Update nginx configuration to serve HTTP only
+  - [x] Remove SSL/TLS configuration from nginx.conf
+  - [x] Update exposed ports in docker-compose files
 
 ### Testing Updates
 - [x] Update testing to not rely on HTTPS

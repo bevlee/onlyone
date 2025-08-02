@@ -24,6 +24,6 @@ COPY nginx/start-nginx.sh /start-nginx.sh
 
 RUN chmod +x /start-nginx.sh
 
-EXPOSE 80 443
+EXPOSE 80
 
 CMD ["/start-nginx.sh"]
