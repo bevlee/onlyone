@@ -129,10 +129,10 @@
 ## 🔒 Phase 4: Remove HTTPS Configuration
 
 ### Frontend HTTPS Removal
-- [ ] Remove HTTPS cert config from front/vite.config.ts
-  - [ ] Remove cert file checks and loading
-  - [ ] Simplify server configuration to HTTP only
-  - [ ] Update any hardcoded HTTPS URLs
+- [x] Remove HTTPS cert config from front/vite.config.ts
+  - [x] Remove cert file checks and loading
+  - [x] Simplify server configuration to HTTP only
+  - [x] Update any hardcoded HTTPS URLs
 
 ### Backend Communication
 - [ ] Change frontend-backend communication from HTTPS to HTTP
@@ -147,7 +147,14 @@
   - [ ] Update exposed ports in docker-compose files
 
 ### Testing Updates
-- [ ] Update testing to not rely on HTTPS
-  - [ ] Modify integration tests to use HTTP endpoints
-  - [ ] Update test configurations and fixtures
-  - [ ] Ensure all test scripts work with HTTP
+- [x] Update testing to not rely on HTTPS
+  - [x] Modify integration tests to use HTTP endpoints
+  - [x] Update test configurations and fixtures
+  - [x] Ensure all test scripts work with HTTP
+
+### Documentation Updates
+- [ ] Update README files to reflect HTTP-only configuration
+  - [ ] Update root README.md to document AWS ALB deployment model
+  - [x] Update front/README.md to remove HTTPS setup instructions
+  - [ ] Update gameserver/README.md to document HTTP communication
+  - [ ] Remove certificate generation instructions from documentation
