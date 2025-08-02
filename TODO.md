@@ -135,10 +135,16 @@
   - [x] Update any hardcoded HTTPS URLs
 
 ### Backend Communication
-- [ ] Change frontend-backend communication from HTTPS to HTTP
-  - [ ] Update API endpoints to use HTTP
-  - [ ] Modify WebSocket connections to use WS instead of WSS
-  - [ ] Update environment variables and configuration
+- [x] Change frontend-backend communication from HTTPS to HTTP
+  - [x] Update API endpoints to use HTTP
+  - [x] Modify WebSocket connections to use WS instead of WSS
+  - [x] Update environment variables and configuration
+  - [x] Modify backend to listen on port 3000 instead of 3001
+    - [x] Update backend Node.js code to use port 3000
+    - [x] Update backend testing configuration for port 3000
+    - [x] Update Dockerfiles to expose port 3000
+    - [x] Update environment variables and docker-compose files
+    - [x] Update any hardcoded port references in configuration
 
 ### Docker Configuration
 - [ ] Remove port 443 and cert references from Dockerfiles

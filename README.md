@@ -36,7 +36,7 @@ The gameserver has a modular architecture:
 cd front && npm run dev      # https://localhost:5173
 
 # Backend development server
-cd gameserver && npm start   # http://localhost:3001
+cd gameserver && npm start   # http://localhost:3000
 ```
 
 ### Production with Docker
@@ -63,7 +63,7 @@ docker-compose down
 - Static file serving with aggressive caching
 - SPA routing with fallback to index.html
 
-### Gameserver (Internal Port 3001)
+### Gameserver (Internal Port 3000)
 
 - Socket.IO server for real-time game events
 - Game state management across multiple rooms
@@ -184,7 +184,7 @@ Copy `.env.example` to `.env` and configure:
 ```bash
 ENVIRONMENT=production
 NODE_ENV=production
-GAMESERVER_PORT=3001
+GAMESERVER_PORT=3000
 GAMESERVER_HOST=gameserver
 SERVER_NAME=your-domain.com
 ```

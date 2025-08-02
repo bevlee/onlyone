@@ -37,7 +37,7 @@ sudo nginx -t && sudo systemctl reload nginx
 | `ENVIRONMENT` | `development` | `production` | Environment identifier |
 | `SERVER_NAME` | `localhost` | `yourdomain.com` | Primary server name |
 | `GAMESERVER_HOST` | `gameserver` | `gameserver` | Backend container name |
-| `GAMESERVER_PORT` | `3001` | `3001` | Backend port |
+| `GAMESERVER_PORT` | `3000` | `3000` | Backend port |
 
 ### Rate Limiting
 | Variable | Development | Production | Description |

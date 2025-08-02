@@ -9,9 +9,9 @@ services:
     restart: always
     environment:
       - NODE_ENV=${NODE_ENV:-development}
-      - PORT=${GAMESERVER_PORT:-3001}
+      - PORT=${GAMESERVER_PORT:-3000}
     ports:
-      - "${GAMESERVER_PORT:-3001}:${GAMESERVER_PORT:-3001}"
+      - "${GAMESERVER_PORT:-3000}:${GAMESERVER_PORT:-3000}"
     user: "1001:1001"
 
   # Nginx reverse proxy (includes frontend build)
@@ -27,7 +27,7 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - SERVER_NAME=${SERVER_NAME:-localhost}
       - GAMESERVER_HOST=gameserver
-      - GAMESERVER_PORT=${GAMESERVER_PORT:-3001}
+      - GAMESERVER_PORT=${GAMESERVER_PORT:-3000}
       - STATIC_CACHE_DURATION=${CACHE_DURATION:-1h}
       - STATIC_ROOT=${STATIC_ROOT:-/usr/share/nginx/html}
     volumes:

@@ -106,6 +106,6 @@ io.on("connection", async (socket) => {
 });
 
 // Start the server on configured port
-const port = process.env.GAMESERVER_PORT || 3001;
+const port = process.env.GAMESERVER_PORT || 3000;
 startServer(server, port);
 
