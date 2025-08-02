@@ -20,7 +20,6 @@ OnlyOne is a real-time multiplayer word-guessing game inspired by the "Just One"
 **Technology**: Nginx Alpine with custom configuration
 - **Static File Serving**: Serves frontend build files from `/usr/share/nginx/html`
 - **Reverse Proxy**: Routes `/socket.io/*` requests to gameserver with WebSocket upgrade
-- **SSL Termination**: HTTPS with certificates in `/etc/nginx/ssl`
 - **Performance**: Gzip compression, static asset caching
 - **Configuration**: Environment-based templating with `envsubst`
 
@@ -44,19 +43,18 @@ Frontend (build) → Nginx (static files + proxy) → Gameserver (API + WebSocke
 ```
 
 ### Network Architecture
-1. **External Access**: Client → Nginx (ports 80/443)
+1. **External Access**: Client → AWS ALB → ECS (port 80)
 2. **Internal Proxy**: Nginx → Gameserver (internal Docker network)
 3. **WebSocket Upgrade**: Seamless HTTP → WebSocket transition for Socket.IO
 
 ### Container Security
 - **Non-root execution**: Gameserver runs as user `1001:1001`
 - **Multi-stage builds**: Optimized production images
-- **SSL-ready**: Certificate mounting for HTTPS
 
 ## Real-time Communication Patterns
 
 ### Connection Flow
-1. Client connects to `wss://domain/socket.io/`
+1. Client connects to `ws://domain/socket.io/`
 2. Nginx proxies WebSocket connection to gameserver
 3. GameServer authenticates with room/username
 4. ConnectionManager tracks player in room-specific collections
@@ -88,8 +86,9 @@ Each player becomes the guesser in rotation:
 
 ### Deployment Model
 - **Development**: Frontend dev server + separate gameserver
-- **Production**: Fully containerized with nginx handling all client requests
+- **Production**: AWS ECS with ALB for HTTPS termination and load balancing
 - **Scalability**: Stateless frontend allows horizontal nginx scaling
+- **SSL/TLS**: Handled by AWS Application Load Balancer, containers serve HTTP only
 - **Monitoring**: Comprehensive logging and error tracking
 
 ### Data Architecture
@@ -99,15 +98,16 @@ Each player becomes the guesser in rotation:
 
 ### Environment Configuration
 - **Environment Variables**: Configurable ports, URLs, cache settings
-- **SSL Certificates**: External mount point for production certificates
+- **AWS Integration**: ECS service definitions with ALB target groups
 - **Docker Compose**: Orchestrates all three services with proper networking
 
 ## Key Design Decisions
 
 1. **Static Frontend**: SvelteKit builds to static files for nginx serving (performance)
-2. **Nginx Proxy**: Single entry point with SSL termination and WebSocket proxying
-3. **Thread-Safe Backend**: PQueue prevents race conditions in multiplayer state
-4. **Room-based Architecture**: Isolated game instances with targeted broadcasting
-5. **Docker-first**: Development and production use same containerized architecture
+2. **Nginx Proxy**: Single entry point for static files and WebSocket proxying
+3. **AWS ALB Integration**: HTTPS termination and load balancing handled by AWS infrastructure
+4. **Thread-Safe Backend**: PQueue prevents race conditions in multiplayer state
+5. **Room-based Architecture**: Isolated game instances with targeted broadcasting
+6. **Docker-first**: Development and production use same containerized architecture
 
 This architecture provides a scalable, maintainable real-time multiplayer experience with clear separation of concerns and production-ready deployment capabilities.

@@ -125,3 +125,29 @@
   - [ ] Add test-specific environment configurations
   - [ ] Set up test data seeding and cleanup
   - [ ] Configure test-friendly logging and monitoring
+
+## 🔒 Phase 4: Remove HTTPS Configuration
+
+### Frontend HTTPS Removal
+- [ ] Remove HTTPS cert config from front/vite.config.ts
+  - [ ] Remove cert file checks and loading
+  - [ ] Simplify server configuration to HTTP only
+  - [ ] Update any hardcoded HTTPS URLs
+
+### Backend Communication
+- [ ] Change frontend-backend communication from HTTPS to HTTP
+  - [ ] Update API endpoints to use HTTP
+  - [ ] Modify WebSocket connections to use WS instead of WSS
+  - [ ] Update environment variables and configuration
+
+### Docker Configuration
+- [ ] Remove port 443 and cert references from Dockerfiles
+  - [ ] Update nginx configuration to serve HTTP only
+  - [ ] Remove SSL/TLS configuration from nginx.conf
+  - [ ] Update exposed ports in docker-compose files
+
+### Testing Updates
+- [ ] Update testing to not rely on HTTPS
+  - [ ] Modify integration tests to use HTTP endpoints
+  - [ ] Update test configurations and fixtures
+  - [ ] Ensure all test scripts work with HTTP
