@@ -77,14 +77,14 @@
 - [ ] **Reverse Proxy Functionality**
   - [ ] Test static file serving from frontend build artifacts
   - [ ] Verify WebSocket upgrade handling for `/socket.io/*`
-  - [ ] Test SSL/TLS termination and certificate handling
+  - [ ] Test HTTP proxy functionality and headers
   - [ ] Validate proxy headers and request forwarding
 
 - [ ] **Service Discovery Integration**
   - [ ] Test nginx → gameserver internal networking
   - [ ] Verify environment-based configuration templating
   - [ ] Test health check endpoint functionality
-  - [ ] Validate gzip compression and caching headers
+  - [ ] Validate gzip compression headers
 
 ### Gameserver Integration Testing
 - [ ] **Socket.IO Server Integration**
@@ -159,8 +159,8 @@
   - [x] Ensure all test scripts work with HTTP
 
 ### Documentation Updates
-- [ ] Update README files to reflect HTTP-only configuration
-  - [ ] Update root README.md to document AWS ALB deployment model
+- [x] Update README files to reflect HTTP-only configuration
+  - [x] Update root README.md to document AWS ALB deployment model
   - [x] Update front/README.md to remove HTTPS setup instructions
-  - [ ] Update gameserver/README.md to document HTTP communication
-  - [ ] Remove certificate generation instructions from documentation
+  - [x] Update gameserver/README.md to document HTTP communication
+  - [x] Remove certificate generation instructions from documentation

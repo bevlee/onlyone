@@ -27,7 +27,7 @@ export const createSocketServer = (server) => {
   return new Server(server, {
     connectionStateRecovery: {}, // Enable connection state recovery
     cors: {
-      origin: "https://localhost:5173", // Allow frontend origin
+      origin: "http://localhost:5173", // Allow frontend origin
       methods: ["GET"],
     },
   });
