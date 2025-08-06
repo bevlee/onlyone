@@ -27,7 +27,7 @@ export const createSocketServer = (server) => {
   return new Server(server, {
     connectionStateRecovery: {}, // Enable connection state recovery
     cors: {
-      origin: "https://localhost:5173", // Allow frontend origin
+      origin: "http://localhost:5173", // Allow frontend origin
       methods: ["GET"],
     },
   });
@@ -36,9 +36,9 @@ export const createSocketServer = (server) => {
 /**
  * Start the HTTP server on specified port
  * @param {http.Server} server - HTTP server instance
- * @param {number} port - Port number (default: 3001)
+ * @param {number} port - Port number (default: 3000)
  */
-export const startServer = (server, port = 3001) => {
+export const startServer = (server, port = 3000) => {
   server.listen(port, () => {
     logger.info({ port }, `Server running at http://localhost:${port}`);
   });

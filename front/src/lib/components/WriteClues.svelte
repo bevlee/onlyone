@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
-	import { defaultTimer } from '../config';
-	import Timer from './Timer.svelte';
+	import { defaultTimer } from '$lib/config';
+	import Timer from '$lib/components/Timer.svelte';
 
 	const { word, role, submitAnswer, leaveGame } = $props();
 	let clue = $state('');

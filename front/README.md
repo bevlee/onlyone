@@ -64,10 +64,21 @@ npm run test
 
 ## 🌐 Deployment
 
-The app is designed to work with a Socket.IO backend server. Make sure to:
+The app is designed to work with a Socket.IO backend server using HTTP communication. 
 
-1. Set the `PUBLIC_SOCKET_ENDPOINT` environment variable
-2. Deploy the backend server (see `/back` directory)
+**Development:**
+- Frontend dev server runs on HTTP (port 5173)
+- Connect to backend via HTTP WebSocket connections
+- No SSL certificates required locally
+
+**Production (AWS ECS + ALB):**
+- HTTPS termination handled by AWS Application Load Balancer
+- Containers communicate internally via HTTP
+- Frontend served as static files through nginx
+
+**Configuration:**
+1. Set the `PUBLIC_SOCKET_ENDPOINT` environment variable (HTTP endpoint)
+2. Deploy the backend server (see `/gameserver` directory)  
 3. Configure CORS settings for your domain
 
 ## �� Features
@@ -84,7 +95,7 @@ The app is designed to work with a Socket.IO backend server. Make sure to:
 
 ### Environment Variables
 
-- `PUBLIC_SOCKET_ENDPOINT`: WebSocket server endpoint that connects to the game server
+- `PUBLIC_SOCKET_ENDPOINT`: HTTP WebSocket server endpoint that connects to the game server (e.g., `ws://localhost:3000` for development)
 
 ### Key Components
 

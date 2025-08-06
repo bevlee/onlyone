@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Join Room functionality', () => {
     test.beforeEach(async ({ page }) => {
         // Navigate to the homepage and wait for it to be ready
-        await page.goto('https://localhost:5173');
+        await page.goto('http://localhost:5173');
         // Wait for the page to be fully loaded
         await page.waitForLoadState('networkidle');
     });

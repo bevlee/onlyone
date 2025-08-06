@@ -33,10 +33,10 @@ The gameserver has a modular architecture:
 
 ```bash
 # Frontend development server
-cd front && npm run dev      # https://localhost:5173
+cd front && npm run dev      # http://localhost:5173
 
 # Backend development server
-cd gameserver && npm start   # http://localhost:3001
+cd gameserver && npm start   # http://localhost:3000
 ```
 
 ### Production with Docker
@@ -57,20 +57,20 @@ docker-compose down
 
 ## Services
 
-### Frontend (Port 443 via Nginx)
+### Frontend (Port 80 via Nginx)
 
 - Svelte SPA with real-time Socket.IO communication
 - Static file serving with aggressive caching
 - SPA routing with fallback to index.html
 
-### Gameserver (Internal Port 3001)
+### Gameserver (Internal Port 3000)
 
 - Socket.IO server for real-time game events
 - Game state management across multiple rooms
 - Player connection and name change handling
 - Comprehensive test coverage
 
-### Nginx Reverse Proxy (Port 443)
+### Nginx Reverse Proxy (Port 80)
 
 - Routes `/socket.io/*` → gameserver WebSocket
 - Routes `/*` → frontend static files
@@ -85,9 +85,9 @@ docker-compose down
 
 ## URLs
 
-- **Application**: https://localhost
-- **WebSocket**: https://localhost/socket.io/\*
-- **Health Check**: https://localhost/health
+- **Application**: http://localhost
+- **WebSocket**: http://localhost/socket.io/\*
+- **Health Check**: http://localhost/health
 
 ## Development
 
@@ -139,43 +139,19 @@ npm run test:all
 
 3. **Health checks**:
    ```bash
-   curl https://localhost/health
+   curl http://localhost/health
    ```
 
 ## Configuration
 
-### SSL Certificates
+### AWS ALB Deployment
 
-Place your SSL certificates in the `certs/` directory:
+This application is designed for deployment with AWS ECS + Application Load Balancer (ALB):
 
-```
-certs/
-├── server.pem      # SSL certificate
-└── server-key.pem  # Private key
-```
-
-### Development SSL Setup
-
-For local development, create SSL certificates using [mkcert](https://github.com/FiloSottile/mkcert):
-
-```bash
-# Install mkcert (macOS)
-brew install mkcert
-
-# Install mkcert (Linux)
-curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64"
-chmod +x mkcert-v*-linux-amd64
-sudo mv mkcert-v*-linux-amd64 /usr/local/bin/mkcert
-
-# Install the local CA
-mkcert -install
-
-# Create certificates for localhost
-mkdir -p certs
-mkcert -key-file certs/server-key.pem -cert-file certs/server.pem localhost 127.0.0.1 ::1
-```
-
-This creates trusted SSL certificates for localhost development that work with all browsers.
+- **HTTPS Termination**: Handled by AWS ALB, not the application containers
+- **SSL Certificates**: Managed by AWS Certificate Manager (ACM)
+- **Container Communication**: All internal communication uses HTTP only
+- **Load Balancer**: ALB routes HTTPS traffic to HTTP containers on port 80
 
 ### Environment Variables
 
@@ -184,7 +160,7 @@ Copy `.env.example` to `.env` and configure:
 ```bash
 ENVIRONMENT=production
 NODE_ENV=production
-GAMESERVER_PORT=3001
+GAMESERVER_PORT=3000
 GAMESERVER_HOST=gameserver
 SERVER_NAME=your-domain.com
 ```
@@ -214,7 +190,7 @@ SERVER_NAME=your-domain.com
 
 - **Nginx logs**: `docker-compose logs nginx`
 - **Gameserver logs**: `docker-compose logs gameserver`
-- **Health status**: `curl https://localhost/health`
+- **Health status**: `curl http://localhost/health`
 - **Service status**: `docker-compose ps`
 
 ## Contributing

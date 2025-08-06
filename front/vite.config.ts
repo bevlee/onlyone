@@ -1,21 +1,14 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { svelteTesting } from '@testing-library/svelte/vite';
-import fs from 'fs';
 import path from 'path';
 import { defineConfig } from 'vite';
 
 /// <reference types="vitest/config" />
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit(), svelteTesting()],
-	resolve: { alias: { $lib: path.resolve('./src/lib') } },
-	server: {
-		https: {
-			key: fs.readFileSync('./localhost-key.pem'),
-			cert: fs.readFileSync('./localhost.pem')
-		},
-		// http2: false, // Disable HTTP/2
-		proxy: {}
+	resolve: { 
+		alias: { $lib: path.resolve('./src/lib') }
 	},
 	test: {
 		projects: [

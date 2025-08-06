@@ -3,11 +3,11 @@
 	import { Button } from '$lib/components/ui/button';
 	import { io } from 'socket.io-client';
 	import { SvelteSet } from 'svelte/reactivity';
-	import ChooseCategory from '../components/ChooseCategory.svelte';
-	import EndGame from '../components/EndGame.svelte';
-	import FilterClues from '../components/FilterClues.svelte';
-	import GuessWord from '../components/GuessWord.svelte';
-	import WriteClues from './WriteClues.svelte';
+	import ChooseCategory from '$lib/components/ChooseCategory.svelte';
+	import EndGame from '$lib/components/EndGame.svelte';
+	import FilterClues from '$lib/components/FilterClues.svelte';
+	import GuessWord from '$lib/components/GuessWord.svelte';
+	import WriteClues from '$lib/components/WriteClues.svelte';
 
 	let { roomName, leaveRoom } = $props();
 	console.log('Room name in child:', roomName);

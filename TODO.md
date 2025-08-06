@@ -77,14 +77,14 @@
 - [ ] **Reverse Proxy Functionality**
   - [ ] Test static file serving from frontend build artifacts
   - [ ] Verify WebSocket upgrade handling for `/socket.io/*`
-  - [ ] Test SSL/TLS termination and certificate handling
+  - [ ] Test HTTP proxy functionality and headers
   - [ ] Validate proxy headers and request forwarding
 
 - [ ] **Service Discovery Integration**
   - [ ] Test nginx → gameserver internal networking
   - [ ] Verify environment-based configuration templating
   - [ ] Test health check endpoint functionality
-  - [ ] Validate gzip compression and caching headers
+  - [ ] Validate gzip compression headers
 
 ### Gameserver Integration Testing
 - [ ] **Socket.IO Server Integration**
@@ -125,3 +125,42 @@
   - [ ] Add test-specific environment configurations
   - [ ] Set up test data seeding and cleanup
   - [ ] Configure test-friendly logging and monitoring
+
+## 🔒 Phase 4: Remove HTTPS Configuration
+
+### Frontend HTTPS Removal
+- [x] Remove HTTPS cert config from front/vite.config.ts
+  - [x] Remove cert file checks and loading
+  - [x] Simplify server configuration to HTTP only
+  - [x] Update any hardcoded HTTPS URLs
+
+### Backend Communication
+- [x] Change frontend-backend communication from HTTPS to HTTP
+  - [x] Update API endpoints to use HTTP
+  - [x] Modify WebSocket connections to use WS instead of WSS
+  - [x] Update environment variables and configuration
+  - [x] Modify backend to listen on port 3000 instead of 3001
+    - [x] Update backend Node.js code to use port 3000
+    - [x] Update backend testing configuration for port 3000
+    - [x] Update Dockerfiles to expose port 3000
+    - [x] Update environment variables and docker-compose files
+    - [x] Update any hardcoded port references in configuration
+
+### Docker Configuration
+- [x] Remove port 443 and cert references from Dockerfiles
+  - [x] Update nginx configuration to serve HTTP only
+  - [x] Remove SSL/TLS configuration from nginx.conf
+  - [x] Update exposed ports in docker-compose files
+
+### Testing Updates
+- [x] Update testing to not rely on HTTPS
+  - [x] Modify integration tests to use HTTP endpoints
+  - [x] Update test configurations and fixtures
+  - [x] Ensure all test scripts work with HTTP
+
+### Documentation Updates
+- [x] Update README files to reflect HTTP-only configuration
+  - [x] Update root README.md to document AWS ALB deployment model
+  - [x] Update front/README.md to remove HTTPS setup instructions
+  - [x] Update gameserver/README.md to document HTTP communication
+  - [x] Remove certificate generation instructions from documentation
