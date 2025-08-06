@@ -6,7 +6,7 @@ Built with Svelte frontend, Node.js backend, and container deployment.
 
 ## Demo
 
-You can test the game at https://bevsoft.com/onlyone
+You can test the game at https://onlyone.bevsoft.com
 
 Note: This is a multiplayer game - you'll need multiple players to enjoy the full experience!
 
