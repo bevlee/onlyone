@@ -1,166 +1,119 @@
-# TODO - DockerHub Migration
+# TODO
 
-## Phase 1: Multi-stage Frontend Build Strategy
+## 🎭 Playwright E2E Testing Implementation
 
-### Frontend Image Build
+### Phase 1: Setup Infrastructure (Completed ✅)
+- [x] **Project Structure Setup**
+  - [x] Create `/e2e-tests/` directory in project root
+  - [x] Set up `playwright.config.ts` with multi-browser configuration (Chromium, Firefox, Safari)
+  - [x] Create `docker-compose.e2e.yml` for isolated test environment
+  - [x] Add Playwright dependencies to root `package.json`
+  - [x] Create test execution scripts (`test:e2e`, `test:e2e:headed`, `test:e2e:debug`)
 
-- [x] Create standalone frontend build image
-  - [x] Build frontend with all static assets
-  - [x] Export build artifacts to `/app/build`
-  - [x] Tag as intermediate build image
-  - [x] Test local build produces static files
+- [x] **Environment Configuration**
+  - [x] Configure test base URLs and ports
+  - [x] Set up test-specific environment variables
+  - [x] Create test database/storage isolation
+  - [x] Configure parallel test execution settings
 
-### Nginx Image with Frontend Assets
+### Phase 2: Test Fixtures & Helpers
+- [ ] **Core Test Utilities**
+  - [ ] Create `fixtures/room-setup.ts` for room creation helpers
+  - [ ] Build `fixtures/socket-helpers.ts` for WebSocket testing utilities
+  - [ ] Set up `fixtures/user-helpers.ts` for user management
+  - [ ] Create `fixtures/cleanup.ts` for test isolation and cleanup
 
-- [x] Update nginx Dockerfile to use frontend build image
-  - [x] Remove broken `--from=onlyone-frontend` reference
-  - [x] Test nginx serves static files correctly
-  - [ ] Verify WebSocket proxy still works
+- [ ] **Data Generators**
+  - [ ] Implement random username generators
+  - [ ] Create unique room name generators
+  - [ ] Build test data factories for game states
+  - [ ] Set up mock data for different scenarios
 
-## 🚀 Phase 2: DockerHub Image Publishing Strategy
+### Phase 3: Core Connection Tests
+- [ ] **Single User Scenarios** (`tests/connection.spec.ts`)
+  - [ ] Test user creates room and joins successfully
+  - [ ] Verify room state shows correct player count
+  - [ ] Test room persistence across page refreshes
+  - [ ] Validate localStorage username persistence
 
-### Image Registry Architecture
-- [ ] Design multi-service image strategy
-  - [ ] Plan image naming convention for `bevdev1/onlyone-*` repositories
-  - [ ] CI-only semantic versioning strategy (v1.2.3)
-  - [ ] Coordinated version releases across all services
+- [ ] **Multi-User Joining** (`tests/multi-user.spec.ts`)
+  - [ ] Multiple users join same room simultaneously
+  - [ ] Verify all players see each other in lobby
+  - [ ] Test concurrent join requests don't cause conflicts
+  - [ ] Validate player list synchronization across browsers
 
-### Distribution Pipeline Design  
-- [ ] Design build and deployment workflow
-  - [ ] Local development: build from source (no registry pulls)
-  - [ ] Production deployment: semver-tagged images only via CI/CD
-  - [ ] Git tag → CI trigger → Docker semver workflow
-  - [ ] Version coordination strategy across frontend/gameserver/nginx
+- [ ] **Connection State Management**
+  - [ ] User disconnects unexpectedly (close tab/browser)
+  - [ ] Verify other players see disconnection immediately
+  - [ ] Test automatic cleanup of disconnected players
+  - [ ] Validate connection status indicators
 
-### Semantic Versioning Workflow
-- [ ] **Git Tag Strategy**
-  - [ ] Define semver format (v1.2.3) for releases
-  - [ ] Create git tag validation rules
-  - [ ] Document release process (tag → CI → deploy)
-  - [ ] Set up automated changelog generation
+### Phase 4: Name Management Tests
+- [ ] **Valid Name Changes** (`tests/name-management.spec.ts`)
+  - [ ] User changes name to valid unique name
+  - [ ] All other players see name update in real-time
+  - [ ] Name persists in localStorage across sessions
+  - [ ] Test name change confirmation feedback
 
-- [ ] **CI/CD Semver Integration**
-  - [ ] Modify GitHub Actions to trigger only on git tags
-  - [ ] Add semver parsing from git tags to Docker tags
-  - [ ] Update `latest` tag automatically on stable releases
-  - [ ] Registry authentication and security model
+- [ ] **Name Conflict Resolution**
+  - [ ] User attempts to change to existing player's name
+  - [ ] System rejects change and shows appropriate error
+  - [ ] Original name remains unchanged
+  - [ ] Test retry mechanism after conflict
 
-### Version Coordination
-- [ ] **Multi-Service Versioning**
-  - [ ] Ensure frontend/gameserver/nginx versions stay aligned
-  - [ ] Create version compatibility matrix
-  - [ ] Add version validation in nginx Dockerfile
-  - [ ] Test cross-service version compatibility
+- [ ] **Edge Case Name Validation**
+  - [ ] Empty names and whitespace-only names
+  - [ ] Names too long (>30 characters)
+  - [ ] Special characters and unicode/emoji names
+  - [ ] SQL injection and XSS attempt prevention
 
-- [ ] **Release Management**
-  - [ ] Image update and rollback strategies
-  - [ ] Multi-environment configuration management
-  - [ ] Integration with existing GitHub Actions workflow
-  - [ ] Production deployment validation
+### Phase 5: Advanced Scenarios
+- [ ] **Network Recovery Tests** (`tests/recovery.spec.ts`)
+  - [ ] Simulate network interruption during active session
+  - [ ] Test automatic reconnection and state restoration
+  - [ ] Verify room state consistency after recovery
+  - [ ] Test connection timeout handling
 
-## 🧪 Phase 3: Local Integration Testing Framework
+- [ ] **Server Restart Scenarios**
+  - [ ] Restart gameserver during active sessions
+  - [ ] Test graceful reconnection of all clients
+  - [ ] Verify room state reconstruction
+  - [ ] Test data persistence across restarts
 
-### Frontend Integration Testing
-- [ ] **Static Asset Integration**
-  - [ ] Verify frontend builds produce correct static files
-  - [ ] Test asset serving through nginx proxy
-  - [ ] Validate SPA routing and fallback behavior
-  - [ ] Check frontend environment variable injection
+- [ ] **Race Condition Tests**
+  - [ ] Multiple browsers join/leave rapidly
+  - [ ] Verify player lists stay synchronized
+  - [ ] Test concurrent name changes
+  - [ ] Validate game state consistency under load
 
-- [ ] **Socket.IO Client Integration**
-  - [ ] Test WebSocket connection establishment
-  - [ ] Verify Socket.IO client can connect through nginx proxy
-  - [ ] Test connection recovery and reconnection logic
-  - [ ] Validate client-side event handling
+### Phase 6: Cross-Browser Compatibility
+- [ ] **Browser-Specific Tests**
+  - [ ] Test WebSocket connections across browsers
+  - [ ] Verify UI consistency (Chrome, Firefox, Safari)
+  - [ ] Test mobile browser compatibility
+  - [ ] Validate performance across different browsers
 
-### Nginx Proxy Integration Testing
-- [ ] **Reverse Proxy Functionality**
-  - [ ] Test static file serving from frontend build artifacts
-  - [ ] Verify WebSocket upgrade handling for `/socket.io/*`
-  - [ ] Test HTTP proxy functionality and headers
-  - [ ] Validate proxy headers and request forwarding
+- [ ] **Socket.IO Compatibility**
+  - [ ] Test WebSocket fallback mechanisms
+  - [ ] Verify polling fallback works correctly
+  - [ ] Test connection upgrade scenarios
+  - [ ] Validate transport negotiation
 
-- [ ] **Service Discovery Integration**
-  - [ ] Test nginx → gameserver internal networking
-  - [ ] Verify environment-based configuration templating
-  - [ ] Test health check endpoint functionality
-  - [ ] Validate gzip compression headers
+### Phase 7: Integration & Automation
+- [ ] **CI/CD Integration**
+  - [ ] Integrate tests into GitHub Actions
+  - [ ] Set up test result reporting
+  - [ ] Configure failure notifications
+  - [ ] Create nightly full test runs
 
-### Gameserver Integration Testing
-- [ ] **Socket.IO Server Integration**
-  - [ ] Test WebSocket server accepts connections through proxy
-  - [ ] Verify room-based connection management
-  - [ ] Test real-time event broadcasting to multiple clients
-  - [ ] Validate game state synchronization across connections
+- [ ] **Test Maintenance**
+  - [ ] Document test writing guidelines
+  - [ ] Create test debugging procedures
+  - [ ] Set up test data management
+  - [ ] Establish test review process
 
-- [ ] **Multi-Service Communication**
-  - [ ] Test gameserver responds to proxied requests
-  - [ ] Verify internal Docker networking connectivity
-  - [ ] Test environment variable configuration
-  - [ ] Validate logging and error handling integration
-
-### Full-Stack Integration Testing
-- [ ] **Complete Game Flow Integration**
-  - [ ] Test end-to-end game creation and joining
-  - [ ] Verify category selection across multiple clients
-  - [ ] Test clue writing and submission workflow
-  - [ ] Validate voting and filtering functionality
-  - [ ] Test word guessing and scoring integration
-
-- [ ] **Multi-Player Scenarios**
-  - [ ] Test multiple browser sessions in same room
-  - [ ] Verify player connection/disconnection handling
-  - [ ] Test concurrent game state updates
-  - [ ] Validate room isolation between different games
-
-### Integration Test Automation
-- [ ] **Local Testing Scripts**
-  - [ ] Create `scripts/test-integration.sh` for full stack testing
-  - [ ] Add `scripts/start-test-env.sh` for quick environment setup
-  - [ ] Create health check validation scripts
-  - [ ] Add container log aggregation for debugging
-
-- [ ] **Docker Compose Test Configuration**
-  - [ ] Create `docker-compose.test.yml` for integration testing
-  - [ ] Add test-specific environment configurations
-  - [ ] Set up test data seeding and cleanup
-  - [ ] Configure test-friendly logging and monitoring
-
-## 🔒 Phase 4: Remove HTTPS Configuration
-
-### Frontend HTTPS Removal
-- [x] Remove HTTPS cert config from front/vite.config.ts
-  - [x] Remove cert file checks and loading
-  - [x] Simplify server configuration to HTTP only
-  - [x] Update any hardcoded HTTPS URLs
-
-### Backend Communication
-- [x] Change frontend-backend communication from HTTPS to HTTP
-  - [x] Update API endpoints to use HTTP
-  - [x] Modify WebSocket connections to use WS instead of WSS
-  - [x] Update environment variables and configuration
-  - [x] Modify backend to listen on port 3000 instead of 3001
-    - [x] Update backend Node.js code to use port 3000
-    - [x] Update backend testing configuration for port 3000
-    - [x] Update Dockerfiles to expose port 3000
-    - [x] Update environment variables and docker-compose files
-    - [x] Update any hardcoded port references in configuration
-
-### Docker Configuration
-- [x] Remove port 443 and cert references from Dockerfiles
-  - [x] Update nginx configuration to serve HTTP only
-  - [x] Remove SSL/TLS configuration from nginx.conf
-  - [x] Update exposed ports in docker-compose files
-
-### Testing Updates
-- [x] Update testing to not rely on HTTPS
-  - [x] Modify integration tests to use HTTP endpoints
-  - [x] Update test configurations and fixtures
-  - [x] Ensure all test scripts work with HTTP
-
-### Documentation Updates
-- [x] Update README files to reflect HTTP-only configuration
-  - [x] Update root README.md to document AWS ALB deployment model
-  - [x] Update front/README.md to remove HTTPS setup instructions
-  - [x] Update gameserver/README.md to document HTTP communication
-  - [x] Remove certificate generation instructions from documentation
+- [ ] **Performance & Monitoring**
+  - [ ] Add test execution time monitoring
+  - [ ] Set up test flakiness detection
+  - [ ] Create test coverage reporting
+  - [ ] Implement test result analytics
