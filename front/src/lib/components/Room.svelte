@@ -295,15 +295,13 @@
 			<h4>How to play:</h4>
 			<div class="justify-start">
 				<ol class="inline-block list-inside list-decimal">
-					<li>One player gets the "guesser" role and chooses a category for a secret word.</li>
-					<li>
-						All other players will see the word and write a one word clue to help that player guess
-						the secret word.
-					</li>
-					<li>Any duplicate clues will be cancelled out!</li>
+					<li>Guesser picks a category</li>
+					<li>Others see the word, give one-word clues</li>
+					<li>No duplicate clues allowed!</li>
 				</ol>
 				<br /> <br />
-				This is a team game and your goal is to get as many guesses right as possible!
+				Goal: Guess as many words as possible together!
+				<br /> <br />
 			</div>
 		</div>
 		<Button class="startButton" onclick={startGame}>Start</Button>
