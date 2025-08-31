@@ -1,10 +1,7 @@
 <script lang="ts">
-	import { DropdownMenu as DropdownMenuPrimitive } from 'bits-ui';
-	import { cn } from '$lib/utils';
-	
-	let { class: className, children, ...props } = $props();
+	import { DropdownMenu as DropdownMenuPrimitive } from "bits-ui";
+
+	let { ref = $bindable(null), ...restProps }: DropdownMenuPrimitive.TriggerProps = $props();
 </script>
 
-<DropdownMenuPrimitive.Trigger class={cn('outline-none', className)} {...props}>
-	{@render children()}
-</DropdownMenuPrimitive.Trigger>
+<DropdownMenuPrimitive.Trigger bind:ref data-slot="dropdown-menu-trigger" {...restProps} />
