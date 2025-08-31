@@ -97,6 +97,11 @@ io.on("connection", async (socket) => {
   socket.on("guessWord", (guess) => {
     gameStateManager.setGuess(room, guess);
   });
+  
+  socket.on("nextRound", () => {
+    logger.debug({ room, username }, 'Player triggered next round');
+    // Event is handled by the waitForNextRound Promise in gameLoop
+  });
 
   // Handle socket recovery (for connection state recovery)
   if (!socket.recovered) {
