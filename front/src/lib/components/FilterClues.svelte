@@ -36,33 +36,64 @@
 	};
 </script>
 
-{#if role == 'guesser'}
-	<h2>
-		<Timer count={defaultTimer} submitAnswer={() => {}} />
-		Removing duplicate clues...
-	</h2>
-{:else}
-	<Timer count={defaultTimer} {submitAnswer} />
-	<p>The secret word is {secretWord}</p>
-	{#each clues as clue, index}
-		<div>
-			{#if votes[index] < 0}
-				{clue} is a duplicate with {votes[index]} votes
-			{:else}
-				{clue} is good with {votes[index]} votes
-			{/if}
-			<Button disabled={hasVoted(index, -1)} onclick={() => voteOnClue(index, -1)}>-</Button>
-			<Button disabled={hasVoted(index, 1)} onclick={() => voteOnClue(index, 1)}>+</Button>
+<div class="space-y-6">
+	{#if role == 'guesser'}
+		<div class="space-y-4 text-center">
+			<Timer count={defaultTimer} submitAnswer={() => {}} />
+			<h2 class="text-muted-foreground text-lg font-medium">Removing duplicate clues...</h2>
 		</div>
-	{/each}
+	{:else}
+		<Timer count={defaultTimer} {submitAnswer} />
 
-	<br />
-	<br />
-	<br />
-	<br />
-	<Button disabled={submitted} onclick={() => submitAnswer()}>
-		{submitted ? 'Votes submitted' : 'Looks good to me!'}</Button
-	>
-{/if}
+		<div class="bg-card rounded-lg border p-4 text-center">
+			<div class="text-muted-foreground text-sm">The secret word is</div>
+			<div class="text-primary mt-1 text-lg font-semibold">{secretWord}</div>
+		</div>
+
+		<div class="space-y-3">
+			{#each clues as clue, index}
+				<div class="bg-card space-y-3 rounded-lg border p-4">
+					<div class="text-center">
+						<div class="font-medium">{clue || '(empty)'}</div>
+						<div class="text-muted-foreground mt-1 text-sm">
+							{#if votes[index] < 0}
+								Duplicate - {Math.abs(votes[index])} votes
+							{:else}
+								Good clue - {votes[index]} votes
+							{/if}
+						</div>
+					</div>
+
+					<div class="flex justify-center gap-2">
+						<Button
+							variant="outline"
+							size="sm"
+							disabled={hasVoted(index, -1)}
+							onclick={() => voteOnClue(index, -1)}
+							class="px-6"
+						>
+							Mark as Duplicate (-1 vote)
+						</Button>
+						<Button
+							variant="outline"
+							size="sm"
+							disabled={hasVoted(index, 1)}
+							onclick={() => voteOnClue(index, 1)}
+							class="px-6"
+						>
+							Keep Clue (+1 vote)
+						</Button>
+					</div>
+				</div>
+			{/each}
+		</div>
+
+		<div class="text-center">
+			<Button disabled={submitted} onclick={() => submitAnswer()} class="px-8">
+				{submitted ? 'Votes submitted' : 'Looks good to me!'}
+			</Button>
+		</div>
+	{/if}
+</div>
 
 <!-- <Button onclick={() => leaveGame()}>Leave Game</Button> -->

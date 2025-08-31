@@ -35,3 +35,17 @@ export {
 	Description as DialogDescription,
 	Close as DialogClose,
 };
+
+// For better TypeScript support with import * as Dialog
+export default {
+	Root,
+	Title,
+	Portal,
+	Footer,
+	Header,
+	Trigger,
+	Overlay,
+	Content,
+	Description,
+	Close,
+};

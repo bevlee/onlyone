@@ -25,12 +25,14 @@
 	};
 </script>
 
-{#if timerFinished}
-	{stopTimer()}
-	<h3>Time's UP!</h3>
-{:else}
-	<h3>
-		{timerText}
-	</h3>
-	<h3>{count.toString()}</h3>
-{/if}
+<div class="text-center space-y-1">
+	{#if timerFinished}
+		{stopTimer()}
+		<div class="text-lg font-medium text-red-600 dark:text-red-400">Time's up!</div>
+	{:else}
+		<div class="text-sm text-muted-foreground">{timerText}</div>
+		<div class="text-2xl font-bold {count < 10 ? 'text-red-600 dark:text-red-400' : 'text-foreground'}">
+			{count}
+		</div>
+	{/if}
+</div>

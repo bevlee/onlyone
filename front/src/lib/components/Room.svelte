@@ -1,13 +1,6 @@
 <script lang="ts">
 	import { env } from '$env/dynamic/public';
 	import { Button } from '$lib/components/ui/button';
-	import {
-		DropdownMenu,
-		DropdownMenuContent,
-		DropdownMenuItem,
-		DropdownMenuSeparator,
-		DropdownMenuTrigger
-	} from '$lib/components/ui/dropdown-menu';
 	import { io } from 'socket.io-client';
 	import { SvelteSet } from 'svelte/reactivity';
 	import ChooseCategory from '$lib/components/ChooseCategory.svelte';
@@ -15,14 +8,24 @@
 	import FilterClues from '$lib/components/FilterClues.svelte';
 	import GuessWord from '$lib/components/GuessWord.svelte';
 	import WriteClues from '$lib/components/WriteClues.svelte';
-	import SettingsIcon from '@lucide/svelte/icons/settings';
-	import UserIcon from '@lucide/svelte/icons/user';
-	import LogOutIcon from '@lucide/svelte/icons/log-out';
+	import RoomHeader from '$lib/components/RoomHeader.svelte';
+	import PlayerList from '$lib/components/PlayerList.svelte';
+	import GameInstructions from '$lib/components/GameInstructions.svelte';
+	import ChangeNameModal from '$lib/components/ChangeNameModal.svelte';
+	import LeaveRoomModal from '$lib/components/LeaveRoomModal.svelte';
 
 	let { roomName, leaveRoom } = $props();
-	console.log('Room name in child:', roomName);
+
 	let gameStarted = $state<boolean>(false);
-	let username = $state<string | null>(localStorage.getItem('username'));
+	// Initialize username properly
+	const initialUsername =
+		localStorage.getItem('username') || 'user' + Math.floor(Math.random() * 10000);
+	let username = $state<string>(initialUsername);
+
+	// Modal states
+	let showChangeNameModal = $state(false);
+	let showLeaveRoomModal = $state(false);
+	let isChangingName = $state(false);
 
 	// These need $state because they're mutated in callbacks/socket events
 	let role: string = $state('');
@@ -52,9 +55,9 @@
 	// svelte-ignore non_reactive_update
 	let totalRounds: number = 0;
 
-	if (!username) {
-		username = 'user' + Math.floor(Math.random() * 10000);
-		setUsername(username);
+	// Set initial username if not already saved
+	if (initialUsername.startsWith('user')) {
+		setUsername(initialUsername);
 	}
 	let currentScene = $state<string>('main');
 	let players = $state(new SvelteSet([username]));
@@ -186,38 +189,30 @@
 	);
 
 	//////// FUNCTIONS
-	const changeName = async (newName: string) => {
-		const success = await new Promise((resolve) => {
-			socket.emit('changeName', username, newName, roomName, (response: { status: string }) => {
-				if (response) {
-					resolve(response.status === 'ok');
-				}
-				resolve(false);
+	const handleChangeName = async (newName: string): Promise<boolean> => {
+		isChangingName = true;
+		try {
+			const success = await new Promise<boolean>((resolve) => {
+				socket.emit('changeName', username, newName, roomName, (response: { status: string }) => {
+					if (response) {
+						resolve(response.status === 'ok');
+					}
+					resolve(false);
+				});
 			});
-		});
 
-		if (success) {
-			setUsername(newName);
-			return true;
+			if (success) {
+				setUsername(newName);
+				return true;
+			}
+			return false;
+		} finally {
+			isChangingName = false;
 		}
-		return false;
 	};
 
-	console.log('roomname is', roomName);
-	const changeNamePrompt = async () => {
-		console.log('changing name');
-		let newName: string | null = prompt('Please enter your username', username);
-		if (newName) {
-			if (newName.length > 0 && newName.length < 30 && newName != username) {
-				const nameChangeSuccess = await changeName(newName);
-				if (!nameChangeSuccess) {
-					alert('Error: There is already a player in the room with the name: ');
-					await changeNamePrompt();
-				}
-			} else {
-				alert('Name must be between 1 and 30 chars and unique. Try again!');
-			}
-		}
+	const openChangeNameModal = () => {
+		showChangeNameModal = true;
 	};
 
 	// submit event to server and proceed to next scene
@@ -243,7 +238,11 @@
 		categories = [];
 	};
 
-	const leave = () => {
+	const openLeaveRoomModal = () => {
+		showLeaveRoomModal = true;
+	};
+
+	const handleLeaveRoom = () => {
 		socket.disconnect();
 		leaveRoom();
 	};
@@ -271,96 +270,88 @@
 		socket.emit('updateVotes', index, value);
 	};
 
+	const nextRound = () => {
+		socket.emit('nextRound');
+	};
+
 	export const add = (first: number) => {
 		return first + 10;
 	};
 </script>
 
-<div class="space-y-6 p-6">
-	<div class="flex justify-end">
-		<DropdownMenu>
-			<DropdownMenuTrigger>
-				<Button variant="outline" size="icon">
-					<SettingsIcon class="h-4 w-4" />
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end">
-				{#if currentScene === 'main' || currentScene === 'endGame'}
-					<DropdownMenuItem onclick={changeNamePrompt}>
-						<UserIcon class="mr-2 h-4 w-4" />
-						Change Name
-					</DropdownMenuItem>
-					<DropdownMenuSeparator />
-				{/if}
-				<DropdownMenuItem onclick={() => leave()}>
-					<LogOutIcon class="mr-2 h-4 w-4" />
-					Leave Room
-				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
-	</div>
+<div class="bg-background min-h-screen">
+	<RoomHeader
+		{roomName}
+		{username}
+		{currentScene}
+		onChangeName={openChangeNameModal}
+		onLeaveRoom={openLeaveRoomModal}
+	/>
 
-	<div class="space-y-4 text-center">
-		<div class="space-y-2">
-			<h2 class="text-xl font-semibold">
-				Room: <span class="text-primary">{roomName}</span>
-			</h2>
-			<p class="text-lg">
-				Username: <strong>{username}</strong>
-			</p>
-		</div>
-
-	</div>
-
-	<div class="space-y-3">
-		<h3 class="text-center text-lg font-medium">Players in Lobby</h3>
-		<ul class="space-y-1 rounded-lg border bg-muted/20 p-4">
-			{#each players.keys() as player}
-				<li class="text-center">{player}</li>
-			{/each}
-		</ul>
+	<div class="container mx-auto max-w-4xl space-y-6 p-4">
+		<PlayerList {players} currentUser={username} />
 	</div>
 
 	{#if currentScene == 'main'}
-		<div class="space-y-6">
-			<div class="space-y-4 rounded-lg border bg-muted/20 p-6">
-				<h3 class="text-center text-lg font-medium">How to play</h3>
-				<ol class="space-y-2 list-inside list-decimal text-left">
-					<li>Guesser picks a category</li>
-					<li>Others see the word, give one-word clues</li>
-					<li>No duplicate clues allowed!</li>
-				</ol>
-				<p class="text-center font-medium">
-					Goal: Guess as many words as possible together!
-				</p>
-			</div>
-			<div class="pt-4">
-				<Button class="w-full" variant="default" onclick={startGame}>Start Game</Button>
+		<div class="container mx-auto max-w-4xl space-y-6 p-4">
+			<GameInstructions />
+
+			<div class="flex justify-center">
+				<Button
+					class="px-8 py-3 text-lg font-semibold"
+					variant="default"
+					onclick={startGame}
+					disabled={players.size < 3}
+				>
+					{players.size < 3 ? `Need ${3 - players.size} more players` : 'Start Game'}
+				</Button>
 			</div>
 		</div>
 	{:else if currentScene == 'chooseCategory'}
-		<div class="text-center">
-			<p class="mb-4 text-sm text-muted-foreground">My role is {role}</p>
+		<div class="container mx-auto max-w-4xl p-4">
+			<div class="mb-6 text-center">
+				<p class="text-muted-foreground text-sm">
+					My role is <span class="text-foreground font-medium">{role}</span>
+				</p>
+			</div>
+			<ChooseCategory {categories} {role} {submitAnswer} {leaveGame} />
 		</div>
-		<ChooseCategory {categories} {role} {submitAnswer} {leaveGame} />
 	{:else if currentScene == 'writeClues'}
-		<WriteClues word={secretWord} {role} {submitAnswer} {leaveGame} />
+		<div class="container mx-auto max-w-4xl p-4">
+			<WriteClues word={secretWord} {role} {submitAnswer} {leaveGame} />
+		</div>
 	{:else if currentScene == 'filterClues'}
-		<FilterClues bind:votes {clues} {role} {updateVotes} {submitAnswer} {leaveGame} />
+		<div class="container mx-auto max-w-4xl p-4">
+			<FilterClues bind:votes {clues} {role} {updateVotes} {submitAnswer} {leaveGame} />
+		</div>
 	{:else if currentScene == 'guessWord'}
-		<GuessWord {dedupedClues} {clues} {role} {submitAnswer} {leaveGame} />
+		<div class="container mx-auto max-w-4xl p-4">
+			<GuessWord {dedupedClues} {clues} {role} {submitAnswer} {leaveGame} />
+		</div>
 	{:else if currentScene == 'endGame'}
-		<EndGame
-			{category}
-			{dedupedClues}
-			{clues}
-			{guess}
-			{secretWord}
-			{wordGuessed}
-			{gamesPlayed}
-			{gamesWon}
-			{totalRounds}
-			playAgain={startGame}
-		/>
+		<div class="container mx-auto max-w-4xl p-4">
+			<EndGame
+				{category}
+				{dedupedClues}
+				{clues}
+				{guess}
+				{secretWord}
+				{wordGuessed}
+				{gamesPlayed}
+				{gamesWon}
+				{totalRounds}
+				playAgain={nextRound}
+			/>
+		</div>
 	{/if}
 </div>
+
+<!-- Modals -->
+<ChangeNameModal
+	bind:open={showChangeNameModal}
+	currentName={username}
+	onSubmit={handleChangeName}
+	isSubmitting={isChangingName}
+/>
+
+<LeaveRoomModal bind:open={showLeaveRoomModal} {roomName} onConfirm={handleLeaveRoom} />
