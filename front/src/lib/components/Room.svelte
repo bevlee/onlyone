@@ -41,8 +41,6 @@
 	// svelte-ignore non_reactive_update
 	let dedupedClues: Array<string> = [];
 	// svelte-ignore non_reactive_update
-	let timer: Number = 20;
-	// svelte-ignore non_reactive_update
 	let secretWord: string = 'hehexd';
 	// svelte-ignore non_reactive_update
 	let guess: string = '';
@@ -234,7 +232,6 @@
 
 			console.log(`submitted ${input} for`, currentScene);
 		}
-		timer = 20;
 		categories = [];
 	};
 
