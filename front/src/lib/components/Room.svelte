@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { env } from '$env/dynamic/public';
 	import { Button } from '$lib/components/ui/button';
+	import {
+		DropdownMenu,
+		DropdownMenuContent,
+		DropdownMenuItem,
+		DropdownMenuSeparator,
+		DropdownMenuTrigger
+	} from '$lib/components/ui/dropdown-menu';
 	import { io } from 'socket.io-client';
 	import { SvelteSet } from 'svelte/reactivity';
 	import ChooseCategory from '$lib/components/ChooseCategory.svelte';
@@ -8,6 +15,9 @@
 	import FilterClues from '$lib/components/FilterClues.svelte';
 	import GuessWord from '$lib/components/GuessWord.svelte';
 	import WriteClues from '$lib/components/WriteClues.svelte';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import UserIcon from '@lucide/svelte/icons/user';
+	import LogOutIcon from '@lucide/svelte/icons/log-out';
 
 	let { roomName, leaveRoom } = $props();
 	console.log('Room name in child:', roomName);
@@ -266,48 +276,72 @@
 	};
 </script>
 
-<div class="flex flex-col items-center justify-center">
-	<Button variant="destructive" onclick={() => leave()}>Leave room</Button>
-	<h3>
-		Room:
-		<strong>{roomName}</strong>
-	</h3>
+<div class="space-y-6 p-6">
+	<div class="flex justify-end">
+		<DropdownMenu>
+			<DropdownMenuTrigger>
+				<Button variant="outline" size="icon">
+					<SettingsIcon class="h-4 w-4" />
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end">
+				{#if currentScene === 'main' || currentScene === 'endGame'}
+					<DropdownMenuItem onclick={changeNamePrompt}>
+						<UserIcon class="mr-2 h-4 w-4" />
+						Change Name
+					</DropdownMenuItem>
+					<DropdownMenuSeparator />
+				{/if}
+				<DropdownMenuItem onclick={() => leave()}>
+					<LogOutIcon class="mr-2 h-4 w-4" />
+					Leave Room
+				</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	</div>
 
-	<h4>
-		Username:
-		<strong>{username}</strong>
-	</h4>
-	{#if currentScene === 'main' || currentScene === 'endGame'}
-		<Button onclick={changeNamePrompt}>Change Name</Button>
-	{/if}
+	<div class="space-y-4 text-center">
+		<div class="space-y-2">
+			<h2 class="text-xl font-semibold">
+				Room: <span class="text-primary">{roomName}</span>
+			</h2>
+			<p class="text-lg">
+				Username: <strong>{username}</strong>
+			</p>
+		</div>
 
-	<h4>
-		Players in Lobby:
-		<ul>
+	</div>
+
+	<div class="space-y-3">
+		<h3 class="text-center text-lg font-medium">Players in Lobby</h3>
+		<ul class="space-y-1 rounded-lg border bg-muted/20 p-4">
 			{#each players.keys() as player}
-				<li>{player}</li>
+				<li class="text-center">{player}</li>
 			{/each}
 		</ul>
-	</h4>
+	</div>
 
 	{#if currentScene == 'main'}
-		<div>
-			<h4>How to play:</h4>
-			<div class="justify-start">
-				<ol class="inline-block list-inside list-decimal">
+		<div class="space-y-6">
+			<div class="space-y-4 rounded-lg border bg-muted/20 p-6">
+				<h3 class="text-center text-lg font-medium">How to play</h3>
+				<ol class="space-y-2 list-inside list-decimal text-left">
 					<li>Guesser picks a category</li>
 					<li>Others see the word, give one-word clues</li>
 					<li>No duplicate clues allowed!</li>
 				</ol>
-				<br /> <br />
-				Goal: Guess as many words as possible together!
-				<br /> <br />
+				<p class="text-center font-medium">
+					Goal: Guess as many words as possible together!
+				</p>
+			</div>
+			<div class="pt-4">
+				<Button class="w-full" variant="default" onclick={startGame}>Start Game</Button>
 			</div>
 		</div>
-		<Button class="startButton" onclick={startGame}>Start</Button>
-		<!-- <GuessWord {clues} {role} {submitAnswer}/>  -->
 	{:else if currentScene == 'chooseCategory'}
-		<p>My role is {role}</p>
+		<div class="text-center">
+			<p class="mb-4 text-sm text-muted-foreground">My role is {role}</p>
+		</div>
 		<ChooseCategory {categories} {role} {submitAnswer} {leaveGame} />
 	{:else if currentScene == 'writeClues'}
 		<WriteClues word={secretWord} {role} {submitAnswer} {leaveGame} />
