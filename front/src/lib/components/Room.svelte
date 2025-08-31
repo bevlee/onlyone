@@ -8,11 +8,24 @@
 	import FilterClues from '$lib/components/FilterClues.svelte';
 	import GuessWord from '$lib/components/GuessWord.svelte';
 	import WriteClues from '$lib/components/WriteClues.svelte';
+	import RoomHeader from '$lib/components/RoomHeader.svelte';
+	import PlayerList from '$lib/components/PlayerList.svelte';
+	import GameInstructions from '$lib/components/GameInstructions.svelte';
+	import ChangeNameModal from '$lib/components/ChangeNameModal.svelte';
+	import LeaveRoomModal from '$lib/components/LeaveRoomModal.svelte';
 
 	let { roomName, leaveRoom } = $props();
-	console.log('Room name in child:', roomName);
+
 	let gameStarted = $state<boolean>(false);
-	let username = $state<string | null>(localStorage.getItem('username'));
+	// Initialize username properly
+	const initialUsername =
+		localStorage.getItem('username') || 'user' + Math.floor(Math.random() * 10000);
+	let username = $state<string>(initialUsername);
+
+	// Modal states
+	let showChangeNameModal = $state(false);
+	let showLeaveRoomModal = $state(false);
+	let isChangingName = $state(false);
 
 	// These need $state because they're mutated in callbacks/socket events
 	let role: string = $state('');
@@ -28,8 +41,6 @@
 	// svelte-ignore non_reactive_update
 	let dedupedClues: Array<string> = [];
 	// svelte-ignore non_reactive_update
-	let timer: Number = 20;
-	// svelte-ignore non_reactive_update
 	let secretWord: string = 'hehexd';
 	// svelte-ignore non_reactive_update
 	let guess: string = '';
@@ -42,9 +53,9 @@
 	// svelte-ignore non_reactive_update
 	let totalRounds: number = 0;
 
-	if (!username) {
-		username = 'user' + Math.floor(Math.random() * 10000);
-		setUsername(username);
+	// Set initial username if not already saved
+	if (initialUsername.startsWith('user')) {
+		setUsername(initialUsername);
 	}
 	let currentScene = $state<string>('main');
 	let players = $state(new SvelteSet([username]));
@@ -176,38 +187,30 @@
 	);
 
 	//////// FUNCTIONS
-	const changeName = async (newName: string) => {
-		const success = await new Promise((resolve) => {
-			socket.emit('changeName', username, newName, roomName, (response: { status: string }) => {
-				if (response) {
-					resolve(response.status === 'ok');
-				}
-				resolve(false);
+	const handleChangeName = async (newName: string): Promise<boolean> => {
+		isChangingName = true;
+		try {
+			const success = await new Promise<boolean>((resolve) => {
+				socket.emit('changeName', username, newName, roomName, (response: { status: string }) => {
+					if (response) {
+						resolve(response.status === 'ok');
+					}
+					resolve(false);
+				});
 			});
-		});
 
-		if (success) {
-			setUsername(newName);
-			return true;
+			if (success) {
+				setUsername(newName);
+				return true;
+			}
+			return false;
+		} finally {
+			isChangingName = false;
 		}
-		return false;
 	};
 
-	console.log('roomname is', roomName);
-	const changeNamePrompt = async () => {
-		console.log('changing name');
-		let newName: string | null = prompt('Please enter your username', username);
-		if (newName) {
-			if (newName.length > 0 && newName.length < 30 && newName != username) {
-				const nameChangeSuccess = await changeName(newName);
-				if (!nameChangeSuccess) {
-					alert('Error: There is already a player in the room with the name: ');
-					await changeNamePrompt();
-				}
-			} else {
-				alert('Name must be between 1 and 30 chars and unique. Try again!');
-			}
-		}
+	const openChangeNameModal = () => {
+		showChangeNameModal = true;
 	};
 
 	// submit event to server and proceed to next scene
@@ -229,11 +232,14 @@
 
 			console.log(`submitted ${input} for`, currentScene);
 		}
-		timer = 20;
 		categories = [];
 	};
 
-	const leave = () => {
+	const openLeaveRoomModal = () => {
+		showLeaveRoomModal = true;
+	};
+
+	const handleLeaveRoom = () => {
 		socket.disconnect();
 		leaveRoom();
 	};
@@ -261,72 +267,88 @@
 		socket.emit('updateVotes', index, value);
 	};
 
+	const nextRound = () => {
+		socket.emit('nextRound');
+	};
+
 	export const add = (first: number) => {
 		return first + 10;
 	};
 </script>
 
-<div class="flex flex-col items-center justify-center">
-	<Button variant="destructive" onclick={() => leave()}>Leave room</Button>
-	<h3>
-		Room:
-		<strong>{roomName}</strong>
-	</h3>
+<div class="bg-background min-h-screen">
+	<RoomHeader
+		{roomName}
+		{username}
+		{currentScene}
+		onChangeName={openChangeNameModal}
+		onLeaveRoom={openLeaveRoomModal}
+	/>
 
-	<h4>
-		Username:
-		<strong>{username}</strong>
-	</h4>
-	{#if currentScene === 'main' || currentScene === 'endGame'}
-		<Button onclick={changeNamePrompt}>Change Name</Button>
-	{/if}
-
-	<h4>
-		Players in Lobby:
-		<ul>
-			{#each players.keys() as player}
-				<li>{player}</li>
-			{/each}
-		</ul>
-	</h4>
+	<div class="container mx-auto max-w-4xl space-y-6 p-4">
+		<PlayerList {players} currentUser={username} />
+	</div>
 
 	{#if currentScene == 'main'}
-		<div>
-			<h4>How to play:</h4>
-			<div class="justify-start">
-				<ol class="inline-block list-inside list-decimal">
-					<li>Guesser picks a category</li>
-					<li>Others see the word, give one-word clues</li>
-					<li>No duplicate clues allowed!</li>
-				</ol>
-				<br /> <br />
-				Goal: Guess as many words as possible together!
-				<br /> <br />
+		<div class="container mx-auto max-w-4xl space-y-6 p-4">
+			<GameInstructions />
+
+			<div class="flex justify-center">
+				<Button
+					class="px-8 py-3 text-lg font-semibold"
+					variant="default"
+					onclick={startGame}
+					disabled={players.size < 3}
+				>
+					{players.size < 3 ? `Need ${3 - players.size} more players` : 'Start Game'}
+				</Button>
 			</div>
 		</div>
-		<Button class="startButton" onclick={startGame}>Start</Button>
-		<!-- <GuessWord {clues} {role} {submitAnswer}/>  -->
 	{:else if currentScene == 'chooseCategory'}
-		<p>My role is {role}</p>
-		<ChooseCategory {categories} {role} {submitAnswer} {leaveGame} />
+		<div class="container mx-auto max-w-4xl p-4">
+			<div class="mb-6 text-center">
+				<p class="text-muted-foreground text-sm">
+					My role is <span class="text-foreground font-medium">{role}</span>
+				</p>
+			</div>
+			<ChooseCategory {categories} {role} {submitAnswer} {leaveGame} />
+		</div>
 	{:else if currentScene == 'writeClues'}
-		<WriteClues word={secretWord} {role} {submitAnswer} {leaveGame} />
+		<div class="container mx-auto max-w-4xl p-4">
+			<WriteClues word={secretWord} {role} {submitAnswer} {leaveGame} />
+		</div>
 	{:else if currentScene == 'filterClues'}
-		<FilterClues bind:votes {clues} {role} {updateVotes} {submitAnswer} {leaveGame} />
+		<div class="container mx-auto max-w-4xl p-4">
+			<FilterClues bind:votes {clues} {role} {updateVotes} {submitAnswer} {leaveGame} />
+		</div>
 	{:else if currentScene == 'guessWord'}
-		<GuessWord {dedupedClues} {clues} {role} {submitAnswer} {leaveGame} />
+		<div class="container mx-auto max-w-4xl p-4">
+			<GuessWord {dedupedClues} {clues} {role} {submitAnswer} {leaveGame} />
+		</div>
 	{:else if currentScene == 'endGame'}
-		<EndGame
-			{category}
-			{dedupedClues}
-			{clues}
-			{guess}
-			{secretWord}
-			{wordGuessed}
-			{gamesPlayed}
-			{gamesWon}
-			{totalRounds}
-			playAgain={startGame}
-		/>
+		<div class="container mx-auto max-w-4xl p-4">
+			<EndGame
+				{category}
+				{dedupedClues}
+				{clues}
+				{guess}
+				{secretWord}
+				{wordGuessed}
+				{gamesPlayed}
+				{gamesWon}
+				{totalRounds}
+				playAgain={nextRound}
+			/>
+		</div>
 	{/if}
 </div>
+
+<!-- Modals -->
+<ChangeNameModal
+	bind:open={showChangeNameModal}
+	currentName={username}
+	onSubmit={handleChangeName}
+	isSubmitting={isChangingName}
+/>
+
+<LeaveRoomModal bind:open={showLeaveRoomModal} {roomName} onConfirm={handleLeaveRoom} />

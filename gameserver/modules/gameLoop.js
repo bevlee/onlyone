@@ -60,9 +60,9 @@ export class GameLoop {
       round++;
       if (success) winCount++;
       
-      // Show results and pause before next round
+      // Show results and wait for next round signal
       io.to(room).emit("endGame", this.gameStateManager.getGame(room));
-      await new Promise((resolve) => setTimeout(() => resolve(), 10000)); // wait 10 seconds before next round. TODO: add a button to skip this
+      await this.waitForNextRound(io, room);
     }
     
     // Clean up game state when complete
@@ -291,6 +291,36 @@ export class GameLoop {
         clearInterval(intervalId);
         resolve("Timeout: Condition not met within the given time");
       }, timeout);
+    });
+  }
+
+  /**
+   * Wait for a player to signal the next round should start
+   * @param {Object} io - Socket.io server instance
+   * @param {string} room - Room identifier
+   * @returns {Promise} Promise that resolves when next round is triggered
+   */
+  waitForNextRound(io, room) {
+    return new Promise((resolve) => {
+      // Set up a one-time listener for the next round event
+      const handler = (socket) => {
+        socket.once('nextRound', () => {
+          io.to(room).off('connection', handler);
+          resolve();
+        });
+      };
+
+      // Listen for any player in the room to trigger next round
+      io.to(room).on('connection', handler);
+      
+      // Also listen on existing sockets in the room
+      io.in(room).fetchSockets().then(sockets => {
+        sockets.forEach(socket => {
+          socket.once('nextRound', () => {
+            resolve();
+          });
+        });
+      });
     });
   }
 }

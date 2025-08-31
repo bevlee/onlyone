@@ -27,25 +27,52 @@
 	};
 </script>
 
-{#if role == 'guesser'}
-	<h2>
-		<Timer count={defaultTimer} submitAnswer={() => {}} />
-		Everyone is busy writing prompts <em>{word}</em>
-	</h2>
-{:else}
-	<Timer count={defaultTimer} submitAnswer={submit} />
-	<h2>
-		The Secret word is <em>{word}</em>
-	</h2>
-	<h2>Please write a ONE WORD clue</h2>
-	<Input class="max-w-xs content-center" type="text" bind:value={clue} />
+<div class="space-y-6">
+	{#if role == 'guesser'}
+		<div class="text-center space-y-4">
+			<Timer count={defaultTimer} submitAnswer={() => {}} />
+			<h2 class="text-lg font-medium text-muted-foreground">
+				Everyone is busy writing clues for <span class="text-primary font-semibold">{word}</span>
+			</h2>
+		</div>
+	{:else}
+		<Timer count={defaultTimer} submitAnswer={submit} />
+		
+		<div class="rounded-lg border bg-card p-4 text-center space-y-2">
+			<div class="text-sm text-muted-foreground">The secret word is</div>
+			<div class="font-semibold text-lg text-primary">{word}</div>
+		</div>
 
-	<Button disabled={submitted || invalid} onclick={() => submit('manual')}
-		>{submitted ? 'Answer submitted' : 'Submit'}</Button
-	>
-	{#if invalid}
-		<p class="warning">Your clue must be one word!!!</p>
+		<div class="space-y-4 text-center">
+			<div class="space-y-2">
+				<h2 class="text-lg font-medium">Write a one-word clue</h2>
+				<div class="text-sm text-muted-foreground">
+					Help others guess the secret word with a single descriptive word
+				</div>
+			</div>
+			
+			<Input 
+				class="max-w-xs mx-auto text-center" 
+				type="text" 
+				placeholder="Enter your clue..."
+				bind:value={clue} 
+			/>
+
+			{#if invalid}
+				<div class="text-sm text-orange-600 dark:text-orange-400">
+					⚠️ Your clue must be one word only!
+				</div>
+			{/if}
+
+			<Button 
+				disabled={submitted || invalid} 
+				onclick={() => submit('manual')}
+				class="px-8"
+			>
+				{submitted ? 'Clue submitted' : 'Submit Clue'}
+			</Button>
+		</div>
 	{/if}
-{/if}
+</div>
 
 <!-- <Button onclick={() => leaveGame()}>Leave Game</Button> -->
