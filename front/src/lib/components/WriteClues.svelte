@@ -4,9 +4,15 @@
 	import { defaultTimer } from '$lib/config';
 	import Timer from '$lib/components/Timer.svelte';
 
-	const { word, role, submitAnswer, leaveGame } = $props();
+	const { word, role, submitAnswer, leaveGame, socket } = $props();
 	let clue = $state('');
 	let submitted = $state(false);
+	
+	// Reset submission state when word changes (new round)
+	$effect(() => {
+		submitted = false;
+		clue = '';
+	});
 
 	// clue must be one word!
 	let invalid = $derived(clue.includes(' '));
@@ -30,13 +36,13 @@
 <div class="space-y-6">
 	{#if role == 'guesser'}
 		<div class="text-center space-y-4">
-			<Timer count={defaultTimer} submitAnswer={() => {}} />
+			<Timer count={defaultTimer} submitAnswer={() => {}} {socket} />
 			<h2 class="text-lg font-medium text-muted-foreground">
 				Everyone is busy writing clues for <span class="text-primary font-semibold">{word}</span>
 			</h2>
 		</div>
 	{:else}
-		<Timer count={defaultTimer} submitAnswer={submit} />
+		<Timer count={defaultTimer} submitAnswer={submit} {socket} />
 		
 		<div class="rounded-lg border bg-card p-4 text-center space-y-2">
 			<div class="text-sm text-muted-foreground">The secret word is</div>

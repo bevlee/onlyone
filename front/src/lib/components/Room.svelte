@@ -66,13 +66,20 @@
 	}
 
 	// init socket
-	const socket = io(env.PUBLIC_SOCKET_ENDPOINT, {
+	const socket = io('http://localhost:3000', {
 		auth: {
 			serverOffset: 0,
 			username: username,
 			room: roomName
 		}
 	});
+	// const socket = io(env.PUBLIC_SOCKET_ENDPOINT, {
+	// 	auth: {
+	// 		serverOffset: 0,
+	// 		username: username,
+	// 		room: roomName
+	// 	}
+	// });
 
 	socket.on('disconnect', () => {
 		//send the username to the server
@@ -271,6 +278,12 @@
 		socket.emit('nextRound');
 	};
 
+	// Handle server-side submission rejections
+	socket.on('submissionRejected', (data) => {
+		console.warn(`Submission rejected for ${data.phase}: ${data.reason}`);
+		alert(`Submission rejected: ${data.reason}`);
+	});
+
 	export const add = (first: number) => {
 		return first + 10;
 	};
@@ -311,19 +324,28 @@
 					My role is <span class="text-foreground font-medium">{role}</span>
 				</p>
 			</div>
-			<ChooseCategory {categories} {role} {submitAnswer} {leaveGame} />
+			<ChooseCategory {categories} {role} {submitAnswer} {leaveGame} {socket} />
 		</div>
 	{:else if currentScene == 'writeClues'}
 		<div class="container mx-auto max-w-4xl p-4">
-			<WriteClues word={secretWord} {role} {submitAnswer} {leaveGame} />
+			<WriteClues word={secretWord} {role} {submitAnswer} {leaveGame} {socket} />
 		</div>
 	{:else if currentScene == 'filterClues'}
 		<div class="container mx-auto max-w-4xl p-4">
-			<FilterClues bind:votes {clues} {role} {updateVotes} {submitAnswer} {leaveGame} />
+			<FilterClues
+				bind:votes
+				{clues}
+				{secretWord}
+				{role}
+				{updateVotes}
+				submitAnswer={() => submitAnswer('')}
+				{leaveGame}
+				{socket}
+			/>
 		</div>
 	{:else if currentScene == 'guessWord'}
 		<div class="container mx-auto max-w-4xl p-4">
-			<GuessWord {dedupedClues} {clues} {role} {submitAnswer} {leaveGame} />
+			<GuessWord {dedupedClues} {clues} {role} {submitAnswer} {leaveGame} {socket} />
 		</div>
 	{:else if currentScene == 'endGame'}
 		<div class="container mx-auto max-w-4xl p-4">
@@ -338,6 +360,7 @@
 				{gamesWon}
 				{totalRounds}
 				playAgain={nextRound}
+				{socket}
 			/>
 		</div>
 	{/if}

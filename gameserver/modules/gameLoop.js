@@ -127,7 +127,7 @@ export class GameLoop {
     // Wait for guesser to select category or timeout
     await this.waitForCondition(() => {
       return this.gameStateManager.getGame(room)?.category !== "";
-    }, timeLimit);
+    }, timeLimit, io, room);
     
     logger.debug({ room }, 'Choose category condition finished');
     
@@ -167,7 +167,7 @@ export class GameLoop {
     // Wait for all writers to submit clues
     await this.waitForCondition(() => {
       return this.gameStateManager.getGame(room)?.clues?.length >= writers.length;
-    }, timeLimit);
+    }, timeLimit, io, room);
 
     // Fill in missing clues if some writers didn't submit in time
     const currentGame = this.gameStateManager.getGame(room);
@@ -211,7 +211,7 @@ export class GameLoop {
     // Wait for voting to complete
     await this.waitForCondition(() => {
       return this.gameStateManager.getGame(room)?.finishedVoting;
-    }, timeLimit);
+    }, timeLimit, io, room);
   }
 
   /**
@@ -246,7 +246,7 @@ export class GameLoop {
     // Wait for guesser to submit their guess
     await this.waitForCondition(() => {
       return this.gameStateManager.getGame(room)?.guess !== "";
-    }, timeLimit);
+    }, timeLimit, io, room);
     
     // Evaluate the guess against the secret word
     const currentGame = this.gameStateManager.getGame(room);
@@ -272,23 +272,43 @@ export class GameLoop {
    * Wait for a condition to be met or timeout
    * @param {Function} checkCondition - Function that returns true when condition is met
    * @param {number} timeoutSeconds - Maximum time to wait in seconds
+   * @param {Object} io - Socket.IO server instance for broadcasting timer updates
+   * @param {string} room - Room name to broadcast timer updates to
    * @returns {Promise<string>} Resolution message
    */
-  waitForCondition(checkCondition, timeoutSeconds = 20) {
+  waitForCondition(checkCondition, timeoutSeconds = 20, io, room) {
     const timeout = timeoutSeconds * 1000;
+    let remaining = timeoutSeconds;
+    
     return new Promise((resolve) => {
+      // Broadcast initial countdown
+      if (io && room) {
+        io.to(room).emit("timerUpdate", remaining);
+      }
+      
       // Check condition every second
       const intervalId = setInterval(() => {
         logger.debug('Checking for condition in game loop');
         if (checkCondition()) {
           clearInterval(intervalId);
           resolve("Condition met!");
+          return;
+        }
+        
+        // Decrement and broadcast remaining time
+        remaining--;
+        if (io && room) {
+          io.to(room).emit("timerUpdate", remaining);
         }
       }, 1000);
 
       // Timeout after specified time
       setTimeout(() => {
         clearInterval(intervalId);
+        // Send final timer update
+        if (io && room) {
+          io.to(room).emit("timerUpdate", 0);
+        }
         resolve("Timeout: Condition not met within the given time");
       }, timeout);
     });

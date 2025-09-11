@@ -18,7 +18,8 @@ import { logger } from '../config/logger.js';
  *     finishedVoting: true,        // Whether voting phase is complete
  *     guess: "cat",                // Guesser's submitted guess
  *     success: true,               // Whether guess was correct
- *     dedupedClues: ["furry", "pet", "<redacted>"] // Final filtered clues
+ *     dedupedClues: ["furry", "pet", "<redacted>"], // Final filtered clues
+ *     currentSubmissions: new Set(["user1", "user2"]) // Track submissions for current phase only
  *   },
  *   "room456": {
  *     stage: "chooseCategory",
@@ -94,6 +95,7 @@ export class GameStateManager {
         gamesPlayed: 0,
         gamesWon: 0,
         playerCount: playerCount,
+        currentSubmissions: new Set()
       };
       return this.activeGames[room];
     });
@@ -134,6 +136,11 @@ export class GameStateManager {
       if (game) {
         game.stage = stage;
         
+        // Reset submissions for the new stage
+        if (game.currentSubmissions) {
+          game.currentSubmissions.clear();
+        }
+        
         // Initialize stage-specific data
         switch (stage) {
           case 'writeClues':
@@ -162,10 +169,18 @@ export class GameStateManager {
    * @param {string} category - Selected category
    * @returns {Object} Updated game state
    */
-  setCategory(room, category) {
+  setCategory(room, category, username) {
     const game = this.activeGames[room];
     if (game && game.stage === 'chooseCategory') {
+      // Check if user already submitted for this phase
+      if (game.currentSubmissions && game.currentSubmissions.has(username)) {
+        return { success: false, reason: 'User has already submitted a category' };
+      }
+      
       game.category = category;
+      if (game.currentSubmissions) {
+        game.currentSubmissions.add(username);
+      }
       return { category, success: true };
     }
     return { success: false, reason: 'Invalid stage for category selection' };
@@ -231,9 +246,14 @@ export class GameStateManager {
    * @param {Function} getStem - Function to normalize words for comparison
    * @returns {Promise<Object>} Result of the operation
    */
-  async addValidatedClue(room, clue, getStem) {
+  async addValidatedClue(room, clue, getStem, username) {
     return this.queueOperation(room, (game) => {
       if (game && game.stage === 'writeClues' && game.clues) {
+        // Check if user already submitted for this phase
+        if (game.currentSubmissions && game.currentSubmissions.has(username)) {
+          return { success: false, reason: 'User has already submitted a clue' };
+        }
+        
         // Validate that clue is not the same as secret word
         if (getStem(clue) === getStem(game.secretWord)) {
           return {
@@ -243,6 +263,9 @@ export class GameStateManager {
         }
         
         game.clues.push(clue);
+        if (game.currentSubmissions) {
+          game.currentSubmissions.add(username);
+        }
         return { 
           clue, 
           totalClues: game.clues.length, 
@@ -317,10 +340,18 @@ export class GameStateManager {
    * @param {string} guess - The guesser's guess
    * @returns {Object} Updated game state
    */
-  setGuess(room, guess) {
+  setGuess(room, guess, username) {
     const game = this.activeGames[room];
     if (game && game.stage === 'guessWord') {
+      // Check if user already submitted for this phase
+      if (game.currentSubmissions && game.currentSubmissions.has(username)) {
+        return { success: false, reason: 'User has already submitted a guess' };
+      }
+      
       game.guess = guess;
+      if (game.currentSubmissions) {
+        game.currentSubmissions.add(username);
+      }
       return { guess, success: true };
     }
     return { 

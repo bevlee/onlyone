@@ -9,7 +9,8 @@
 		role,
 		updateVotes,
 		submitAnswer,
-		leaveGame
+		leaveGame,
+		socket
 	}: Props = $props();
 
 	type Props = {
@@ -20,9 +21,16 @@
 		updateVotes: (index: number, value: number) => void;
 		submitAnswer: () => void;
 		leaveGame: () => void;
+		socket?: any;
 	};
 	let submitted = $state(false);
 	let userVotes = $state(new Array(votes.length).fill(0));
+	
+	// Reset submission state when clues change (new round)
+	$effect(() => {
+		submitted = false;
+		userVotes = new Array(votes.length).fill(0);
+	});
 
 	const voteOnClue = (index: number, value: number) => {
 		console.log(index, value);
@@ -39,11 +47,11 @@
 <div class="space-y-6">
 	{#if role == 'guesser'}
 		<div class="space-y-4 text-center">
-			<Timer count={defaultTimer} submitAnswer={() => {}} />
+			<Timer count={defaultTimer} submitAnswer={() => {}} {socket} />
 			<h2 class="text-muted-foreground text-lg font-medium">Removing duplicate clues...</h2>
 		</div>
 	{:else}
-		<Timer count={defaultTimer} {submitAnswer} />
+		<Timer count={defaultTimer} {submitAnswer} {socket} />
 
 		<div class="bg-card rounded-lg border p-4 text-center">
 			<div class="text-muted-foreground text-sm">The secret word is</div>

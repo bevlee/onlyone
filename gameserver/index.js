@@ -18,6 +18,7 @@ import { ConnectionManager } from "./modules/connectionManager.js";
 import { GameStateManager } from "./modules/gameStateManager.js";
 import { GameLoop } from "./modules/gameLoop.js";
 import { logger } from "./config/logger.js";
+import { DEFAULT_TIMER_SECONDS } from "./config/gameConfig.js";
 
 // Initialize Express app and HTTP server
 const app = createExpressServer();
@@ -66,20 +67,26 @@ io.on("connection", async (socket) => {
   // Game flow event handlers
   socket.on("startGame", () => {
     if (!(room in gameStateManager.activeGames)) {
-      startGameLoopBound(io, room, 20);
+      startGameLoopBound(io, room, DEFAULT_TIMER_SECONDS);
     }
   });
   
   socket.on("stopGame", async (roomName) => await gameStateManager.stopGame(io, roomName, connectionManager));
   
   socket.on("chooseCategory", (category) => {
-    gameStateManager.setCategory(room, category);
+    const result = gameStateManager.setCategory(room, category, username);
+    if (!result.success) {
+      logger.warn({ room, username, reason: result.reason }, 'Category submission rejected');
+      socket.emit('submissionRejected', { phase: 'chooseCategory', reason: result.reason });
+    }
   });
   
   socket.on("submitClue", async (clue) => {
-    const result = await gameStateManager.addValidatedClue(room, clue, getStem);
-    // Note: Could emit validation result back to client if needed
-    // socket.emit("clueValidationResult", result);
+    const result = await gameStateManager.addValidatedClue(room, clue, getStem, username);
+    if (!result.success) {
+      logger.warn({ room, username, reason: result.reason }, 'Clue submission rejected');
+      socket.emit('submissionRejected', { phase: 'writeClues', reason: result.reason });
+    }
   });
   
   socket.on("updateVotes", async (index, value) => {
@@ -95,7 +102,11 @@ io.on("connection", async (socket) => {
   });
   
   socket.on("guessWord", (guess) => {
-    gameStateManager.setGuess(room, guess);
+    const result = gameStateManager.setGuess(room, guess, username);
+    if (!result.success) {
+      logger.warn({ room, username, reason: result.reason }, 'Guess submission rejected');
+      socket.emit('submissionRejected', { phase: 'guessWord', reason: result.reason });
+    }
   });
   
   socket.on("nextRound", () => {

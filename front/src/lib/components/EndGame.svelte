@@ -13,7 +13,8 @@
 		gamesPlayed,
 		gamesWon,
 		totalRounds,
-		playAgain
+		playAgain,
+		socket
 	} = $props();
 	console.log(`ending game`, dedupedClues, clues, guess, category);
 
@@ -89,7 +90,7 @@
 	<!-- Next Action -->
 	{#if gamesPlayed < totalRounds}
 		<div class="text-center">
-			<Timer count={defaultTimer} submitAnswer={() => {}} text="Next round starts in: " />
+			<Timer count={defaultTimer} submitAnswer={() => {}} timerText="Next round starts in: " {socket} />
 		</div>
 	{:else}
 		<div class="text-center">

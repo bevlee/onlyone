@@ -3,16 +3,26 @@
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import { defaultTimer } from '$lib/config';
 	import Timer from '$lib/components/Timer.svelte';
-	const { categories, role, submitAnswer, leaveGame } = $props();
+	const { categories, role, submitAnswer, leaveGame, socket } = $props();
 	let selectedOption = $state(categories[0]);
+	let submitted = $state(false);
+	
+	// Reset submission state when categories change (new round)
+	$effect(() => {
+		submitted = false;
+		selectedOption = categories[0];
+	});
 
 	const submit = (): void => {
-		submitAnswer(selectedOption);
+		if (!submitted) {
+			submitted = true;
+			submitAnswer(selectedOption);
+		}
 	};
 </script>
 
 <div class="space-y-6">
-	<Timer count={defaultTimer} submitAnswer={role === 'guesser' ? () => submit() : () => {}} />
+	<Timer count={defaultTimer} submitAnswer={role === 'guesser' ? () => submit() : () => {}} {socket} />
 
 	<div class="mb-6 text-center">
 		<p class="text-muted-foreground text-sm">
@@ -36,7 +46,13 @@
 				</RadioGroup.Root>
 			</div>
 
-			<Button onclick={() => submit()} class="px-8">Select Category</Button>
+			<Button 
+				disabled={submitted} 
+				onclick={() => submit()} 
+				class="px-8"
+			>
+				{submitted ? 'Category selected' : 'Select Category'}
+			</Button>
 		</div>
 	{:else}
 		<div class="space-y-4 text-center">
