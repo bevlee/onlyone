@@ -13,7 +13,7 @@
 <ModeWatcher />
 
 <div class="overflow-none mx-auto w-full max-w-[500px]">
-	<header class="mb-10 grid h-14 w-full grid-cols-3 border-b bg-orange-500">
+	<header class="grid h-14 w-full grid-cols-3 border-b bg-orange-500">
 		<div class="flex items-center justify-start pl-2">
 			<Button onclick={toggleMode} variant="outline" size="icon">
 				<SunIcon
@@ -26,7 +26,7 @@
 			</Button>
 		</div>
 
-		<h1 class="col-start-2 col-end-3 text-center text-2xl font-bold">
+		<h1 class="col-start-2 col-end-3 pt-2 text-center text-2xl font-bold">
 			{title}
 		</h1>
 	</header>
