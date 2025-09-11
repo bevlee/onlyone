@@ -24,7 +24,7 @@ export class GameLoop {
    * @param {string} room - Room name
    * @param {number} timeLimit - Time limit per phase in seconds
    * @param {Array<string>} categories - Available game categories
-   * @param {Object} secretWords - Secret words organized by category
+   * @param {Object} secretWords - Secret words organized by difficulty
    * @param {Function} getStem - Function to get word stem for comparison
    */
   async startGameLoop(io, room, timeLimit, categories, secretWords, getStem) {
@@ -111,12 +111,12 @@ export class GameLoop {
   }
 
   /**
-   * Category selection phase - guesser chooses category
+   * Difficulty selection phase - guesser chooses difficulty
    * @param {Object} io - Socket.IO server instance
    * @param {string} room - Room name
    * @param {string} writerRoom - Writer room name
    * @param {string} guesserRoom - Guesser room name
-   * @param {Array} categories - Available categories
+   * @param {Array} categories - Available difficulty levels
    * @param {number} timeLimit - Time limit in seconds
    */
   async categoryPhase(io, room, writerRoom, guesserRoom, categories, timeLimit) {
@@ -131,10 +131,10 @@ export class GameLoop {
     
     logger.debug({ room }, 'Choose category condition finished');
     
-    // Auto-select random category if none chosen
+    // Auto-select random difficulty if none chosen
     if (this.gameStateManager.getGame(room)?.category === "") {
-      const randomCategory = categories[this.getRandomSelection(categories.length)];
-      this.gameStateManager.setCategory(room, randomCategory);
+      const randomDifficulty = categories[this.getRandomSelection(categories.length)];
+      this.gameStateManager.setCategory(room, randomDifficulty);
     }
   }
 
@@ -144,21 +144,21 @@ export class GameLoop {
    * @param {string} room - Room name
    * @param {string} writerRoom - Writer room name
    * @param {string} guesserRoom - Guesser room name
-   * @param {Object} secretWords - Secret words by category
+   * @param {Object} secretWords - Secret words by difficulty
    * @param {number} timeLimit - Time limit in seconds
    * @param {Array} writers - Array of writer connections
    */
   async cluePhase(io, room, writerRoom, guesserRoom, secretWords, timeLimit, writers) {
     const game = this.gameStateManager.getGame(room);
-    const category = game.category;
+    const difficulty = game.category;
     
     await this.gameStateManager.transitionToStage(room, "writeClues");
     
-    // Select random secret word from chosen category
-    const secretWord = secretWords[category][this.getRandomSelection(secretWords[category].length)];
+    // Select random secret word from chosen difficulty
+    const secretWord = secretWords[difficulty][this.getRandomSelection(secretWords[difficulty].length)];
     this.gameStateManager.setSecretWord(room, secretWord);
     
-    logger.debug({ secretWord, secretWordsCount: secretWords.length }, 'Selected secret word');
+    logger.debug({ secretWord, secretWordsCount: secretWords[difficulty].length }, 'Selected secret word');
     
     // Writers see the secret word, guesser sees nothing
     io.to(writerRoom).emit("writeClues", "writer", secretWord);
