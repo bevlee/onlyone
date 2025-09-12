@@ -1,8 +1,8 @@
 # OnlyOne Game
 
-A cooperative multiplayer word guessing game inspired by [Just One](<https://en.wikipedia.org/wiki/Just_One_(board_game)>).
+A cooperative multiplayer word guessing game inspired by [Just One](<https://en.wikipedia.org/wiki/Just_One_(board_game)>) with a few tweaks.
 
-Built with Svelte frontend, Node.js backend, and container deployment.
+Built with Svelte frontend, Node.js backend, and containerized deployment.
 
 ## Demo
 
@@ -26,34 +26,6 @@ The gameserver has a modular architecture:
 - **GameLoop**: Main game phases (difficulty, clue, voting, guessing)
 - **Handlers**: Socket event handlers for game actions and chat
 - **Utils**: Shared utilities and word operations
-
-## Quick Start
-
-### Development
-
-```bash
-# Frontend development server
-cd front && npm run dev      # http://localhost:5173
-
-# Backend development server
-cd gameserver && npm start   # http://localhost:3000
-```
-
-### Production with Docker
-
-```bash
-# Build and run all services
-docker-compose up --build
-
-# Run in background
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-```
 
 ## Services
 
@@ -89,40 +61,15 @@ docker-compose down
 - **WebSocket**: http://localhost/socket.io/\*
 - **Health Check**: http://localhost/health
 
-## Development
+## Deployment
 
-### Frontend Development
+### Local
 
 ```bash
-cd front
-npm install
 npm run dev
-npm run test
 ```
 
-### Backend Development
-
-```bash
-cd gameserver
-npm install
-npm test
-npm start
-```
-
-### Testing
-
-```bash
-# Frontend tests
-cd front && npm test
-
-# Backend tests
-cd gameserver && npm test
-
-# All tests
-npm run test:all
-```
-
-## Production Deployment
+### Docker Compose
 
 1. **Build and deploy**:
 
@@ -130,28 +77,7 @@ npm run test:all
    docker-compose up --build -d
    ```
 
-2. **Monitor services**:
-
-   ```bash
-   docker-compose ps
-   docker-compose logs -f
-   ```
-
-3. **Health checks**:
-   ```bash
-   curl http://localhost/health
-   ```
-
 ## Configuration
-
-### AWS ALB Deployment
-
-This application is designed for deployment with AWS ECS + Application Load Balancer (ALB):
-
-- **HTTPS Termination**: Handled by AWS ALB, not the application containers
-- **SSL Certificates**: Managed by AWS Certificate Manager (ACM)
-- **Container Communication**: All internal communication uses HTTP only
-- **Load Balancer**: ALB routes HTTPS traffic to HTTP containers on port 80
 
 ### Environment Variables
 
@@ -174,24 +100,6 @@ SERVER_NAME=your-domain.com
 - Collaborative clue writing with duplicate elimination
 - Vote on whether clues are duplicates
 - See how many you can guess right as a team
-
-### Technical Features
-
-- WebSocket-based real-time communication
-- Room-based game isolation
-- Automatic duplicate clue detection
-
-### Security & Performance
-
-- Static asset caching with immutable headers
-- No direct backend exposure (proxied through Nginx)
-
-## Monitoring
-
-- **Nginx logs**: `docker-compose logs nginx`
-- **Gameserver logs**: `docker-compose logs gameserver`
-- **Health status**: `curl http://localhost/health`
-- **Service status**: `docker-compose ps`
 
 ## Contributing
 
