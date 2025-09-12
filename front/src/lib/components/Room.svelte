@@ -65,14 +65,7 @@
 	}
 
 	// init socket
-	// const socket = io('http://localhost:3000', {
-	// 	auth: {
-	// 		serverOffset: 0,
-	// 		username: username,
-	// 		room: roomName
-	// 	}
-	// });
-	const socket = io(env.PUBLIC_SOCKET_ENDPOINT, {
+	const socket = io(env.PUBLIC_GAMESERVER_URL, {
 		auth: {
 			serverOffset: 0,
 			username: username,
@@ -267,7 +260,6 @@
 						}
 					});
 				});
-
 			} catch (error) {
 				console.error('Error starting game:', error);
 				alert('Failed to start game');
