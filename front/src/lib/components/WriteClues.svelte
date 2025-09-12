@@ -4,7 +4,7 @@
 	import { defaultTimer } from '$lib/config';
 	import Timer from '$lib/components/Timer.svelte';
 
-	const { word, role, submitAnswer, leaveGame } = $props();
+	const { word, role, submitAnswer } = $props();
 	let clue = $state('');
 	let submitted = $state(false);
 
@@ -12,7 +12,8 @@
 	let invalid = $derived(clue.includes(' '));
 
 	const submit = (submitType = 'auto') => {
-		if (clue === word || clue.includes(' ')) {
+		const strippedClue: string = clue.trim();
+		if (strippedClue === word || strippedClue.includes(' ')) {
 			// no point prompting user if it was an auto-submit. Just do not submit it in this case
 			if (!(submitType === 'auto')) {
 				alert('you cannot write the secret as a clue!');
@@ -22,7 +23,7 @@
 			}
 		} else {
 			submitted = true;
-			submitAnswer(clue);
+			submitAnswer(strippedClue);
 		}
 	};
 </script>
