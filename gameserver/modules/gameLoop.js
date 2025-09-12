@@ -36,8 +36,23 @@ export class GameLoop {
     const connections = this.connectionManager.getConnections(room);
     const playerCount = Object.keys(connections).length;
     
-    // Each player takes a turn as the guesser
-    for (let guesser of Object.keys(connections)) {
+    let currentPlayerIndex = 0;
+
+    // Continue until no players remain in room
+    while (this.connectionManager.getConnections(room) && 
+           Object.keys(this.connectionManager.getConnections(room)).length > 0) {
+      
+      // Refresh player list in case people joined/left
+      const currentConnections = this.connectionManager.getConnections(room);
+      const currentPlayers = Object.keys(currentConnections);
+      
+      // Handle case where current player left - reset to start
+      if (currentPlayerIndex >= currentPlayers.length) {
+        currentPlayerIndex = 0;
+      }
+      
+      const guesser = currentPlayers[currentPlayerIndex];
+      
       await this.gameStateManager.createGame(room, playerCount);
       await this.gameStateManager.setGameProgress(room, round, winCount);
       
@@ -46,8 +61,8 @@ export class GameLoop {
       io.to(guesserRoom).socketsLeave(guesserRoom);
 
       // Assign players to appropriate rooms (writer vs guesser)
-      this.setupGuesserRoom(connections, guesser, guesserRoom);
-      const writers = this.getWriters(connections, guesser);
+      this.setupGuesserRoom(currentConnections, guesser, guesserRoom);
+      const writers = this.getWriters(currentConnections, guesser);
       this.setupWriterRooms(writers, writerRoom, guesserRoom);
       
       // Run through all game phases
@@ -64,9 +79,12 @@ export class GameLoop {
       // Show results and wait for next round signal
       io.to(room).emit("endGame", this.gameStateManager.getGame(room));
       await this.waitForNextRound(io, room);
+      
+      // Move to next player, cycle back to start when reaching end
+      currentPlayerIndex = (currentPlayerIndex + 1) % currentPlayers.length;
     }
     
-    // Clean up game state when complete
+    // Clean up when room is empty
     await this.gameStateManager.deleteGame(room);
   }
 
@@ -303,11 +321,16 @@ export class GameLoop {
    */
   waitForNextRound(io, room) {
     return new Promise((resolve) => {
+      let resolved = false;
+      
       // Set up a one-time listener for the next round event
       const handler = (socket) => {
         socket.once('nextRound', () => {
-          io.to(room).off('connection', handler);
-          resolve();
+          if (!resolved) {
+            resolved = true;
+            io.off('connection', handler);
+            resolve();
+          }
         });
       };
 
@@ -318,7 +341,11 @@ export class GameLoop {
       io.in(room).fetchSockets().then(sockets => {
         sockets.forEach(socket => {
           socket.once('nextRound', () => {
-            resolve();
+            if (!resolved) {
+              resolved = true;
+              io.off('connection', handler);
+              resolve();
+            }
           });
         });
       });
