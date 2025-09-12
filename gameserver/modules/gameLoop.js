@@ -275,7 +275,7 @@ export class GameLoop {
    * @param {number} timeoutSeconds - Maximum time to wait in seconds
    * @returns {Promise<string>} Resolution message
    */
-  waitForCondition(checkCondition, timeoutSeconds = 20) {
+  waitForCondition(checkCondition, timeoutSeconds = 30) {
     const timeout = timeoutSeconds * 1000;
     return new Promise((resolve) => {
       // Check condition every second
