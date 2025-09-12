@@ -1,0 +1,13 @@
+{
+  "name": "onlyone",
+  "version": "1.0.0",
+  "description": "OnlyOne multiplayer word guessing game",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:front\" \"npm run dev:back\"",
+    "dev:front": "cd front && npm run dev",
+    "dev:back": "cd gameserver && npm start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
