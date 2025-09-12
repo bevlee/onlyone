@@ -8,8 +8,7 @@
 		secretWord,
 		role,
 		updateVotes,
-		submitAnswer,
-		leaveGame
+		submitAnswer
 	}: Props = $props();
 
 	type Props = {
@@ -19,7 +18,6 @@
 		role: string;
 		updateVotes: (index: number, value: number) => void;
 		submitAnswer: () => void;
-		leaveGame: () => void;
 	};
 	let submitted = $state(false);
 	let userVotes = $state(new Array(votes.length).fill(0));
@@ -96,4 +94,3 @@
 	{/if}
 </div>
 
-<!-- <Button onclick={() => leaveGame()}>Leave Game</Button> -->

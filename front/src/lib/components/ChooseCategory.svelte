@@ -3,7 +3,7 @@
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import { defaultTimer } from '$lib/config';
 	import Timer from '$lib/components/Timer.svelte';
-	const { categories, role, submitAnswer, leaveGame } = $props();
+	const { categories, role, submitAnswer } = $props();
 	let selectedOption = $state(categories[0]);
 
 	const submit = (): void => {

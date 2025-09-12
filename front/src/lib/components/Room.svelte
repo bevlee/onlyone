@@ -16,7 +16,6 @@
 
 	let { roomName, leaveRoom } = $props();
 
-	let gameStarted = $state<boolean>(false);
 	// Initialize username properly
 	const initialUsername =
 		localStorage.getItem('username') || 'user' + Math.floor(Math.random() * 10000);
@@ -117,9 +116,6 @@
 		console.log(`changing scene to ${scene} with role ${gameRole}`);
 		role = gameRole;
 		currentScene = scene;
-		if (currentScene === 'main') {
-			gameStarted = false;
-		}
 	});
 
 	socket.on('chooseCategory', (gameRole: string, wordCategories = []) => {
@@ -259,7 +255,7 @@
 		} else {
 			console.log('we got enough players nice');
 			try {
-				const success = await new Promise<boolean>((resolve) => {
+				await new Promise<boolean>((resolve) => {
 					socket.emit('startGame', (response: { status: string; message?: string }) => {
 						console.log('callback was', response);
 						if (response.status === 'ok') {
@@ -272,19 +268,11 @@
 					});
 				});
 
-				if (success) {
-					gameStarted = true;
-				}
 			} catch (error) {
 				console.error('Error starting game:', error);
 				alert('Failed to start game');
 			}
 		}
-	};
-	const leaveGame = async () => {
-		console.log('stopping game');
-		socket.emit('stopGame', roomName);
-		currentScene = 'main';
 	};
 
 	const updateVotes = (index: number, value: number) => {
@@ -341,11 +329,11 @@
 					My role is <span class="text-foreground font-medium">{role}</span>
 				</p>
 			</div>
-			<ChooseCategory {categories} {role} {submitAnswer} {leaveGame} {socket} />
+			<ChooseCategory {categories} {role} {submitAnswer} />
 		</div>
 	{:else if currentScene == 'writeClues'}
 		<div class="container mx-auto max-w-4xl p-4">
-			<WriteClues word={secretWord} {role} {submitAnswer} {leaveGame} {socket} />
+			<WriteClues word={secretWord} {role} {submitAnswer} />
 		</div>
 	{:else if currentScene == 'filterClues'}
 		<div class="container mx-auto max-w-4xl p-4">
@@ -356,13 +344,11 @@
 				{role}
 				{updateVotes}
 				submitAnswer={() => submitAnswer('')}
-				{leaveGame}
-				{socket}
 			/>
 		</div>
 	{:else if currentScene == 'guessWord'}
 		<div class="container mx-auto max-w-4xl p-4">
-			<GuessWord {dedupedClues} {clues} {role} {submitAnswer} {leaveGame} {socket} />
+			<GuessWord {dedupedClues} {clues} {role} {submitAnswer} />
 		</div>
 	{:else if currentScene == 'endGame'}
 		<div class="container mx-auto max-w-4xl p-4">
@@ -377,7 +363,6 @@
 				{gamesWon}
 				{totalRounds}
 				playAgain={nextRound}
-				{socket}
 			/>
 		</div>
 	{/if}

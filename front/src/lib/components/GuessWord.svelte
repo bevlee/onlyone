@@ -3,14 +3,13 @@
 	import { Input } from '$lib/components/ui/input';
 	import { defaultTimer } from '$lib/config';
 	import Timer from '$lib/components/Timer.svelte';
-	const { dedupedClues, clues, role, submitAnswer, leaveGame }: Props = $props();
+	const { dedupedClues, clues, role, submitAnswer }: Props = $props();
 
 	type Props = {
 		dedupedClues: string[];
 		clues: string[];
 		role: string;
 		submitAnswer: (answer: string) => void;
-		leaveGame: () => void;
 	};
 
 	let text = $state('');
@@ -65,4 +64,3 @@
 		</div>
 	{/if}
 </div>
-<!-- <Button onclick={() => leaveGame()}>Leave Game</Button> -->
