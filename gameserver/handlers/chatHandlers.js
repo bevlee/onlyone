@@ -52,8 +52,8 @@ export function handleChangeName(connections, io) {
       connections[room][newName] = connections[room][oldName];
       delete connections[room][oldName];
       callback({ status: "ok" });
+      io.to(room).emit("playerNameChanged", { oldName, newName });
     }
-    io.to(room).emit("playerNameChanged", { oldName, newName });
   };
 }
 
