@@ -66,20 +66,20 @@
 	}
 
 	// init socket
-	const socket = io('http://localhost:3000', {
-		auth: {
-			serverOffset: 0,
-			username: username,
-			room: roomName
-		}
-	});
-	// const socket = io(env.PUBLIC_SOCKET_ENDPOINT, {
+	// const socket = io('http://localhost:3000', {
 	// 	auth: {
 	// 		serverOffset: 0,
 	// 		username: username,
 	// 		room: roomName
 	// 	}
 	// });
+	const socket = io(env.PUBLIC_SOCKET_ENDPOINT, {
+		auth: {
+			serverOffset: 0,
+			username: username,
+			room: roomName
+		}
+	});
 
 	socket.on('disconnect', () => {
 		//send the username to the server
@@ -271,7 +271,7 @@
 						}
 					});
 				});
-				
+
 				if (success) {
 					gameStarted = true;
 				}
