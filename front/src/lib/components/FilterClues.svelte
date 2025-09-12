@@ -48,38 +48,37 @@
 			<div class="text-primary mt-1 text-lg font-semibold">{secretWord}</div>
 		</div>
 
-		<div class="space-y-3">
+		<div class="space-y-2">
 			{#each clues as clue, index}
-				<div class="bg-card space-y-3 rounded-lg border p-4">
-					<div class="text-center">
-						<div class="font-medium">{clue || '(empty)'}</div>
-						<div class="text-muted-foreground mt-1 text-sm">
-							{#if votes[index] < 0}
-								Duplicate - {Math.abs(votes[index])} votes
-							{:else}
-								Good clue - {votes[index]} votes
-							{/if}
+				<div class="flex items-center justify-between bg-card rounded-lg border px-4 py-3">
+					<div class="flex items-center gap-3 flex-1 min-w-0">
+						<div class="font-medium text-base truncate {votes[index] < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}">
+							{clue || '(empty)'}
+						</div>
+						<div class="text-sm text-muted-foreground">
+							({votes[index]} votes)
 						</div>
 					</div>
-
-					<div class="flex justify-center gap-2">
+					<div class="flex gap-2 flex-shrink-0">
 						<Button
 							variant="outline"
 							size="sm"
 							disabled={hasVoted(index, -1)}
 							onclick={() => voteOnClue(index, -1)}
-							class="min-w-0 whitespace-normal px-3 py-2 text-center"
+							class="px-3 py-2"
+							title="Mark as duplicate"
 						>
-							Duplicate (-1 vote)
+							❌
 						</Button>
 						<Button
 							variant="outline"
 							size="sm"
 							disabled={hasVoted(index, 1)}
 							onclick={() => voteOnClue(index, 1)}
-							class="min-w-0 whitespace-normal px-3 py-2 text-center"
+							class="px-3 py-2"
+							title="Mark as unique"
 						>
-							Unique (+1 vote)
+							✅
 						</Button>
 					</div>
 				</div>
