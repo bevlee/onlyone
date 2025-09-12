@@ -156,7 +156,7 @@ export class GameLoop {
     await this.gameStateManager.transitionToStage(room, "writeClues");
     
     // Select secret word using database tracking to avoid repeats
-    const secretWord = await database.getNextWord(room, difficulty, secretWords[difficulty]);
+    const secretWord = database.getNextWord(room, difficulty, secretWords[difficulty]);
     this.gameStateManager.setSecretWord(room, secretWord);
     
     logger.debug({ secretWord, difficulty, room }, 'Selected secret word from database');
