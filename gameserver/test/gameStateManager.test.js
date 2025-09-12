@@ -33,8 +33,8 @@ describe('GameStateManager', () => {
       
       const game = gameStateManager.getGame(testRoom);
       expect(game).to.deep.equal({
-        stage: "chooseCategory",
-        category: "",
+        stage: "chooseDifficulty",
+        difficulty: "",
         gamesPlayed: 0,
         gamesWon: 0,
         playerCount: testPlayerCount
@@ -43,12 +43,12 @@ describe('GameStateManager', () => {
 
     it('should overwrite existing game when creating with same room name', async () => {
       await gameStateManager.createGame(testRoom, testPlayerCount);
-      gameStateManager.setCategory(testRoom, 'Animals');
+      gameStateManager.setDifficulty(testRoom, 'Animals');
       
       await gameStateManager.createGame(testRoom, 5);
       
       const game = gameStateManager.getGame(testRoom);
-      expect(game.category).to.equal('');
+      expect(game.difficulty).to.equal('');
       expect(game.playerCount).to.equal(5);
     });
   });
@@ -117,27 +117,27 @@ describe('GameStateManager', () => {
     });
   });
 
-  describe('setCategory', () => {
+  describe('setDifficulty', () => {
     beforeEach(async () => {
       await gameStateManager.createGame(testRoom, testPlayerCount);
     });
 
-    it('should set category when in chooseCategory stage', () => {
-      const result = gameStateManager.setCategory(testRoom, 'Animals');
+    it('should set difficulty when in chooseDifficulty stage', () => {
+      const result = gameStateManager.setDifficulty(testRoom, 'Animals');
       
       expect(result.success).to.be.true;
-      expect(result.category).to.equal('Animals');
+      expect(result.difficulty).to.equal('Animals');
       
       const game = gameStateManager.getGame(testRoom);
-      expect(game.category).to.equal('Animals');
+      expect(game.difficulty).to.equal('Animals');
     });
 
-    it('should not set category when not in chooseCategory stage', async () => {
+    it('should not set difficulty when not in chooseDifficulty stage', async () => {
       await gameStateManager.transitionToStage(testRoom, 'writeClues');
-      const result = gameStateManager.setCategory(testRoom, 'Animals');
+      const result = gameStateManager.setDifficulty(testRoom, 'Animals');
       
       expect(result.success).to.be.false;
-      expect(result.reason).to.equal('Invalid stage for category selection');
+      expect(result.reason).to.equal('Invalid stage for difficulty selection');
     });
   });
 
@@ -418,7 +418,7 @@ describe('GameStateManager', () => {
       
       const game = gameStateManager.getGame(testRoom);
       expect(game).to.exist;
-      expect(game.stage).to.equal('chooseCategory');
+      expect(game.stage).to.equal('chooseDifficulty');
     });
 
     it('should return undefined for non-existent room', () => {

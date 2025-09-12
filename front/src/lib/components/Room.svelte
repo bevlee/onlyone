@@ -3,7 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { io } from 'socket.io-client';
 	import { SvelteSet } from 'svelte/reactivity';
-	import ChooseCategory from '$lib/components/ChooseCategory.svelte';
+	import ChooseDifficulty from '$lib/components/ChooseDifficulty.svelte';
 	import EndGame from '$lib/components/EndGame.svelte';
 	import FilterClues from '$lib/components/FilterClues.svelte';
 	import GuessWord from '$lib/components/GuessWord.svelte';
@@ -32,9 +32,9 @@
 
 	// These don't need $state because they're handled by Svelte's built-in reactivity
 	// svelte-ignore non_reactive_update
-	let categories: Array<string> = ['a', 'b', 'c'];
+	let difficulties: Array<string> = ['a', 'b', 'c'];
 	// svelte-ignore non_reactive_update
-	let category: string = '';
+	let difficulty: string = '';
 	// svelte-ignore non_reactive_update
 	let clues: Array<string> = ['a', 'b', 'a'];
 	// svelte-ignore non_reactive_update
@@ -111,11 +111,11 @@
 		currentScene = scene;
 	});
 
-	socket.on('chooseCategory', (gameRole: string, wordCategories = []) => {
-		console.log(`changing scene to chooseCategory with role ${gameRole}`);
+	socket.on('chooseDifficulty', (gameRole: string, wordDifficulties = []) => {
+		console.log(`changing scene to chooseDifficulty with role ${gameRole}`);
 		role = gameRole;
-		categories = wordCategories;
-		currentScene = 'chooseCategory';
+		difficulties = wordDifficulties;
+		currentScene = 'chooseDifficulty';
 	});
 	socket.on('writeClues', (gameRole: string, word: string = '') => {
 		console.log(`changing scene to writeClues with role ${gameRole}`, word);
@@ -158,7 +158,7 @@
 			dedupedClues: Array<string>;
 			guess: string;
 			secretWord: string;
-			category: string;
+			difficulty: string;
 			success: boolean;
 			gamesWon: number;
 			gamesPlayed: number;
@@ -170,7 +170,7 @@
 				dedupedClues = gameState.dedupedClues;
 				guess = gameState.guess;
 				secretWord = gameState.secretWord;
-				category = gameState.category;
+				difficulty = gameState.difficulty;
 				currentScene = 'endGame';
 				wordGuessed = gameState.success;
 				gamesWon = gameState.gamesWon;
@@ -211,8 +211,8 @@
 
 	// submit event to server and proceed to next scene
 	const submitAnswer = (input: string) => {
-		if (currentScene === 'chooseCategory') {
-			socket.emit('chooseCategory', input);
+		if (currentScene === 'chooseDifficulty') {
+			socket.emit('chooseDifficulty', input);
 
 			console.log(`submitted ${input} for`, currentScene);
 		} else if (currentScene === 'writeClues') {
@@ -228,7 +228,7 @@
 
 			console.log(`submitted ${input} for`, currentScene);
 		}
-		categories = [];
+		difficulties = [];
 	};
 
 	const openLeaveRoomModal = () => {
@@ -314,14 +314,14 @@
 				</Button>
 			</div>
 		</div>
-	{:else if currentScene == 'chooseCategory'}
+	{:else if currentScene == 'chooseDifficulty'}
 		<div class="container mx-auto max-w-4xl p-4">
 			<div class="mb-6 text-center">
 				<p class="text-muted-foreground text-sm">
 					My role is <span class="text-foreground font-medium">{role}</span>
 				</p>
 			</div>
-			<ChooseCategory {categories} {role} {submitAnswer} />
+			<ChooseDifficulty difficulties={difficulties} {role} {submitAnswer} />
 		</div>
 	{:else if currentScene == 'writeClues'}
 		<div class="container mx-auto max-w-4xl p-4">
@@ -345,7 +345,7 @@
 	{:else if currentScene == 'endGame'}
 		<div class="container mx-auto max-w-4xl p-4">
 			<EndGame
-				{category}
+				{difficulty}
 				{dedupedClues}
 				{clues}
 				{guess}

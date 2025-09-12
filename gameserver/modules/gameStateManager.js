@@ -7,8 +7,8 @@ import { logger } from '../config/logger.js';
  * Example game state structure:
  * this.activeGames = {
  *   "room123": {
- *     stage: "guessWord",           // Current game phase: "chooseCategory" | "writeClues" | "filterClues" | "guessWord"
- *     category: "Animals",          // Selected category
+ *     stage: "guessWord",           // Current game phase: "chooseDifficulty" | "writeClues" | "filterClues" | "guessWord"
+ *     difficulty: "Animals",        // Selected difficulty
  *     secretWord: "cat",           // Secret word to guess
  *     gamesPlayed: 2,              // Number of rounds completed
  *     gamesWon: 1,                 // Number of successful guesses
@@ -21,8 +21,8 @@ import { logger } from '../config/logger.js';
  *     dedupedClues: ["furry", "pet", "<redacted>"] // Final filtered clues
  *   },
  *   "room456": {
- *     stage: "chooseCategory",
- *     category: "",
+ *     stage: "chooseDifficulty",
+ *     difficulty: "",
  *     gamesPlayed: 0,
  *     gamesWon: 0,
  *     playerCount: 2
@@ -89,8 +89,8 @@ export class GameStateManager {
   async createGame(room, playerCount) {
     return this.queueOperation(room, () => {
       this.activeGames[room] = {
-        stage: "chooseCategory",
-        category: "",
+        stage: "chooseDifficulty",
+        difficulty: "",
         gamesPlayed: 0,
         gamesWon: 0,
         playerCount: playerCount,
@@ -157,18 +157,18 @@ export class GameStateManager {
   }
 
   /**
-   * Set the selected category for the game (direct access - no queue needed)
+   * Set the selected difficulty for the game (direct access - no queue needed)
    * @param {string} room - Room name
-   * @param {string} category - Selected category
+   * @param {string} difficulty - Selected difficulty
    * @returns {Object} Updated game state
    */
-  setCategory(room, category) {
+  setDifficulty(room, difficulty) {
     const game = this.activeGames[room];
-    if (game && game.stage === 'chooseCategory') {
-      game.category = category;
-      return { category, success: true };
+    if (game && game.stage === 'chooseDifficulty') {
+      game.difficulty = difficulty;
+      return { difficulty, success: true };
     }
-    return { success: false, reason: 'Invalid stage for category selection' };
+    return { success: false, reason: 'Invalid stage for difficulty selection' };
   }
 
   /**

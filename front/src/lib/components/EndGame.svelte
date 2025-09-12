@@ -4,7 +4,7 @@
 	import Timer from '$lib/components/Timer.svelte';
 
 	const {
-		category,
+		difficulty,
 		dedupedClues,
 		clues,
 		guess,
@@ -15,7 +15,7 @@
 		totalRounds,
 		playAgain
 	} = $props();
-	console.log(`ending game`, dedupedClues, clues, guess, category);
+	console.log(`ending game`, dedupedClues, clues, guess, difficulty);
 
 	let displayedClues = $state(dedupedClues);
 	let hidden = false;
@@ -45,7 +45,7 @@
 		<div class="bg-card space-y-2 rounded-lg border p-4">
 			<div class="space-y-2 text-center">
 				<div class="text-muted-foreground text-sm">Difficulty</div>
-				<div class="font-medium">{category}</div>
+				<div class="font-medium">{difficulty}</div>
 			</div>
 
 			<div class="space-y-2 border-t pt-3">

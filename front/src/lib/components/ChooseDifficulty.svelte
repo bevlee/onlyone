@@ -3,8 +3,8 @@
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import { defaultTimer } from '$lib/config';
 	import Timer from '$lib/components/Timer.svelte';
-	const { categories, role, submitAnswer } = $props();
-	let selectedOption = $state(categories[0]);
+	const { difficulties, role, submitAnswer } = $props();
+	let selectedOption = $state(difficulties[0]);
 
 	const submit = (): void => {
 		submitAnswer(selectedOption);
@@ -25,11 +25,11 @@
 
 			<div class="bg-card rounded-lg border p-6">
 				<RadioGroup.Root bind:value={selectedOption} class="space-y-3">
-					{#each categories as category}
+					{#each difficulties as difficulty}
 						<div class="flex items-center gap-3">
-							<RadioGroup.Item id={category} value={category} />
-							<label for={category} class="flex-1 cursor-pointer text-left text-sm font-medium">
-								{category}
+							<RadioGroup.Item id={difficulty} value={difficulty} />
+							<label for={difficulty} class="flex-1 cursor-pointer text-left text-sm font-medium">
+								{difficulty}
 							</label>
 						</div>
 					{/each}
