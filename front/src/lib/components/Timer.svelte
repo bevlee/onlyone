@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
-	let timer: number | undefined = undefined;
+	let timer: ReturnType<typeof setInterval> | undefined = undefined;
 	let { count, submitAnswer, timerText = 'Time left:' } = $props();
 	$effect(() => {
 		timer = setInterval(() => {
@@ -25,13 +25,15 @@
 	};
 </script>
 
-<div class="text-center space-y-1">
+<div class="space-y-1 text-center">
 	{#if timerFinished}
 		{stopTimer()}
 		<div class="text-lg font-medium text-red-600 dark:text-red-400">Time's up!</div>
 	{:else}
-		<div class="text-sm text-muted-foreground">{timerText}</div>
-		<div class="text-2xl font-bold {count < 10 ? 'text-red-600 dark:text-red-400' : 'text-foreground'}">
+		<div class="text-muted-foreground text-sm">{timerText}</div>
+		<div
+			class="text-2xl font-bold {count < 10 ? 'text-red-600 dark:text-red-400' : 'text-foreground'}"
+		>
 			{count}
 		</div>
 	{/if}
