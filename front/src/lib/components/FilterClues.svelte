@@ -70,18 +70,18 @@
 							size="sm"
 							disabled={hasVoted(index, -1)}
 							onclick={() => voteOnClue(index, -1)}
-							class="px-6"
+							class="min-w-0 whitespace-normal px-3 py-2 text-center"
 						>
-							Mark as Duplicate (-1 vote)
+							Duplicate (-1 vote)
 						</Button>
 						<Button
 							variant="outline"
 							size="sm"
 							disabled={hasVoted(index, 1)}
 							onclick={() => voteOnClue(index, 1)}
-							class="px-6"
+							class="min-w-0 whitespace-normal px-3 py-2 text-center"
 						>
-							Keep Clue (+1 vote)
+							Unique (+1 vote)
 						</Button>
 					</div>
 				</div>
