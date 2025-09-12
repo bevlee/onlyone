@@ -311,7 +311,7 @@ export class GameLoop {
       };
 
       // Listen for any player in the room to trigger next round
-      io.to(room).on('connection', handler);
+      io.on('connection', handler);
       
       // Also listen on existing sockets in the room
       io.in(room).fetchSockets().then(sockets => {

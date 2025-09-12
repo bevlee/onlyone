@@ -64,9 +64,23 @@ io.on("connection", async (socket) => {
   };
 
   // Game flow event handlers
-  socket.on("startGame", () => {
-    if (!(room in gameStateManager.activeGames)) {
-      startGameLoopBound(io, room, 20);
+  socket.on("startGame", (callback) => {
+    try {
+      if (!(room in gameStateManager.activeGames)) {
+        startGameLoopBound(io, room, 20);
+        if (callback && typeof callback === 'function') {
+          callback({ status: 'ok', message: 'Game started successfully' });
+        }
+      } else {
+        if (callback && typeof callback === 'function') {
+          callback({ status: 'error', message: 'Game already in progress' });
+        }
+      }
+    } catch (error) {
+      console.error('Error starting game:', error);
+      if (callback && typeof callback === 'function') {
+        callback({ status: 'error', message: 'Failed to start game' });
+      }
     }
   });
   

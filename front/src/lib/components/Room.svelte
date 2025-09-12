@@ -66,13 +66,20 @@
 	}
 
 	// init socket
-	const socket = io(env.PUBLIC_SOCKET_ENDPOINT, {
+	const socket = io('http://localhost:3000', {
 		auth: {
 			serverOffset: 0,
 			username: username,
 			room: roomName
 		}
 	});
+	// const socket = io(env.PUBLIC_SOCKET_ENDPOINT, {
+	// 	auth: {
+	// 		serverOffset: 0,
+	// 		username: username,
+	// 		room: roomName
+	// 	}
+	// });
 
 	socket.on('disconnect', () => {
 		//send the username to the server
@@ -247,14 +254,31 @@
 	const startGame = async () => {
 		console.log('starting the game!@!!!!!!!!!!!!!');
 		console.log('players are', players);
-		if (players.size < 1) {
+		if (players.size < 3) {
 			alert('must have at least 3 players to play!');
 		} else {
 			console.log('we got enough players nice');
-			socket.emit('startGame', (response: { status: string }) => {
-				console.log('callback was', response);
-			});
-			gameStarted = true;
+			try {
+				const success = await new Promise<boolean>((resolve) => {
+					socket.emit('startGame', (response: { status: string; message?: string }) => {
+						console.log('callback was', response);
+						if (response.status === 'ok') {
+							resolve(true);
+						} else {
+							console.error('Failed to start game:', response.message);
+							alert(response.message || 'Failed to start game');
+							resolve(false);
+						}
+					});
+				});
+				
+				if (success) {
+					gameStarted = true;
+				}
+			} catch (error) {
+				console.error('Error starting game:', error);
+				alert('Failed to start game');
+			}
 		}
 	};
 	const leaveGame = async () => {
@@ -271,6 +295,12 @@
 		socket.emit('nextRound');
 	};
 
+	// Handle server-side submission rejections
+	socket.on('submissionRejected', (data) => {
+		console.warn(`Submission rejected for ${data.phase}: ${data.reason}`);
+		alert(`Submission rejected: ${data.reason}`);
+	});
+
 	export const add = (first: number) => {
 		return first + 10;
 	};
@@ -285,7 +315,7 @@
 		onLeaveRoom={openLeaveRoomModal}
 	/>
 
-	<div class="container mx-auto max-w-4xl space-y-6 p-4">
+	<div class="container mx-auto max-w-4xl space-y-1 p-1">
 		<PlayerList {players} currentUser={username} />
 	</div>
 
@@ -311,19 +341,28 @@
 					My role is <span class="text-foreground font-medium">{role}</span>
 				</p>
 			</div>
-			<ChooseCategory {categories} {role} {submitAnswer} {leaveGame} />
+			<ChooseCategory {categories} {role} {submitAnswer} {leaveGame} {socket} />
 		</div>
 	{:else if currentScene == 'writeClues'}
 		<div class="container mx-auto max-w-4xl p-4">
-			<WriteClues word={secretWord} {role} {submitAnswer} {leaveGame} />
+			<WriteClues word={secretWord} {role} {submitAnswer} {leaveGame} {socket} />
 		</div>
 	{:else if currentScene == 'filterClues'}
 		<div class="container mx-auto max-w-4xl p-4">
-			<FilterClues bind:votes {clues} {role} {updateVotes} {submitAnswer} {leaveGame} />
+			<FilterClues
+				bind:votes
+				{clues}
+				{secretWord}
+				{role}
+				{updateVotes}
+				submitAnswer={() => submitAnswer('')}
+				{leaveGame}
+				{socket}
+			/>
 		</div>
 	{:else if currentScene == 'guessWord'}
 		<div class="container mx-auto max-w-4xl p-4">
-			<GuessWord {dedupedClues} {clues} {role} {submitAnswer} {leaveGame} />
+			<GuessWord {dedupedClues} {clues} {role} {submitAnswer} {leaveGame} {socket} />
 		</div>
 	{:else if currentScene == 'endGame'}
 		<div class="container mx-auto max-w-4xl p-4">
@@ -338,6 +377,7 @@
 				{gamesWon}
 				{totalRounds}
 				playAgain={nextRound}
+				{socket}
 			/>
 		</div>
 	{/if}

@@ -21,7 +21,7 @@
 	</div>
 	{#if role == 'guesser'}
 		<div class="space-y-4 text-center">
-			<h2 class="text-lg font-medium">Choose a category for your secret word</h2>
+			<h2 class="text-lg font-medium">Choose a difficulty for your secret word</h2>
 
 			<div class="bg-card rounded-lg border p-6">
 				<RadioGroup.Root bind:value={selectedOption} class="space-y-3">
@@ -36,15 +36,15 @@
 				</RadioGroup.Root>
 			</div>
 
-			<Button onclick={() => submit()} class="px-8">Select Category</Button>
+			<Button onclick={() => submit()} class="px-8">Select Difficulty</Button>
 		</div>
 	{:else}
 		<div class="space-y-4 text-center">
 			<h2 class="text-muted-foreground text-lg font-medium">
-				Waiting for guesser to choose category...
+				Waiting for guesser to choose difficulty...
 			</h2>
 			<div class="text-muted-foreground text-sm">
-				The guesser is selecting the category for this round.
+				The guesser is selecting the difficulty for this round.
 			</div>
 		</div>
 	{/if}
