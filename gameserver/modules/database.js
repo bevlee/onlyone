@@ -2,7 +2,7 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import logger from '../config/logger.js';
+import { logger } from '../config/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -125,24 +125,24 @@ class Database {
     try {
       await this.ensureRoom(roomId);
 
-      // Get words not yet used in this room for this difficulty
-      const placeholders = availableWords.map(() => '?').join(',');
-      const query = `
-        SELECT word FROM (
-          SELECT ? as word ${availableWords.map(() => 'UNION SELECT ?').join(' ')}
-        ) all_words
-        WHERE word NOT IN (
-          SELECT word FROM room_used_words 
-          WHERE room_id = ? AND difficulty = ?
-        )
-        ORDER BY RANDOM() 
-        LIMIT 1
-      `;
+      // Get all words already used in this room for this difficulty
+      const usedWordsResult = await this.db.all(`
+        SELECT word FROM room_used_words 
+        WHERE room_id = ? AND difficulty = ?
+      `, [roomId, difficulty]);
 
-      const params = [availableWords[0], ...availableWords.slice(1), roomId, difficulty];
-      const result = await this.db.get(query, params);
+      const usedWords = new Set(usedWordsResult.map(row => row.word));
       
-      return result ? result.word : null;
+      // Filter to get unused words
+      const unusedWords = availableWords.filter(word => !usedWords.has(word));
+      
+      if (unusedWords.length === 0) {
+        return null; // All words have been used
+      }
+
+      // Return a random unused word
+      const randomIndex = Math.floor(Math.random() * unusedWords.length);
+      return unusedWords[randomIndex];
     } catch (error) {
       logger.error({ error, roomId, difficulty }, 'Failed to get unused word');
       throw error;

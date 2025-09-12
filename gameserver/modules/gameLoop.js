@@ -1,5 +1,6 @@
 import { dedupeClues } from "../wordOperations.js";
 import { logger } from '../config/logger.js';
+import database from './database.js';
 
 /**
  * Manages the main game loop
@@ -154,11 +155,11 @@ export class GameLoop {
     
     await this.gameStateManager.transitionToStage(room, "writeClues");
     
-    // Select random secret word from chosen difficulty
-    const secretWord = secretWords[difficulty][this.getRandomSelection(secretWords[difficulty].length)];
+    // Select secret word using database tracking to avoid repeats
+    const secretWord = await database.getNextWord(room, difficulty, secretWords[difficulty]);
     this.gameStateManager.setSecretWord(room, secretWord);
     
-    logger.debug({ secretWord, secretWordsCount: secretWords[difficulty].length }, 'Selected secret word');
+    logger.debug({ secretWord, difficulty, room }, 'Selected secret word from database');
     
     // Writers see the secret word, guesser sees nothing
     io.to(writerRoom).emit("writeClues", "writer", secretWord);

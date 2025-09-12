@@ -18,6 +18,7 @@ import { ConnectionManager } from "./modules/connectionManager.js";
 import { GameStateManager } from "./modules/gameStateManager.js";
 import { GameLoop } from "./modules/gameLoop.js";
 import { logger } from "./config/logger.js";
+import database from "./modules/database.js";
 
 // Initialize Express app and HTTP server
 const app = createExpressServer();
@@ -124,7 +125,34 @@ io.on("connection", async (socket) => {
   }
 });
 
-// Start the server on configured port
-const port = process.env.GAMESERVER_PORT || 3000;
-startServer(server, port);
+// Initialize database and start server
+async function initializeAndStart() {
+  try {
+    // Initialize database
+    await database.initialize();
+    logger.info('Database initialized successfully');
+    
+    // Start the server on configured port
+    const port = process.env.GAMESERVER_PORT || 3000;
+    startServer(server, port);
+  } catch (error) {
+    logger.error({ error }, 'Failed to initialize server');
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  logger.info('Received SIGINT, shutting down gracefully');
+  await database.close();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  logger.info('Received SIGTERM, shutting down gracefully');
+  await database.close();
+  process.exit(0);
+});
+
+initializeAndStart();
 
