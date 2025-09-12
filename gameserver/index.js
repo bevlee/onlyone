@@ -68,7 +68,7 @@ io.on("connection", async (socket) => {
   socket.on("startGame", (callback) => {
     try {
       if (!(room in gameStateManager.activeGames)) {
-        startGameLoopBound(io, room, 20);
+        startGameLoopBound(io, room, 30);
         if (callback && typeof callback === 'function') {
           callback({ status: 'ok', message: 'Game started successfully' });
         }
