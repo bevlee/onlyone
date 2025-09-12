@@ -6,7 +6,7 @@ A real-time multiplayer word guessing game inspired by the board game "Just One"
 
 1. **Join a Room**: Enter a room name to join or create a new game room
 2. **Team Setup**: One player becomes the "guesser" while others become "writers"
-3. **Category Selection**: The guesser chooses a category (animals, people, places)
+3. **Difficulty Selection**: The guesser chooses a difficulty level (easy, medium, hard)
 4. **Secret Word**: Writers see the secret word and write one-word clues to help the guesser
 5. **Duplicate Filtering**: Any duplicate clues are automatically cancelled out
 6. **Guessing**: The guesser sees the filtered clues and tries to guess the word

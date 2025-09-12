@@ -23,7 +23,7 @@ The gameserver has a modular architecture:
 
 - **ConnectionManager**: Handles player connections and room management
 - **GameStateManager**: Centralized game state and progress tracking
-- **GameLoop**: Main game phases (category, clue, voting, guessing)
+- **GameLoop**: Main game phases (difficulty, clue, voting, guessing)
 - **Handlers**: Socket event handlers for game actions and chat
 - **Utils**: Shared utilities and word operations
 
@@ -170,7 +170,7 @@ SERVER_NAME=your-domain.com
 ### Game Mechanics
 
 - Real-time multiplayer word guessing
-- Select a category to guess a secret word from
+- Select a difficulty level to guess a secret word from
 - Collaborative clue writing with duplicate elimination
 - Vote on whether clues are duplicates
 - See how many you can guess right as a team

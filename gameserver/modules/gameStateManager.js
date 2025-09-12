@@ -8,7 +8,7 @@ import { logger } from '../config/logger.js';
  * this.activeGames = {
  *   "room123": {
  *     stage: "guessWord",           // Current game phase: "chooseDifficulty" | "writeClues" | "filterClues" | "guessWord"
- *     difficulty: "Animals",        // Selected difficulty
+ *     difficulty: "easy",           // Selected difficulty
  *     secretWord: "cat",           // Secret word to guess
  *     gamesPlayed: 2,              // Number of rounds completed
  *     gamesWon: 1,                 // Number of successful guesses
@@ -18,7 +18,7 @@ import { logger } from '../config/logger.js';
  *     finishedVoting: true,        // Whether voting phase is complete
  *     guess: "cat",                // Guesser's submitted guess
  *     success: true,               // Whether guess was correct
- *     dedupedClues: ["furry", "pet", "<redacted>"] // Final filtered clues
+ *     dedupedClues: ["furry", "pet", "meow"] // Final filtered clues
  *   },
  *   "room456": {
  *     stage: "chooseDifficulty",

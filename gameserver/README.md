@@ -14,14 +14,14 @@ gameserver/
 │   ├── gameHandlers.js      # Socket event handlers for game actions
 │   └── chatHandlers.js      # Socket event handlers for chat and player management
 ├── index.js                 # Main server entry point (now ~75 lines vs 282)
-└── config.js               # Game categories and secret words
+└── config.js               # Game difficulty levels and secret words
 ```
 
 ### Key Modules
 
 - **ConnectionManager**: Manages player connections per room, handles join/leave operations
 - **GameStateManager**: Centralized game state management with methods for updating game phases
-- **GameLoop**: Extracted 120+ line game loop into manageable phases (category, clue, voting, guessing)
+- **GameLoop**: Extracted 120+ line game loop into manageable phases (difficulty, clue, voting, guessing)
 - **Server Config**: Separated Express and Socket.IO setup from business logic
 - **Chat Handlers**: Handles chat messages, player name changes, and disconnections with proper event emission
 
@@ -54,7 +54,7 @@ npm test
 
 Test coverage includes:
 
-- Game handlers (start/stop game, category selection, clue submission, voting, guessing)
+- Game handlers (start/stop game, difficulty selection, clue submission, voting, guessing)
 - Chat handlers (name changes, disconnections, chat messages)
 - Connection management
 - Game state management
