@@ -76,51 +76,39 @@
 
 	socket.on('disconnect', () => {
 		//send the username to the server
-		console.log(`user ${socket.id} disconnected`);
 	});
 	socket.on('connect', () => {
-		console.log(socket.auth);
 	});
 	socket.on('joinRoom', (roomDetails: Object) => {
-		console.log('joined room which consists of: ', roomDetails);
 		for (let player of Object.keys(roomDetails)) {
 			players.add(player);
 		}
 	});
 
 	socket.on('playerJoined', (player: string) => {
-		console.log(`user ${player} joined`);
 		players.add(player);
-		console.log($state.snapshot(players));
 	});
 	socket.on('playerLeft', (player: string) => {
-		console.log(`user ${player} left`);
 		players.delete(player);
-		console.log($state.snapshot(players));
 	});
 
 	socket.on('playerNameChanged', ({ oldName, newName }: { oldName: string; newName: string }) => {
-		console.log(`user ${oldName} changed name to ${newName}`);
 		players.delete(oldName);
 		players.add(newName);
-		console.log($state.snapshot(players));
 	});
 
 	socket.on('changeScene', (scene, gameRole: string) => {
-		console.log(`changing scene to ${scene} with role ${gameRole}`);
 		role = gameRole;
 		currentScene = scene;
 	});
 
 	socket.on('chooseDifficulty', (gameRole: string, wordDifficulties = [], guesser = '') => {
-		console.log(`changing scene to chooseDifficulty with role ${gameRole}`);
 		role = gameRole;
 		difficulties = wordDifficulties;
 		currentGuesser = guesser;
 		currentScene = 'chooseDifficulty';
 	});
 	socket.on('writeClues', (gameRole: string, word: string = '', guesser = '') => {
-		console.log(`changing scene to writeClues with role ${gameRole}`, word);
 		role = gameRole;
 		secretWord = word;
 		currentGuesser = guesser;
@@ -136,7 +124,6 @@
 			currentScene = 'filterClues';
 			socket.on('updateVotes', (index, vote: number) => {
 				if (votes && votes.length > 0) {
-					console.log('getting updated votes', index, vote);
 					votes[index] += vote;
 				}
 			});
@@ -146,8 +133,6 @@
 		'guessWord',
 		(gameRole: string, guesserClues: Array<string>, writerClues: Array<string> = [], guesser = '') => {
 			socket.off('updateVotes');
-			console.log(`changing scene to guessWord with role ${gameRole}`);
-			console.log(`clues are`, guesserClues, writerClues);
 			role = gameRole;
 			clues = writerClues;
 			dedupedClues = guesserClues;
@@ -171,8 +156,7 @@
 			currentGuesser: string;
 		}) => {
 			try {
-				console.log(`ending game`, gameState);
-				clues = gameState.clues;
+					clues = gameState.clues;
 				dedupedClues = gameState.dedupedClues;
 				guess = gameState.guess;
 				secretWord = gameState.secretWord;
@@ -184,8 +168,7 @@
 				totalRounds = gameState.playerCount;
 				currentGuesser = gameState.currentGuesser;
 			} catch (error) {
-				console.log('errored on end game', error);
-			}
+				}
 		}
 	);
 
@@ -221,19 +204,15 @@
 		if (currentScene === 'chooseDifficulty') {
 			socket.emit('chooseDifficulty', input);
 
-			console.log(`submitted ${input} for`, currentScene);
 		} else if (currentScene === 'writeClues') {
 			socket.emit('submitClue', input);
 
-			console.log(`submitted ${input} for`, currentScene);
 		} else if (currentScene === 'filterClues') {
 			socket.emit('finishVoting');
 
-			console.log(`submitted ${input} for`, currentScene);
 		} else if (currentScene === 'guessWord') {
 			socket.emit('guessWord', input);
 
-			console.log(`submitted ${input} for`, currentScene);
 		}
 		difficulties = [];
 	};
@@ -248,17 +227,13 @@
 	};
 
 	const startGame = async () => {
-		console.log('starting the game!@!!!!!!!!!!!!!');
-		console.log('players are', players);
 		if (players.size < 3) {
 			alert('must have at least 3 players to play!');
 		} else {
-			console.log('we got enough players nice');
 			try {
 				await new Promise<boolean>((resolve) => {
 					socket.emit('startGame', (response: { status: string; message?: string }) => {
-						console.log('callback was', response);
-						if (response.status === 'ok') {
+							if (response.status === 'ok') {
 							resolve(true);
 						} else {
 							console.error('Failed to start game:', response.message);

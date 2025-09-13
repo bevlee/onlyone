@@ -6,12 +6,10 @@
 	let roomSelected: boolean = $state(false);
 
 	const joinRoom = (name: string) => {
-		console.log('joining ', name);
 		roomSelected = true;
 		roomName = name;
 	};
 	const leaveRoom = () => {
-		console.log('leaving room ');
 		roomSelected = false;
 		roomName = '';
 	};
