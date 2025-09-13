@@ -56,6 +56,17 @@ class WordDatabase {
         );
       `);
 
+      // Words table for storing all available words
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS words (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          word TEXT NOT NULL UNIQUE,
+          difficulty TEXT NOT NULL,
+          active BOOLEAN DEFAULT 1,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
       // Used words tracking table
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS room_used_words (
@@ -83,6 +94,11 @@ class WordDatabase {
       this.db.exec(`
         CREATE INDEX IF NOT EXISTS idx_rooms_last_active 
         ON rooms(last_active);
+      `);
+
+      this.db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_words_difficulty_active 
+        ON words(difficulty, active);
       `);
 
       logger.debug('Database schema created successfully');
@@ -136,6 +152,28 @@ class WordDatabase {
         cleanupInactiveRooms: this.db.prepare(`
           DELETE FROM rooms 
           WHERE last_active < datetime('now', '-' || ? || ' days')
+        `),
+        
+        getAllWordsForDifficulty: this.db.prepare(`
+          SELECT word FROM words 
+          WHERE difficulty = ? AND active = 1
+        `),
+        
+        addWord: this.db.prepare(`
+          INSERT INTO words (word, difficulty, active) 
+          VALUES (?, ?, 1)
+        `),
+        
+        updateWordStatus: this.db.prepare(`
+          UPDATE words 
+          SET active = ? 
+          WHERE word = ? AND difficulty = ?
+        `),
+        
+        getWordCount: this.db.prepare(`
+          SELECT COUNT(*) as count 
+          FROM words 
+          WHERE difficulty = ? AND active = 1
         `)
       };
 
@@ -161,15 +199,32 @@ class WordDatabase {
   }
 
   /**
+   * Get all active words for a difficulty level from database
+   * @param {string} difficulty - Word difficulty (easy/medium/hard)
+   * @returns {Array<string>} Array of all active words for this difficulty
+   */
+  getAllWordsForDifficulty(difficulty) {
+    try {
+      const wordsResult = this.preparedStatements.getAllWordsForDifficulty.all(difficulty);
+      return wordsResult.map(row => row.word);
+    } catch (error) {
+      logger.error({ error, difficulty }, 'Failed to get words for difficulty');
+      throw error;
+    }
+  }
+
+  /**
    * Get an unused word for a room and difficulty
    * @param {string} roomId - Room identifier
    * @param {string} difficulty - Word difficulty (easy/medium/hard)
-   * @param {Array<string>} availableWords - Array of all words for this difficulty
    * @returns {string|null} Random unused word or null if all used
    */
-  getUnusedWord(roomId, difficulty, availableWords) {
+  getUnusedWord(roomId, difficulty) {
     try {
       this.ensureRoom(roomId);
+
+      // Get available words from database
+      const availableWords = this.getAllWordsForDifficulty(difficulty);
 
       // Get all words already used in this room for this difficulty
       const usedWordsResult = this.preparedStatements.getUsedWords.all(roomId, difficulty);
@@ -229,21 +284,23 @@ class WordDatabase {
    * Get next available word for a room, resetting if all words used
    * @param {string} roomId - Room identifier
    * @param {string} difficulty - Word difficulty
-   * @param {Array<string>} availableWords - Array of all words for this difficulty
    * @returns {string} Next available word
    */
-  getNextWord(roomId, difficulty, availableWords) {
+  getNextWord(roomId, difficulty) {
     try {
       // Use transaction for consistency
       return this.db.transaction(() => {
+        // Get available words from database
+        const availableWords = this.getAllWordsForDifficulty(difficulty);
+
         // Try to get an unused word
-        let word = this.getUnusedWord(roomId, difficulty, availableWords);
+        let word = this.getUnusedWord(roomId, difficulty);
         
         if (!word) {
           // All words exhausted - clear used words and try again
           logger.info({ roomId, difficulty }, 'All words exhausted, resetting word pool');
           this.clearUsedWords(roomId, difficulty);
-          word = this.getUnusedWord(roomId, difficulty, availableWords);
+          word = this.getUnusedWord(roomId, difficulty);
         }
 
         if (!word) {
@@ -301,6 +358,66 @@ class WordDatabase {
       return result.changes;
     } catch (error) {
       logger.error({ error, daysInactive }, 'Failed to cleanup inactive rooms');
+      throw error;
+    }
+  }
+
+  /**
+   * Add a new word to the database
+   * @param {string} word - The word to add
+   * @param {string} difficulty - Word difficulty (easy/medium/hard)
+   * @returns {boolean} True if word was added, false if it already exists
+   */
+  addWord(word, difficulty) {
+    try {
+      const result = this.preparedStatements.addWord.run(word, difficulty);
+      if (result.changes > 0) {
+        logger.info({ word, difficulty }, 'Word added to database');
+        return true;
+      }
+      return false; // Word already exists
+    } catch (error) {
+      if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+        logger.debug({ word, difficulty }, 'Word already exists in database');
+        return false;
+      }
+      logger.error({ error, word, difficulty }, 'Failed to add word');
+      throw error;
+    }
+  }
+
+  /**
+   * Update word active status (enable/disable word)
+   * @param {string} word - The word to update
+   * @param {string} difficulty - Word difficulty
+   * @param {boolean} active - Whether word should be active
+   * @returns {boolean} True if word was updated
+   */
+  updateWordStatus(word, difficulty, active) {
+    try {
+      const result = this.preparedStatements.updateWordStatus.run(active ? 1 : 0, word, difficulty);
+      if (result.changes > 0) {
+        logger.info({ word, difficulty, active }, 'Word status updated');
+        return true;
+      }
+      return false; // Word not found
+    } catch (error) {
+      logger.error({ error, word, difficulty, active }, 'Failed to update word status');
+      throw error;
+    }
+  }
+
+  /**
+   * Get count of active words for a difficulty
+   * @param {string} difficulty - Word difficulty
+   * @returns {number} Number of active words
+   */
+  getWordCount(difficulty) {
+    try {
+      const result = this.preparedStatements.getWordCount.get(difficulty);
+      return result.count;
+    } catch (error) {
+      logger.error({ error, difficulty }, 'Failed to get word count');
       throw error;
     }
   }

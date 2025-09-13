@@ -9,7 +9,7 @@ import {
 } from "./handlers/chatHandlers.js";
 
 // Game configuration and utilities
-import { difficulties, secretWords } from "./data/data.js";
+import { difficulties } from "./data/data.js";
 import { getStem } from "./wordOperations.js";
 
 // Modular components
@@ -61,7 +61,7 @@ io.on("connection", async (socket) => {
   // Setup game event handlers
   // Bind the game loop with required dependencies
   const startGameLoopBound = (io, room, timeLimit) => {
-    return gameLoop.startGameLoop(io, room, timeLimit, difficulties, secretWords, getStem);
+    return gameLoop.startGameLoop(io, room, timeLimit, difficulties, getStem);
   };
 
   // Game flow event handlers
