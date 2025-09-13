@@ -168,6 +168,7 @@
 			gamesWon: number;
 			gamesPlayed: number;
 			playerCount: number;
+			currentGuesser: string;
 		}) => {
 			try {
 				console.log(`ending game`, gameState);
@@ -181,6 +182,7 @@
 				gamesWon = gameState.gamesWon;
 				gamesPlayed = gameState.gamesPlayed;
 				totalRounds = gameState.playerCount;
+				currentGuesser = gameState.currentGuesser;
 			} catch (error) {
 				console.log('errored on end game', error);
 			}
@@ -396,6 +398,7 @@
 				{gamesWon}
 				{totalRounds}
 				playAgain={nextRound}
+				{currentGuesser}
 			/>
 		</div>
 	{/if}
