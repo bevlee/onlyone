@@ -30,12 +30,17 @@
 		<div transition:slide={{ duration: 200 }} class="px-4 pb-4">
 			<div class="text-muted-foreground space-y-3 text-sm">
 				<ol class="list-inside list-decimal space-y-2">
+					<li>Everyone takes turns at guessing and writing clues</li>
 					<li>Guesser picks a difficulty</li>
-					<li>Others see the word, give one-word clues</li>
+					<li>Others see a secret word, give one-word clues</li>
 					<li>No duplicate clues allowed!</li>
 				</ol>
 				<div class="text-foreground pt-2 text-center font-medium">
 					🎯 Goal: Guess as many words as possible together!
+				</div>
+
+				<div class="text-foreground pt-2 text-center italic">
+					Example: Secret word is “Tiger” → Clues: “Stripe”, “Jungle”, “Fierce"
 				</div>
 			</div>
 		</div>
