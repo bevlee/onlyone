@@ -10,6 +10,7 @@ import { logger } from '../config/logger.js';
  *     stage: "guessWord",           // Current game phase: "chooseDifficulty" | "writeClues" | "filterClues" | "guessWord"
  *     difficulty: "easy",           // Selected difficulty
  *     secretWord: "cat",           // Secret word to guess
+ *     currentGuesser: "player1",   // Username of current guesser
  *     gamesPlayed: 2,              // Number of rounds completed
  *     gamesWon: 1,                 // Number of successful guesses
  *     playerCount: 3,              // Total players in room
@@ -23,6 +24,7 @@ import { logger } from '../config/logger.js';
  *   "room456": {
  *     stage: "chooseDifficulty",
  *     difficulty: "",
+ *     currentGuesser: "player2",
  *     gamesPlayed: 0,
  *     gamesWon: 0,
  *     playerCount: 2
@@ -182,6 +184,21 @@ export class GameStateManager {
     if (game) {
       game.secretWord = secretWord;
       return { secretWord, success: true };
+    }
+    return { success: false, reason: 'Game not found' };
+  }
+
+  /**
+   * Set the current guesser for the round (direct access - no queue needed)
+   * @param {string} room - Room name
+   * @param {string} guesser - Username of the current guesser
+   * @returns {Object} Updated game state
+   */
+  setCurrentGuesser(room, guesser) {
+    const game = this.activeGames[room];
+    if (game) {
+      game.currentGuesser = guesser;
+      return { currentGuesser: guesser, success: true };
     }
     return { success: false, reason: 'Game not found' };
   }

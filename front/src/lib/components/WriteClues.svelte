@@ -4,7 +4,7 @@
 	import { defaultTimer } from '$lib/config';
 	import Timer from '$lib/components/Timer.svelte';
 
-	const { word, role, submitAnswer } = $props();
+	const { word, role, submitAnswer, currentGuesser } = $props();
 	let clue = $state('');
 	let submitted = $state(false);
 
@@ -33,7 +33,7 @@
 		<div class="space-y-4 text-center">
 			<Timer count={defaultTimer} submitAnswer={() => {}} />
 			<h2 class="text-muted-foreground text-lg font-medium">
-				Everyone is busy writing clues for <span class="text-primary font-semibold">{word}</span>
+				Everyone is busy writing clues for the secret word
 			</h2>
 		</div>
 	{:else}

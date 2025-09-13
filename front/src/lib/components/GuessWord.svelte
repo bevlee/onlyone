@@ -3,13 +3,14 @@
 	import { Input } from '$lib/components/ui/input';
 	import { defaultTimer } from '$lib/config';
 	import Timer from '$lib/components/Timer.svelte';
-	const { dedupedClues, clues, role, submitAnswer }: Props = $props();
+	const { dedupedClues, clues, role, submitAnswer, currentGuesser }: Props = $props();
 
 	type Props = {
 		dedupedClues: string[];
 		clues: string[];
 		role: string;
 		submitAnswer: (answer: string) => void;
+		currentGuesser?: string;
 	};
 
 	let text = $state('');

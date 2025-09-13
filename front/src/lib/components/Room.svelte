@@ -29,6 +29,7 @@
 	// These need $state because they're mutated in callbacks/socket events
 	let role: string = $state('');
 	let votes: Array<number> = $state<Array<number>>([]);
+	let currentGuesser: string = $state('');
 
 	// These don't need $state because they're handled by Svelte's built-in reactivity
 	// svelte-ignore non_reactive_update
@@ -111,24 +112,27 @@
 		currentScene = scene;
 	});
 
-	socket.on('chooseDifficulty', (gameRole: string, wordDifficulties = []) => {
+	socket.on('chooseDifficulty', (gameRole: string, wordDifficulties = [], guesser = '') => {
 		console.log(`changing scene to chooseDifficulty with role ${gameRole}`);
 		role = gameRole;
 		difficulties = wordDifficulties;
+		currentGuesser = guesser;
 		currentScene = 'chooseDifficulty';
 	});
-	socket.on('writeClues', (gameRole: string, word: string = '') => {
+	socket.on('writeClues', (gameRole: string, word: string = '', guesser = '') => {
 		console.log(`changing scene to writeClues with role ${gameRole}`, word);
 		role = gameRole;
 		secretWord = word;
+		currentGuesser = guesser;
 		currentScene = 'writeClues';
 	});
 	socket.on(
 		'filterClues',
-		(gameRole: string, votesForDuplicate: Array<number> = [], writerClues: Array<string> = []) => {
+		(gameRole: string, votesForDuplicate: Array<number> = [], writerClues: Array<string> = [], guesser = '') => {
 			role = gameRole;
 			clues = writerClues;
 			votes = votesForDuplicate;
+			currentGuesser = guesser;
 			currentScene = 'filterClues';
 			socket.on('updateVotes', (index, vote: number) => {
 				if (votes && votes.length > 0) {
@@ -140,13 +144,14 @@
 	);
 	socket.on(
 		'guessWord',
-		(gameRole: string, guesserClues: Array<string>, writerClues: Array<string> = []) => {
+		(gameRole: string, guesserClues: Array<string>, writerClues: Array<string> = [], guesser = '') => {
 			socket.off('updateVotes');
 			console.log(`changing scene to guessWord with role ${gameRole}`);
 			console.log(`clues are`, guesserClues, writerClues);
 			role = gameRole;
 			clues = writerClues;
 			dedupedClues = guesserClues;
+			currentGuesser = guesser;
 			currentScene = 'guessWord';
 		}
 	);
@@ -320,15 +325,40 @@
 				<p class="text-muted-foreground text-sm">
 					My role is <span class="text-foreground font-medium">{role}</span>
 				</p>
+				{#if currentGuesser}
+					<p class="text-muted-foreground text-xs mt-1">
+						Current guesser: <span class="text-foreground font-medium">{currentGuesser}</span>
+					</p>
+				{/if}
 			</div>
-			<ChooseDifficulty difficulties={difficulties} {role} {submitAnswer} />
+			<ChooseDifficulty difficulties={difficulties} {role} {submitAnswer} {currentGuesser} />
 		</div>
 	{:else if currentScene == 'writeClues'}
 		<div class="container mx-auto max-w-4xl p-4">
-			<WriteClues word={secretWord} {role} {submitAnswer} />
+			<div class="mb-6 text-center">
+				<p class="text-muted-foreground text-sm">
+					My role is <span class="text-foreground font-medium">{role}</span>
+				</p>
+				{#if currentGuesser}
+					<p class="text-muted-foreground text-xs mt-1">
+						Current guesser: <span class="text-foreground font-medium">{currentGuesser}</span>
+					</p>
+				{/if}
+			</div>
+			<WriteClues word={secretWord} {role} {submitAnswer} {currentGuesser} />
 		</div>
 	{:else if currentScene == 'filterClues'}
 		<div class="container mx-auto max-w-4xl p-4">
+			<div class="mb-6 text-center">
+				<p class="text-muted-foreground text-sm">
+					My role is <span class="text-foreground font-medium">{role}</span>
+				</p>
+				{#if currentGuesser}
+					<p class="text-muted-foreground text-xs mt-1">
+						Current guesser: <span class="text-foreground font-medium">{currentGuesser}</span>
+					</p>
+				{/if}
+			</div>
 			<FilterClues
 				bind:votes
 				{clues}
@@ -336,11 +366,22 @@
 				{role}
 				{updateVotes}
 				submitAnswer={() => submitAnswer('')}
+				{currentGuesser}
 			/>
 		</div>
 	{:else if currentScene == 'guessWord'}
 		<div class="container mx-auto max-w-4xl p-4">
-			<GuessWord {dedupedClues} {clues} {role} {submitAnswer} />
+			<div class="mb-6 text-center">
+				<p class="text-muted-foreground text-sm">
+					My role is <span class="text-foreground font-medium">{role}</span>
+				</p>
+				{#if currentGuesser}
+					<p class="text-muted-foreground text-xs mt-1">
+						Current guesser: <span class="text-foreground font-medium">{currentGuesser}</span>
+					</p>
+				{/if}
+			</div>
+			<GuessWord {dedupedClues} {clues} {role} {submitAnswer} {currentGuesser} />
 		</div>
 	{:else if currentScene == 'endGame'}
 		<div class="container mx-auto max-w-4xl p-4">

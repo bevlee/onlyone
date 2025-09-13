@@ -3,7 +3,7 @@
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import { defaultTimer } from '$lib/config';
 	import Timer from '$lib/components/Timer.svelte';
-	const { difficulties, role, submitAnswer } = $props();
+	const { difficulties, role, submitAnswer, currentGuesser } = $props();
 	let selectedOption = $state(difficulties[0]);
 
 	const submit = (): void => {
