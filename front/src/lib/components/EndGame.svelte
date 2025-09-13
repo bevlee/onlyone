@@ -13,7 +13,8 @@
 		gamesPlayed,
 		gamesWon,
 		totalRounds,
-		playAgain
+		playAgain,
+		currentGuesser
 	} = $props();
 	console.log(`ending game`, dedupedClues, clues, guess, difficulty);
 
@@ -49,7 +50,7 @@
 			</div>
 
 			<div class="space-y-2 border-t pt-3">
-				<div class="text-muted-foreground text-sm">Your guess</div>
+				<div class="text-muted-foreground text-sm">{currentGuesser}'s guess</div>
 				<div class="text-center font-medium">{guess || 'No guess'}</div>
 			</div>
 
