@@ -228,7 +228,7 @@ export class GameLoop {
     // Writers see voting interface, guesser waits
     const currentGuesser = game.currentGuesser;
     io.to(writerRoom).emit("filterClues", "writer", clueVotes, clues, currentGuesser);
-    io.to(guesserRoom).emit("filterClues", "guesser", undefined, undefined, currentGuesser);
+    io.to(guesserRoom).emit("filterClues", "guesser", [], [], currentGuesser);
     await this.gameStateManager.transitionToStage(room, "filterClues");
 
     // Wait for voting to complete
