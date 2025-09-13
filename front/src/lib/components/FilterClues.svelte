@@ -25,7 +25,6 @@
 	let userVotes = $state(new Array(votes.length).fill(0));
 
 	const voteOnClue = (index: number, value: number) => {
-		console.log(index, value);
 		userVotes[index] += value;
 
 		votes[index] += value;

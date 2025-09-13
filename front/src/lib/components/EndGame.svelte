@@ -16,7 +16,6 @@
 		playAgain,
 		currentGuesser
 	} = $props();
-	console.log(`ending game`, dedupedClues, clues, guess, difficulty);
 
 	let displayedClues = $state(dedupedClues);
 	let hidden = false;
@@ -24,7 +23,6 @@
 		hidden = !hidden;
 		displayedClues = hidden ? clues : dedupedClues;
 	};
-	console.log('played:', gamesPlayed, ' total', totalRounds);
 </script>
 
 <div class="space-y-6">
