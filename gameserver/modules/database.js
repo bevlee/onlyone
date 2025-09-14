@@ -175,14 +175,14 @@ class WordDatabase {
 
   /**
    * Ensure room exists in database
-   * @param {string} roomId - Room identifier
+   * @param {string} roomName - Room identifier
    */
-  ensureRoom(roomId) {
+  ensureRoom(roomName) {
     try {
-      this.preparedStatements.ensureRoom.run(roomId);
-      this.preparedStatements.updateRoomActivity.run(roomId);
+      this.preparedStatements.ensureRoom.run(roomName);
+      this.preparedStatements.updateRoomActivity.run(roomName);
     } catch (error) {
-      logger.error({ error, roomId }, 'Failed to ensure room exists');
+      logger.error({ error, roomName }, 'Failed to ensure room exists');
       throw error;
     }
   }
@@ -205,60 +205,60 @@ class WordDatabase {
 
   /**
    * Mark a word as used in a room
-   * @param {string} roomId - Room identifier
+   * @param {string} roomName - Room identifier
    * @param {string} word - Word that was used
    * @param {string} difficulty - Word difficulty
    */
-  markWordAsUsed(roomId, word, difficulty) {
+  markWordAsUsed(roomName, word, difficulty) {
     try {
-      this.ensureRoom(roomId);
-      this.preparedStatements.markWordAsUsed.run(roomId, word, difficulty);
-      logger.debug({ roomId, word, difficulty }, 'Word marked as used');
+      this.ensureRoom(roomName);
+      this.preparedStatements.markWordAsUsed.run(roomName, word, difficulty);
+      logger.debug({ roomName, word, difficulty }, 'Word marked as used');
     } catch (error) {
-      logger.error({ error, roomId, word, difficulty }, 'Failed to mark word as used');
+      logger.error({ error, roomName, word, difficulty }, 'Failed to mark word as used');
       throw error;
     }
   }
 
   /**
    * Clear all used words for a room and difficulty (when all words exhausted)
-   * @param {string} roomId - Room identifier
+   * @param {string} roomName - Room identifier
    * @param {string} difficulty - Word difficulty to reset
    * @returns {number} Number of words cleared
    */
-  clearUsedWords(roomId, difficulty) {
+  clearUsedWords(roomName, difficulty) {
     try {
-      const result = this.preparedStatements.clearUsedWords.run(roomId, difficulty);
-      logger.info({ roomId, difficulty, deletedRows: result.changes }, 'Cleared used words for room');
+      const result = this.preparedStatements.clearUsedWords.run(roomName, difficulty);
+      logger.info({ roomName, difficulty, deletedRows: result.changes }, 'Cleared used words for room');
       return result.changes;
     } catch (error) {
-      logger.error({ error, roomId, difficulty }, 'Failed to clear used words');
+      logger.error({ error, roomName, difficulty }, 'Failed to clear used words');
       throw error;
     }
   }
 
   /**
    * Get next available word for a room, resetting if all words used
-   * @param {string} roomId - Room identifier
+   * @param {string} roomName - Room identifier
    * @param {string} difficulty - Word difficulty
    * @returns {string} Next available word
    */
-  getNextWord(roomId, difficulty) {
+  getNextWord(roomName, difficulty) {
     try {
       // Use transaction for consistency
       return this.db.transaction(() => {
-        this.ensureRoom(roomId);
+        this.ensureRoom(roomName);
 
         // Try to get a random unused word using efficient SQL query
-        let result = this.preparedStatements.getRandomUnusedWord.get(difficulty, roomId, difficulty);
-        
+        let result = this.preparedStatements.getRandomUnusedWord.get(difficulty, roomName, difficulty);
+
         if (!result) {
           // All words exhausted - clear used words and try again
-          logger.info({ roomId, difficulty }, 'All words exhausted, resetting word pool');
-          this.clearUsedWords(roomId, difficulty);
-          
+          logger.info({ roomName, difficulty }, 'All words exhausted, resetting word pool');
+          this.clearUsedWords(roomName, difficulty);
+
           // Try again after reset
-          result = this.preparedStatements.getRandomUnusedWord.get(difficulty, roomId, difficulty);
+          result = this.preparedStatements.getRandomUnusedWord.get(difficulty, roomName, difficulty);
         }
 
         if (!result) {
@@ -268,29 +268,29 @@ class WordDatabase {
             throw new Error(`No words available for difficulty: ${difficulty}`);
           }
           result = { word: availableWords[Math.floor(Math.random() * availableWords.length)] };
-          logger.warn({ roomId, difficulty }, 'Using fallback random word selection');
+          logger.warn({ roomName, difficulty }, 'Using fallback random word selection');
         }
 
         // Mark the selected word as used
-        this.markWordAsUsed(roomId, result.word, difficulty);
-        
+        this.markWordAsUsed(roomName, result.word, difficulty);
+
         return result.word;
       })();
     } catch (error) {
-      logger.error({ error, roomId, difficulty }, 'Failed to get next word');
+      logger.error({ error, roomName, difficulty }, 'Failed to get next word');
       throw error;
     }
   }
 
   /**
    * Get statistics for a room
-   * @param {string} roomId - Room identifier
+   * @param {string} roomName - Room identifier
    * @returns {Object} Room statistics
    */
-  getRoomStats(roomId) {
+  getRoomStats(roomName) {
     try {
-      const stats = this.preparedStatements.getRoomStats.get(roomId, roomId, roomId, roomId, roomId);
-      
+      const stats = this.preparedStatements.getRoomStats.get(roomName, roomName, roomName, roomName, roomName);
+
       return stats || {
         easy_used: 0,
         medium_used: 0,
@@ -299,7 +299,7 @@ class WordDatabase {
         room_last_active: null
       };
     } catch (error) {
-      logger.error({ error, roomId }, 'Failed to get room stats');
+      logger.error({ error, roomName }, 'Failed to get room stats');
       throw error;
     }
   }
