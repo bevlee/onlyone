@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
 import { GameLoop } from '../modules/gameLoop.js';
+import database from '../modules/database.js';
 
 describe('GameLoop', () => {
   let gameLoop, mockGameStateManager, mockConnectionManager, mockIo, mockSocket, mockEmit;
@@ -20,7 +21,8 @@ describe('GameLoop', () => {
       setFinishedVoting: sinon.stub().returns({ success: true }), // Now synchronous
       setGuess: sinon.stub().returns({ success: true }), // Now synchronous
       setGameResult: sinon.stub().resolves(),
-      deleteGame: sinon.stub().resolves()
+      deleteGame: sinon.stub().resolves(),
+      setCurrentGuesser: sinon.stub().returns({ success: true }) // Add missing method
     };
 
     // Mock ConnectionManager
@@ -35,9 +37,16 @@ describe('GameLoop', () => {
       socketsLeave: mockSocketsLeave,
       emit: mockEmit
     };
+    const mockFetchSockets = sinon.stub().resolves([]);
+    const mockInChain = {
+      fetchSockets: mockFetchSockets
+    };
     mockIo = {
       to: sinon.stub().returns(mockToChain),
-      emit: sinon.stub()
+      emit: sinon.stub(),
+      on: sinon.stub(),
+      in: sinon.stub().returns(mockInChain),
+      off: sinon.stub()
     };
 
     mockSocket = {
@@ -47,17 +56,25 @@ describe('GameLoop', () => {
 
     // Test data
     room = 'testRoom';
-    writerRoom = 'testRoom.writer';
-    guesserRoom = 'testRoom.guesser';
-    difficulties = ['Animals', 'Food', 'Movies'];
+    writerRoom = 'testroom.writer';
+    guesserRoom = 'testroom.guesser';
+    difficulties = ['easy', 'medium', 'hard'];
     secretWords = {
-      'Animals': ['cat', 'dog', 'elephant'],
-      'Food': ['pizza', 'burger', 'salad']
+      'easy': ['cat', 'dog', 'elephant'],
+      'medium': ['pizza', 'burger', 'salad']
     };
     getStem = sinon.stub().returns('cat');
 
+    // Mock database
+    sinon.stub(database, 'getNextWord').returns('cat');
+
     // Create GameLoop instance
     gameLoop = new GameLoop(mockGameStateManager, mockConnectionManager);
+  });
+
+  afterEach(() => {
+    // Restore all stubs
+    sinon.restore();
   });
 
   describe('constructor', () => {
@@ -145,8 +162,8 @@ describe('GameLoop', () => {
     beforeEach(() => {
       // Mock game state to have no difficulty initially, then difficulty set
       mockGameStateManager.getGame
-        .onFirstCall().returns({ difficulty: '' })
-        .onSecondCall().returns({ difficulty: 'Animals' });
+        .onFirstCall().returns({ difficulty: '', currentGuesser: 'player1' })
+        .onSecondCall().returns({ difficulty: 'easy', currentGuesser: 'player1' });
     });
 
     it('should emit chooseDifficulty events to both rooms', async () => {
@@ -162,22 +179,24 @@ describe('GameLoop', () => {
     });
 
     it('should set random difficulty if none chosen within time limit', async () => {
-      // Mock game state to always have empty difficulty
-      mockGameStateManager.getGame.returns({ difficulty: '' });
+      // Reset the stub and mock game state to always have empty difficulty
+      mockGameStateManager.getGame.reset();
+      mockGameStateManager.getGame.returns({ difficulty: '', currentGuesser: 'player1' });
       sinon.stub(gameLoop, 'waitForCondition').resolves('Timeout');
       sinon.stub(gameLoop, 'getRandomSelection').returns(0);
 
       await gameLoop.difficultyPhase(mockIo, room, writerRoom, guesserRoom, difficulties, 20);
 
-      expect(mockGameStateManager.setDifficulty.calledWith(room, 'Animals')).to.be.true;
+      expect(mockGameStateManager.setDifficulty.calledWith(room, 'easy')).to.be.true;
     });
   });
 
   describe('cluePhase', () => {
     beforeEach(() => {
       mockGameStateManager.getGame.returns({
-        difficulty: 'Animals',
-        clues: ['furry', 'pet']
+        difficulty: 'easy',
+        clues: ['furry', 'pet'],
+        currentGuesser: 'player1'
       });
       sinon.stub(gameLoop, 'getRandomSelection').returns(0);
       sinon.stub(gameLoop, 'waitForCondition').resolves('Condition met!');
@@ -186,7 +205,7 @@ describe('GameLoop', () => {
     it('should initialize clues and set secret word', async () => {
       const writers = [['player1', mockSocket], ['player2', mockSocket]];
 
-      await gameLoop.cluePhase(mockIo, room, writerRoom, guesserRoom, secretWords, 20, writers);
+      await gameLoop.cluePhase(mockIo, room, writerRoom, guesserRoom, 20, writers);
 
       expect(mockGameStateManager.transitionToStage.calledWith(room, 'writeClues')).to.be.true;
       expect(mockGameStateManager.setSecretWord.calledWith(room, 'cat')).to.be.true;
@@ -195,7 +214,7 @@ describe('GameLoop', () => {
     it('should emit writeClues events to both rooms', async () => {
       const writers = [['player1', mockSocket]];
 
-      await gameLoop.cluePhase(mockIo, room, writerRoom, guesserRoom, secretWords, 20, writers);
+      await gameLoop.cluePhase(mockIo, room, writerRoom, guesserRoom, 20, writers);
 
       expect(mockEmit.calledWith('writeClues', 'writer', 'cat')).to.be.true;
       expect(mockEmit.calledWith('writeClues', 'guesser', '')).to.be.true;
@@ -204,12 +223,13 @@ describe('GameLoop', () => {
     it('should add default clues if not enough submitted', async () => {
       // Mock game state with fewer clues than writers
       mockGameStateManager.getGame.returns({
-        difficulty: 'Animals',
-        clues: ['furry'] // Only 1 clue
+        difficulty: 'easy',
+        clues: ['furry'], // Only 1 clue
+        currentGuesser: 'player1'
       });
       const writers = [['player1', mockSocket], ['player2', mockSocket]]; // 2 writers
 
-      await gameLoop.cluePhase(mockIo, room, writerRoom, guesserRoom, secretWords, 20, writers);
+      await gameLoop.cluePhase(mockIo, room, writerRoom, guesserRoom, 20, writers);
 
       expect(mockGameStateManager.addClue.calledWith(room, '<no answer>')).to.be.true;
     });
@@ -478,13 +498,27 @@ describe('GameLoop', () => {
   describe('startGameLoop integration', () => {    
     beforeEach(() => {
       // Mock all dependencies for integration test
-      mockConnectionManager.getConnections.returns({
+      // getConnections is called multiple times per loop iteration:
+      // 1st iteration: while condition + currentConnections (2 calls for player1 as guesser)
+      // 2nd iteration: while condition + currentConnections (2 calls for player2 as guesser)
+      // 3rd iteration: while condition returns empty to exit
+      const connections = {
         'player1': mockSocket,
         'player2': mockSocket
+      };
+      mockConnectionManager.getConnections.callsFake(() => {
+        const callCount = mockConnectionManager.getConnections.callCount;
+        // Allow for multiple calls per iteration - need enough for 2 full rounds
+        // Each iteration makes 3 calls: while condition, currentConnections, and Object.keys check
+        if (callCount <= 6) { // Allow for 2 iterations (2 players × ~3 calls each)
+          return connections;
+        } else {
+          return {}; // Exit loop after both players have been guesser
+        }
       });
 
       mockGameStateManager.getGame.returns({
-        difficulty: 'Animals',
+        difficulty: 'easy',
         clues: ['furry', 'pet'],
         votes: [0, 0],
         guess: 'cat',
@@ -497,6 +531,7 @@ describe('GameLoop', () => {
       sinon.stub(gameLoop, 'cluePhase').resolves();
       sinon.stub(gameLoop, 'votingPhase').resolves();
       sinon.stub(gameLoop, 'guessingPhase').resolves(true);
+      sinon.stub(gameLoop, 'waitForNextRound').resolves();
       sinon.stub(gameLoop, 'setupGuesserRoom');
       sinon.stub(gameLoop, 'getWriters').returns([['player2', mockSocket]]);
       sinon.stub(gameLoop, 'setupWriterRooms');
@@ -514,7 +549,7 @@ describe('GameLoop', () => {
         expect(mockGameStateManager.createGame.callCount).to.equal(2);
         expect(mockGameStateManager.setGameProgress.callCount).to.equal(2);
         expect(mockGameStateManager.setGameResult.callCount).to.equal(2);
-        expect(mockGameStateManager.deleteGame.calledWith(room)).to.be.true;
+        expect(mockGameStateManager.deleteGame.calledWith(room.toLowerCase())).to.be.true;
         expect(mockEmit.calledWith('endGame')).to.be.true;
         
         // Should clear rooms for each player (includes room clearing + emit calls)
