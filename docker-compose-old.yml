@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # Game backend
+  gameserver:
+    build:
+      context: ./gameserver
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${GAMESERVER_PORT:-3000}
+    ports:
+      - "${GAMESERVER_PORT:-3000}:${GAMESERVER_PORT:-3000}"
+    user: "1001:1001"
+
+  # Nginx reverse proxy (includes frontend build)
+  nginx:
+    build:
+      context: .
+      dockerfile: ./nginx/Dockerfile
+    restart: always
+    ports:
+      - "80:80"
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - SERVER_NAME=${SERVER_NAME:-localhost}
+      - GAMESERVER_HOST=gameserver
+      - GAMESERVER_PORT=${GAMESERVER_PORT:-3000}
+      - STATIC_ROOT=${STATIC_ROOT:-/usr/share/nginx/html}
+    depends_on:
+      - gameserver
+
+volumes:
+  gameserver-logs:
