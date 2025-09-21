@@ -1,1 +1,0 @@
-export const defaultTimer: number = 30;
