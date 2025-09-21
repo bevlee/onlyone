@@ -1,35 +1,63 @@
-version: '3.8'
 
 services:
   # Game backend
-  gameserver:
-    build:
-      context: ./gameserver
-      dockerfile: Dockerfile
-    restart: always
-    environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=${GAMESERVER_PORT:-3000}
-    ports:
-      - "${GAMESERVER_PORT:-3000}:${GAMESERVER_PORT:-3000}"
-    user: "1001:1001"
+  # gameserver:
+  #   build:
+  #     context: ./gameserver
+  #     dockerfile: Dockerfile
+  #   restart: always
+  #   environment:
+  #     - NODE_ENV=${NODE_ENV:-development}
+  #     - PORT=${GAMESERVER_PORT:-3000}
+  #   ports:
+  #     - "${GAMESERVER_PORT:-3000}:${GAMESERVER_PORT:-3000}"
+  #   user: "1001:1001"
 
-  # Nginx reverse proxy (includes frontend build)
-  nginx:
-    build:
-      context: .
-      dockerfile: ./nginx/Dockerfile
+  # # Nginx reverse proxy (includes frontend build)
+  # nginx:
+  #   build:
+  #     context: .
+  #     dockerfile: ./nginx/Dockerfile
+  #   restart: always
+  #   ports:
+  #     - "80:80"
+  #   environment:
+  #     - ENVIRONMENT=${ENVIRONMENT:-development}
+  #     - SERVER_NAME=${SERVER_NAME:-localhost}
+  #     - GAMESERVER_HOST=gameserver
+  #     - GAMESERVER_PORT=${GAMESERVER_PORT:-3000}
+  #     - STATIC_ROOT=${STATIC_ROOT:-/usr/share/nginx/html}
+  #   depends_on:
+  #     - gameserver
+  
+
+  nats:
+    image: nats:2.11.9-alpine
     restart: always
     ports:
-      - "80:80"
-    environment:
-      - ENVIRONMENT=${ENVIRONMENT:-development}
-      - SERVER_NAME=${SERVER_NAME:-localhost}
-      - GAMESERVER_HOST=gameserver
-      - GAMESERVER_PORT=${GAMESERVER_PORT:-3000}
-      - STATIC_ROOT=${STATIC_ROOT:-/usr/share/nginx/html}
+      - "4222:4222"
+      - "8222:8222" # Monitoring
+    volumes:
+      - nats-data:/data/jetstream
+    command: ["-js", "-sd", "/data/jetstream"]
+
+  # Init service to create the GAME_EVENTS stream
+  nats-init:
+    image: natsio/nats-box:0.18.1
     depends_on:
-      - gameserver
+      - nats
+    volumes:
+      - ./nats/create-stream.sh:/create-stream.sh:ro
+    entrypoint: ["/bin/sh", "/create-stream.sh"]
+    
+
+  # Example game server that depends on the stream being ready
+  # gameserver:
+  #   build: ./gameserver
+  #   depends_on:
+  #     - nats-init
+  #   environment:
+  #     NATS_URL: nats://nats:4222
 
 volumes:
-  gameserver-logs:
+  nats-data:
