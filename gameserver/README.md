@@ -1,61 +1,70 @@
-### Directory Structure
+# Game Server
 
+Real-time multiplayer word-guessing game server built with TypeScript, Express, and Socket.IO.
+
+## APIs
+
+### Room Management
+
+- `getActiveRooms` - Get list of all active game rooms
+- `joinRoom` - Join an existing room by name
+- `leaveRoom` - Leave current room
+- `createRoom` - Create a new game room
+- `getRoomDetails` - Get details of current room
+- `deleteRoom` - Delete an existing room
+
+## Tech Stack
+
+- TypeScript with ES modules
+- Express.js for HTTP server
+- Socket.IO for real-time communication
+- Pino for logging
+- Better SQLite3 for data persistence
+
+## State Synchronization Strategy
+
+### Phase-Based Full State Sync
+
+The game uses **phase boundaries** as natural state consolidation points to maintain client-server synchronization:
+
+#### Full State Updates
+- **Phase transitions** - Complete game state sent to all clients
+- **Reconnections** - Clients get complete current state
+- **Game logic changes** - When player actions affect active game state
+
+#### Delta Updates
+- **Player roster changes** - Join/leave events (unless affecting game logic)
+- **Mid-phase updates** - Targeted events (clue submitted, vote cast)
+- **Real-time feedback** - Quick updates without full state overhead
+
+#### Player Join/Leave Logic
+```typescript
+// Delta update - simple roster change
+playerJoined → { player, playerCount }
+playerLeft → { playerId, playerCount }
+
+// Full state update - affects active game
+currentGuesserLeft → complete game state + new guesser
 ```
-gameserver/
-├── config/
-│   └── serverConfig.js       # Express and Socket.IO server configuration
-├── modules/
-│   ├── connectionManager.js  # Player connection management
-│   ├── gameStateManager.js   # Game state and data management
-│   └── gameLoop.js          # Main game loop logic
-├── utils/
-│   └── gameUtils.js         # Utility functions
-├── handlers/
-│   ├── gameHandlers.js      # Socket event handlers for game actions
-│   └── chatHandlers.js      # Socket event handlers for chat and player management
-├── index.js                 # Main server entry point (now ~75 lines vs 282)
-└── config.js               # Game difficulty levels and secret words
+
+#### Phase Transition Events
+```typescript
+'choosing-difficulty' → full state + available difficulties
+'writing-clues' → full state + secret word + time limit
+'filtering-clues' → full state + all clues to filter
+'guessing-word' → full state + filtered clues
+'end-game' → full state + results
 ```
 
-### Key Modules
+#### Benefits
+- **Prevents state drift** - Regular sync points
+- **Handles disconnections** - Mid-phase joiners get full context
+- **Performance balance** - Full state periodically, deltas in between
+- **Debugging friendly** - Clear checkpoints for state validation
 
-- **ConnectionManager**: Manages player connections per room, handles join/leave operations
-- **GameStateManager**: Centralized game state management with methods for updating game phases
-- **GameLoop**: Extracted 120+ line game loop into manageable phases (difficulty, clue, voting, guessing)
-- **Server Config**: Separated Express and Socket.IO setup from business logic
-- **Chat Handlers**: Handles chat messages, player name changes, and disconnections with proper event emission
-
-### Socket Events
-
-#### Chat & Player Management
-
-- `changeName`: Changes player name with validation and emits `playerNameChanged` event
-- `playerNameChanged`: Emitted when a player successfully changes their name
-- `playerJoined`: Emitted when a new player joins a room
-- `playerLeft`: Emitted when a player leaves a room or disconnects
-
-### HTTP Communication & Deployment
-
-This gameserver is configured for HTTP-only communication:
-
-- **Port**: 3000
-- **Protocol**: HTTP
-- **CORS**: Configured for HTTP frontend origin (`http://localhost:5173`)
-- **WebSocket**: Uses `ws://` protocol
-- **Deployment**: Designed for AWS ECS with ALB load balancer
-
-### Testing
-
-Run tests with:
+## Development
 
 ```bash
-npm test
+npm install
+npm run dev
 ```
-
-Test coverage includes:
-
-- Game handlers (start/stop game, difficulty selection, clue submission, voting, guessing)
-- Chat handlers (name changes, disconnections, chat messages)
-- Connection management
-- Game state management
-- Utility functions
