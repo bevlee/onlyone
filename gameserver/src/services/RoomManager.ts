@@ -1,4 +1,4 @@
-import { Room, Rooms, Player, Settings, GameState } from '../models/Room.js';
+import { Room, Rooms, RoomPlayer, Settings, GameState, GamePhaseType } from '@shared/Room.js';
 
 export class RoomManager {
   private rooms: Rooms = {};
@@ -9,20 +9,24 @@ export class RoomManager {
     }
 
     const defaultSettings: Settings = {
-      maxPlayers: 6,
-      difficulty: 'medium',
-      timeLimit: 60
+      maxPlayers: 12,
+      timeLimit: 30
     };
 
     const defaultGameState: GameState = {
-      status: 'waiting',
-      currentRound: 0,
-      clues: [],
-      guesses: []
+      gamesWon: 0,
+      gamesPlayed: 0,
+      gamePhase: {
+        phase: GamePhaseType.Lobby,
+        state: {
+          minPlayersToStart: 3
+        }
+      }
     };
 
     this.rooms[roomId] = {
       players: [],
+      spectators: [],
       settings: { ...defaultSettings, ...settings },
       gameState: defaultGameState
     };
@@ -30,7 +34,7 @@ export class RoomManager {
     return this.rooms[roomId];
   }
 
-  joinRoom(roomId: string, player: Player): Room {
+  joinRoom(roomId: string, player: RoomPlayer): Room {
     const room = this.getRoom(roomId);
 
     if (room.players.length >= room.settings.maxPlayers) {
@@ -39,6 +43,11 @@ export class RoomManager {
 
     if (room.players.find(p => p.id === player.id)) {
       throw new Error('Player already in room');
+    }
+
+    // Check for name conflicts in the room
+    if (room.players.find(p => p.name === player.name)) {
+      throw new Error('Player name already taken in this room');
     }
 
     room.players.push(player);
@@ -69,11 +78,12 @@ export class RoomManager {
     return room;
   }
 
-  getActiveRooms(): { roomId: string; playerCount: number; status: string }[] {
+  getActiveRooms(): { roomId: string; playerCount: number; spectatorCount: number; phase: string }[] {
     return Object.entries(this.rooms).map(([roomId, room]) => ({
       roomId,
       playerCount: room.players.length,
-      status: room.gameState.status
+      spectatorCount: room.spectators.length,
+      phase: room.gameState.gamePhase.phase
     }));
   }
 
