@@ -117,6 +117,7 @@ export interface Clue {
   submitter: string;
   votes: ClueCommends;
   wasFiltered: boolean;
+  nonDuplicate: boolean;
   submittedAt: Date;
 }
 
@@ -137,10 +138,12 @@ export interface Rooms {
   [roomId: string]: Room;
 }
 
+import { Player } from './Player.js';
+
 export interface GameRecord {
   id: string;
   roomId: string;
-  players: RoomPlayer[];
+  players: Player[];
   success: boolean;
   difficulty: Difficulty;
   startTime: Date;
