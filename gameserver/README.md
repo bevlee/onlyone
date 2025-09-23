@@ -62,6 +62,29 @@ currentGuesserLeft → complete game state + new guesser
 - **Performance balance** - Full state periodically, deltas in between
 - **Debugging friendly** - Clear checkpoints for state validation
 
+## Commendation System
+
+The EndGame phase includes a player commendation system with the following rules:
+
+### Commendation Rules
+- **Multiple commendations allowed** - Players can commend multiple clues
+- **No takebacks** - Once a commendation is sent, it cannot be undone
+- **Skip option** - Players can skip commending and reveal results immediately
+- **One commendation per clue** - Players can vote either "helpful" OR "creative" per clue, not both
+- **No self-commendation** - Players cannot commend their own clues
+- **Anonymous during commending** - Clue authors are hidden until player chooses to reveal results
+
+### Commendation Types
+- **Helpful** - For clues that effectively help guess the word
+- **Creative** - For clever, entertaining, or original clues
+
+### User Flow
+1. EndGame phase begins with anonymous clues displayed
+2. Players can commend clues as helpful or creative (one type per clue)
+3. Commendation buttons become disabled after use (no takebacks)
+4. Players can click "Skip & See Results" at any time
+5. Results reveal clue authors with commendation totals
+
 ## Development
 
 ```bash
