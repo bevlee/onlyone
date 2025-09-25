@@ -4,15 +4,9 @@ export interface RoomPlayer {
   socketId?: string;
 }
 
-export enum Difficulty {
-  Easy = 'easy',
-  Medium = 'medium',
-  Hard = 'hard'
-}
 
 export enum GamePhaseType {
   Lobby = 'lobby',
-  ChoosingDifficulty = 'choosing-difficulty',
   WritingClues = 'writing-clues',
   FilteringClues = 'filtering-clues',
   GuessingWord = 'guessing-word',
@@ -28,20 +22,14 @@ export interface BaseLobbyState {
   minPlayersToStart: number;
 }
 
-export interface BaseChoosingDifficultyState {
-  availableDifficulties: Difficulty[];
-  guessingPlayer: string;
-}
 
 export interface BaseWritingCluesState {
-  difficulty: Difficulty;
   secretWord: string;
   clues: Clue[];
   guessingPlayer: string;
 }
 
 export interface BaseFilteringCluesState {
-  difficulty: Difficulty;
   secretWord: string;
   clues: Clue[];
   dedupedClues: Clue[];
@@ -50,7 +38,6 @@ export interface BaseFilteringCluesState {
 
 
 export interface BaseGuessingWordState {
-  difficulty: Difficulty;
   secretWord: string;
   dedupedClues: Clue[];
   guess: string;
@@ -58,17 +45,14 @@ export interface BaseGuessingWordState {
 }
 
 export interface BaseEndGameState {
-  difficulty: Difficulty;
   secretWord: string;
   guess: string;
   success: boolean;
   guessingPlayer: string;
-
 }
 
 export interface LobbyState extends BaseLobbyState {}
 
-export interface ChoosingDifficultyState extends BaseChoosingDifficultyState {}
 
 export interface WritingCluesState extends BaseWritingCluesState {}
 
@@ -90,7 +74,6 @@ export interface EndGameState extends BaseEndGameState {
 
 export type GamePhase =
   | { phase: GamePhaseType.Lobby; state: LobbyState }
-  | { phase: GamePhaseType.ChoosingDifficulty; state: ChoosingDifficultyState }
   | { phase: GamePhaseType.WritingClues; state: WritingCluesState }
   | { phase: GamePhaseType.FilteringClues; state: FilteringCluesState }
   | { phase: GamePhaseType.GuessingWord; state: GuessingWordState }
@@ -145,7 +128,6 @@ export interface GameRecord {
   roomId: string;
   players: Player[];
   success: boolean;
-  difficulty: Difficulty;
   startTime: Date;
   endTime: Date;
   secretWord: string;
