@@ -101,6 +101,42 @@ SERVER_NAME=your-domain.com
 - Vote on whether clues are duplicates
 - See how many you can guess right as a team
 
+## Future Goals
+
+### User-Submitted Words Game Mode
+
+A planned enhancement to add player-generated content and increased replayability:
+
+**Core Concept:**
+- Players submit words during lobby/setup phase
+- System ensures fair distribution (players never get their own submitted words)
+- Mix of user-submitted and curated words for variety and safety
+
+**Features:**
+- **Word Submission UI**: Lobby interface for players to contribute 3-5 words per game
+- **Fair Distribution**: Algorithm prevents players from guessing their own submissions
+- **Quality Tracking**: Database storage for word performance analytics
+- **User Stats**: Track submission success rates ("Your words were guessed correctly 73% of the time!")
+- **Moderation System**: Filter inappropriate content before gameplay
+- **Word Analytics**: Identify which user words work best for different difficulty levels
+
+**Database Design:**
+```sql
+user_submitted_words (
+  submitter_id, word, difficulty, times_used,
+  times_guessed_correctly, quality_rating
+)
+```
+
+**Benefits:**
+- Infinite content variety from player creativity
+- Personal investment in submitted words
+- Enhanced social gameplay ("Who submitted 'serendipity'?")
+- Rich analytics for word quality and user engagement
+- Self-sustaining content ecosystem
+
+This feature would transform the game from using a fixed word pool to a dynamic, community-driven word generation system.
+
 ## Contributing
 
 1. Fork the repository
