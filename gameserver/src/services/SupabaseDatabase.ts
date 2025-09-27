@@ -1,0 +1,283 @@
+import { supabase } from '../config/supabase.js';
+import { Database } from '../config/supabase.js';
+import { WordManager } from './WordManager.js';
+
+export type DbUser = Database['public']['Tables']['users']['Row'];
+export type DbGameRecord = Database['public']['Tables']['game_records']['Row'];
+export type DbClue = Database['public']['Tables']['clues']['Row'];
+
+export interface GameData {
+  id?: string;
+  roomId: string;
+  success: boolean;
+  secretWord: string;
+  finalGuess?: string;
+  startTime: Date;
+  endTime: Date;
+  durationSeconds: number;
+  guesserId?: string;
+}
+
+export interface ClueData {
+  gameId: string;
+  submitterId: string;
+  clueText: string;
+  helpfulVotes?: number;
+  creativeVotes?: number;
+  duplicate?: boolean;
+}
+
+export class SupabaseDatabase {
+  public wordManager: WordManager;
+
+  constructor() {
+    // Note: WordManager will need to be updated to work with Supabase
+    // For now, we'll pass the supabase client
+    this.wordManager = new WordManager(supabase as any);
+  }
+
+  // User management methods
+  async getUserById(id: string): Promise<DbUser | null> {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return data;
+  }
+
+  async getUserByAuthId(authUserId: string): Promise<DbUser | null> {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('auth_user_id', authUserId)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return data;
+  }
+
+  async getUserByEmail(email: string): Promise<DbUser | null> {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return data;
+  }
+
+  async createUser(authUserId: string, name: string, email?: string): Promise<DbUser> {
+    const { data, error } = await supabase
+      .from('users')
+      .insert({
+        auth_user_id: authUserId,
+        name,
+        email: email || null,
+        games_played: 0,
+        games_won: 0
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      throw new Error(`Failed to create user: ${error?.message}`);
+    }
+
+    return data;
+  }
+
+  async updateUserStats(userId: string, gamesPlayed: number, gamesWon: number): Promise<void> {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        games_played: gamesPlayed,
+        games_won: gamesWon
+      })
+      .eq('id', userId);
+
+    if (error) {
+      throw new Error(`Failed to update user stats: ${error.message}`);
+    }
+  }
+
+  // Auto-calculate and update user stats
+  async calculateUserStats(userId: string): Promise<void> {
+    const { error } = await supabase.rpc('calculate_user_stats', {
+      user_uuid: userId
+    });
+
+    if (error) {
+      throw new Error(`Failed to calculate user stats: ${error.message}`);
+    }
+  }
+
+  // Game record methods
+  async recordGame(gameData: GameData): Promise<DbGameRecord> {
+    const { data, error } = await supabase
+      .from('game_records')
+      .insert({
+        id: gameData.id,
+        room_id: gameData.roomId,
+        success: gameData.success,
+        secret_word: gameData.secretWord,
+        final_guess: gameData.finalGuess || null,
+        start_time: gameData.startTime.toISOString(),
+        end_time: gameData.endTime.toISOString(),
+        duration_seconds: gameData.durationSeconds,
+        guesser_id: gameData.guesserId || null
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      throw new Error(`Failed to record game: ${error?.message}`);
+    }
+
+    return data;
+  }
+
+  async getGameById(gameId: string): Promise<DbGameRecord | null> {
+    const { data, error } = await supabase
+      .from('game_records')
+      .select('*')
+      .eq('id', gameId)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return data;
+  }
+
+  async getGamesByUser(userId: string, limit = 50): Promise<DbGameRecord[]> {
+    const { data, error } = await supabase
+      .from('game_records')
+      .select('*')
+      .eq('guesser_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      throw new Error(`Failed to get user games: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  // Clue management methods
+  async recordClue(clue: ClueData): Promise<DbClue> {
+    const { data, error } = await supabase
+      .from('clues')
+      .insert({
+        game_id: clue.gameId,
+        submitter_id: clue.submitterId,
+        clue_text: clue.clueText,
+        helpful_votes: clue.helpfulVotes || 0,
+        creative_votes: clue.creativeVotes || 0,
+        duplicate: clue.duplicate || false
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      throw new Error(`Failed to record clue: ${error?.message}`);
+    }
+
+    return data;
+  }
+
+  async getCluesForGame(gameId: string): Promise<(DbClue & { submitter_name: string })[]> {
+    const { data, error } = await supabase
+      .from('clues')
+      .select(`
+        *,
+        users!submitter_id (
+          name
+        )
+      `)
+      .eq('game_id', gameId)
+      .order('submitted_at');
+
+    if (error) {
+      throw new Error(`Failed to get clues for game: ${error.message}`);
+    }
+
+    // Transform the data to match expected format
+    return (data || []).map(clue => ({
+      ...clue,
+      submitter_name: (clue.users as any)?.name || 'Unknown'
+    }));
+  }
+
+  // Analytics and leaderboard methods
+  async getTopPlayers(limit = 10): Promise<DbUser[]> {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .order('games_won', { ascending: false })
+      .order('games_played', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      throw new Error(`Failed to get top players: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  async getUserStatsByPeriod(userId: string, days = 30): Promise<{
+    gamesPlayed: number;
+    gamesWon: number;
+    winRate: number;
+  }> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+
+    const { data, error } = await supabase
+      .from('game_records')
+      .select('success')
+      .eq('guesser_id', userId)
+      .gte('created_at', cutoffDate.toISOString());
+
+    if (error) {
+      throw new Error(`Failed to get user stats: ${error.message}`);
+    }
+
+    const games = data || [];
+    const gamesPlayed = games.length;
+    const gamesWon = games.filter(g => g.success).length;
+    const winRate = gamesPlayed > 0 ? gamesWon / gamesPlayed : 0;
+
+    return {
+      gamesPlayed,
+      gamesWon,
+      winRate
+    };
+  }
+
+  // Transaction helper using Supabase's built-in transaction support
+  async transaction<T>(fn: () => Promise<T>): Promise<T> {
+    // Supabase handles transactions automatically for batch operations
+    // For complex transactions, you'd use supabase.rpc() with a stored procedure
+    return await fn();
+  }
+
+  // Close connection (not needed for Supabase)
+  close(): void {
+    // Supabase handles connections automatically
+  }
+}
