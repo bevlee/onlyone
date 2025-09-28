@@ -1,5 +1,8 @@
 <!-- Lobby page - displays active rooms and allows joining -->
 <script lang="ts">
+  import { Button } from '$lib/components/ui/button/index.js';
+  import { Input } from '$lib/components/ui/input/index.js';
+
   let roomName = $state('testRoom');
 
   const joinRoom = (e: Event) => {
@@ -13,17 +16,8 @@
   <p class="my-6 leading-7">Please enter the room you want to join:</p>
 
   <form class="m-6 text-center" onsubmit={joinRoom}>
-    <input
-      bind:value={roomName}
-      class="max-w-xs content-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-      placeholder="Room name"
-    />
-    <button
-      class="mt-6 bg-green-700 text-white hover:bg-green-800 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2"
-      type="submit"
-    >
-      Join
-    </button>
+    <Input bind:value={roomName} class="max-w-xs content-center" placeholder="Room name" />
+    <Button class="mt-6 bg-green-700 text-white hover:bg-green-800" type="submit">Join</Button>
   </form>
 
   <!-- Active rooms list -->
