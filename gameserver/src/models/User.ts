@@ -1,23 +1,17 @@
-export interface UserStats {
-  gamesPlayed: number;
-  gamesWon: number;
-  successfulGuesses: number;
-  cluesSubmitted: number;
-  nonDuplicateCluesSubmitted: number;
-
-  // Quality-based clue tracking
-  helpfulVotesReceived: number;
-  creativeVotesReceived: number;
-
-  // Breakdown of clue success
-  helpfulCluesSubmitted: number;  // clues that got helpful votes
-  creativeCluesSubmitted: number; // clues that got creative votes
-}
+// Moved to separate UserStats.ts file for profile/leaderboard contexts
 
 export interface AuthProvider {
   provider: 'local' | 'google';
   providerId: string;
   email?: string;
+}
+
+export interface UserSession {
+  token: string;
+  socketId?: string;
+  currentRoomId?: string;
+  isOnline: boolean;
+  lastSeen: Date;
 }
 
 export class User {
@@ -27,7 +21,7 @@ export class User {
   public readonly passwordHash?: string;
   public readonly authProviders: AuthProvider[];
   public readonly createdAt: Date;
-  public stats: UserStats;
+  public session?: UserSession;
 
   constructor(
     id: string,
@@ -35,18 +29,7 @@ export class User {
     email?: string,
     passwordHash?: string,
     authProviders: AuthProvider[] = [],
-    createdAt: Date = new Date(),
-    stats: UserStats = {
-      gamesPlayed: 0,
-      gamesWon: 0,
-      successfulGuesses: 0,
-      cluesSubmitted: 0,
-      nonDuplicateCluesSubmitted: 0,
-      helpfulVotesReceived: 0,
-      creativeVotesReceived: 0,
-      helpfulCluesSubmitted: 0,
-      creativeCluesSubmitted: 0
-    }
+    createdAt: Date = new Date()
   ) {
     this.id = id;
     this.name = name;
@@ -54,60 +37,10 @@ export class User {
     this.passwordHash = passwordHash;
     this.authProviders = authProviders;
     this.createdAt = createdAt;
-    this.stats = stats;
+    this.session = undefined;
   }
 
 
-  getWinRate(): number {
-    return this.stats.gamesPlayed > 0 ? this.stats.gamesWon / this.stats.gamesPlayed : 0;
-  }
-
-  getNonDuplicateClueRate(): number {
-    return this.stats.cluesSubmitted > 0
-      ? this.stats.nonDuplicateCluesSubmitted / this.stats.cluesSubmitted
-      : 0;
-  }
-
-  getHelpfulClueRate(): number {
-    return this.stats.cluesSubmitted > 0
-      ? this.stats.helpfulCluesSubmitted / this.stats.cluesSubmitted
-      : 0;
-  }
-
-  getCreativeClueRate(): number {
-    return this.stats.cluesSubmitted > 0
-      ? this.stats.creativeCluesSubmitted / this.stats.cluesSubmitted
-      : 0;
-  }
-
-  getAverageHelpfulVotes(): number {
-    return this.stats.helpfulCluesSubmitted > 0
-      ? this.stats.helpfulVotesReceived / this.stats.helpfulCluesSubmitted
-      : 0;
-  }
-
-  getAverageCreativeVotes(): number {
-    return this.stats.creativeCluesSubmitted > 0
-      ? this.stats.creativeVotesReceived / this.stats.creativeCluesSubmitted
-      : 0;
-  }
-
-  getTotalHelpfulVotes(): number {
-    return this.stats.helpfulVotesReceived;
-  }
-
-  getTotalCreativeVotes(): number {
-    return this.stats.creativeVotesReceived;
-  }
-
-
-  getGuessSuccessRate(): number {
-    const totalGuessOpportunities = this.stats.successfulGuesses +
-      (this.stats.gamesPlayed - this.stats.gamesWon);
-    return totalGuessOpportunities > 0
-      ? this.stats.successfulGuesses / totalGuessOpportunities
-      : 0;
-  }
 
 
   addAuthProvider(provider: AuthProvider): void {
@@ -122,6 +55,67 @@ export class User {
     return this.authProviders.find(p => p.provider === provider);
   }
 
+  // Session management methods
+  createSession(token: string): void {
+    this.session = {
+      token,
+      isOnline: true,
+      lastSeen: new Date()
+    };
+  }
+
+  updateSession(updates: Partial<UserSession>): void {
+    if (this.session) {
+      this.session = {
+        ...this.session,
+        ...updates,
+        lastSeen: new Date()
+      };
+    }
+  }
+
+  setSocket(socketId: string): void {
+    this.updateSession({
+      socketId,
+      isOnline: true
+    });
+  }
+
+  removeSocket(): void {
+    this.updateSession({
+      socketId: undefined,
+      isOnline: false
+    });
+  }
+
+  joinRoom(roomId: string): void {
+    this.updateSession({ currentRoomId: roomId });
+  }
+
+  leaveRoom(): void {
+    this.updateSession({ currentRoomId: undefined });
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.session?.token;
+  }
+
+  isOnline(): boolean {
+    return !!this.session?.isOnline;
+  }
+
+  getCurrentRoomId(): string | undefined {
+    return this.session?.currentRoomId;
+  }
+
+  getToken(): string | undefined {
+    return this.session?.token;
+  }
+
+  getSocketId(): string | undefined {
+    return this.session?.socketId;
+  }
+
   toJSON() {
     return {
       id: this.id,
@@ -129,7 +123,11 @@ export class User {
       email: this.email,
       authProviders: this.authProviders,
       createdAt: this.createdAt,
-      stats: this.stats
+      session: this.session ? {
+        isOnline: this.session.isOnline,
+        currentRoomId: this.session.currentRoomId,
+        lastSeen: this.session.lastSeen
+      } : undefined
     };
   }
 
@@ -138,7 +136,16 @@ export class User {
       id: this.id,
       name: this.name,
       createdAt: this.createdAt,
-      stats: this.stats
+      isOnline: this.session?.isOnline || false
+    };
+  }
+
+  // For converting to RoomPlayer when joining rooms
+  toRoomPlayer(): { id: string; name: string; socketId?: string } {
+    return {
+      id: this.id,
+      name: this.name,
+      socketId: this.session?.socketId
     };
   }
 }

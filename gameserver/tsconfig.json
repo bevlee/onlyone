@@ -19,8 +19,8 @@
     "noEmit": true,
     "declaration": true,
     "sourceMap": true,
-    "types": ["node"]
+    "types": ["node", "mocha", "chai"]
   },
-  "include": ["src/**/*", "../shared/**/*"],
+  "include": ["src/**/*", "../shared/**/*", "test/**/*"],
   "exclude": ["node_modules", "dist"]
 }

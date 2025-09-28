@@ -4,6 +4,11 @@ export interface RoomPlayer {
   socketId?: string;
 }
 
+// Helper function to identify anonymous players
+export function isAnonymousPlayer(playerId: string): boolean {
+  return playerId.startsWith('anon_');
+}
+
 
 export enum GamePhaseType {
   Lobby = 'lobby',
@@ -115,6 +120,7 @@ export interface Room {
   spectators: RoomPlayer[];
   settings: Settings;
   gameState: GameState;
+  roomLeader: string;
 }
 
 export interface Rooms {

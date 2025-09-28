@@ -13,6 +13,22 @@ Real-time multiplayer word-guessing game server built with TypeScript, Express, 
 - `getRoomDetails` - Get details of current room
 - `deleteRoom` - Delete an existing room
 
+#### Room Privacy Options
+
+**Public Rooms** (Default)
+- Visible in room browser/lobby
+- Anyone can join without invitation
+- Included in `getActiveRooms` responses
+- Ideal for open matchmaking
+
+**Private Rooms** (Future Feature)
+- Not visible in public room listings
+- Require invitation link or room code to join
+- Hidden from `getActiveRooms` responses
+- Perfect for playing with specific friends
+
+*Note: Private room functionality is planned but not yet implemented. All rooms are currently public.*
+
 ## Tech Stack
 
 - TypeScript with ES modules
