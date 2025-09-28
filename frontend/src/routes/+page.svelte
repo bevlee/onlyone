@@ -2,6 +2,6 @@
 	<h1 class="text-3xl font-bold mb-6">Welcome to OnlyOne</h1>
 
 	<div class="text-muted-foreground">
-		<p>Game content will go here...</p>
+		<p>Onlyone Game</p>
 	</div>
 </div>
