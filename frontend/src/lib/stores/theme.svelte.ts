@@ -4,27 +4,16 @@ type Theme = 'light' | 'dark';
 
 function createThemeStore() {
   let theme = $state<Theme>('light');
+  let isDark = $derived(theme === 'dark');
 
-  // Initialize theme from localStorage or system preference
+  // Initialize theme from localStorage, default to light
   if (browser) {
     const stored = localStorage.getItem('onlyone-theme') as Theme;
     if (stored) {
       theme = stored;
-    } else {
-      // Check system preference
-      theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
-
     // Apply initial theme
     updateDocument(theme);
-
-    // Listen for system theme changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-      if (!localStorage.getItem('onlyone-theme')) {
-        theme = e.matches ? 'dark' : 'light';
-        updateDocument(theme);
-      }
-    });
   }
 
   function updateDocument(newTheme: Theme) {
@@ -43,7 +32,7 @@ function createThemeStore() {
     },
 
     get isDark() {
-      return theme === 'dark';
+      return isDark;
     },
 
     toggle() {
