@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import { gameServerAPI, type AuthResponse, type MeResponse } from '$lib/api/gameserver.js';
+import { gameServerAPI } from '$lib/api/gameserver.js';
 
 interface AuthUser {
   id: string;
@@ -73,6 +73,10 @@ function createUserStore() {
     state.isLoading = false;
   }
 
+  function generateGuestId(): string {
+    return `Guest-${Math.floor(Math.random() * 10000)}`;
+  }
+
   return {
     get state() {
       return state;
@@ -144,6 +148,11 @@ function createUserStore() {
 
     async refreshAuth() {
       await checkAuthState();
+    },
+
+    generateGuestName() {
+      const guestName = generateGuestId();
+      this.setAnonymousName(guestName);
     }
   };
 }
