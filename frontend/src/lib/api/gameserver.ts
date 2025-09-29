@@ -37,6 +37,19 @@ interface MeResponse {
   };
 }
 
+interface Room {
+  roomId: string;
+  playerCount: number;
+  maxPlayers: number;
+  status: 'waiting' | 'playing';
+  roomLeader: string;
+}
+
+interface RoomsResponse {
+  rooms: Room[];
+  total: number;
+}
+
 class GameServerAPI {
   private baseURL: string;
 
@@ -128,8 +141,8 @@ class GameServerAPI {
   }
 
   // Lobby endpoints
-  async getRooms() {
-    return this.request('/lobby/rooms');
+  async getRooms(): Promise<ApiResponse<RoomsResponse>> {
+    return this.request<RoomsResponse>('/lobby/rooms');
   }
 
   async joinRoom(roomId: string, playerName?: string) {
@@ -147,4 +160,4 @@ class GameServerAPI {
 }
 
 export const gameServerAPI = new GameServerAPI();
-export type { ApiResponse, AuthResponse, MeResponse };
+export type { ApiResponse, AuthResponse, MeResponse, Room, RoomsResponse };
