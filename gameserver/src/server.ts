@@ -3,12 +3,12 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 
-import { logger } from './config/logger.js';
-import { SupabaseAuthService } from './services/SupabaseAuthService.js';
-import { SupabaseDatabase } from './services/SupabaseDatabase.js';
-import { SupabaseAuthMiddleware } from './middleware/supabase-auth.js';
-import lobbyRoutes from './routes/lobby.js';
-import roomRoutes from './routes/room.js';
+import { logger } from './config/logger.ts';
+import { SupabaseAuthService } from './services/SupabaseAuthService.ts';
+import { SupabaseDatabase } from './services/SupabaseDatabase.ts';
+import { SupabaseAuthMiddleware } from './middleware/supabase-auth.ts';
+import lobbyRoutes from './routes/lobby.ts';
+import roomRoutes from './routes/room.ts';
 
 // Load environment variables
 config({ path: '../../.env' });
@@ -22,7 +22,12 @@ const authMiddleware = new SupabaseAuthMiddleware(authService, database);
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: [
+    process.env.FRONTEND_URL || "http://localhost:5173",
+    "http://localhost:5174", // Alternative port
+    "http://localhost:3000",  // Legacy port
+    "http://localhost:4173"   // Vite preview port
+  ],
   credentials: true
 }));
 app.use(express.json());
