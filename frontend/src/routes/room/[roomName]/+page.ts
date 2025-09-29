@@ -1,7 +1,3 @@
-import type { PageLoad } from './$types';
-
-export const load: PageLoad = ({ params }) => {
-	return {
-		roomName: params.roomName
-	};
-};
+// Disable SSR for real-time room page
+export const ssr = false;
+export const prerender = false;

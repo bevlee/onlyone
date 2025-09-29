@@ -1,7 +1,3 @@
-// Lobby page data loading
-export async function load() {
-  // Load active rooms data
-  return {
-    rooms: []
-  };
-}
+// Disable SSR for real-time lobby page
+export const ssr = false;
+export const prerender = false;
