@@ -14,6 +14,16 @@ const config = {
 		adapter: adapter(),
 		alias: {
 			$lib: 'src/lib'
+		},
+		// remote functions are experimental still
+		experimental: {
+			remoteFunctions: true
+		}
+	},
+
+	compilerOptions: {
+		experimental: {
+			async: true
 		}
 	}
 };
