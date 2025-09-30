@@ -56,23 +56,19 @@
 
 	function getStatusText(status: Room['status']): string {
 		switch (status) {
-			case 'waiting':
-				return 'Waiting for players';
 			case 'playing':
 				return 'Game in progress';
 			default:
-				return 'Unknown status';
+				return 'Waiting for players';
 		}
 	}
 
 	function getStatusColor(status: Room['status']): string {
 		switch (status) {
-			case 'waiting':
-				return 'text-green-600';
 			case 'playing':
 				return 'text-yellow-600';
 			default:
-				return 'text-gray-500';
+				return 'text-green-600';
 		}
 	}
 </script>
@@ -130,15 +126,15 @@
 								</div>
 								<div class="flex items-center gap-3">
 									<span class="text-muted-foreground text-sm">
-										{room.playerCount}/{room.maxPlayers} players
+										{room.players.length}/{room.settings.maxPlayers} players
 									</span>
 									<Button
 										size="sm"
 										class="bg-green-600 text-white hover:bg-green-700"
 										onclick={() => joinRoom(room.roomName)}
-										disabled={room.playerCount >= room.maxPlayers}
+										disabled={room.players.length >= room.settings.maxPlayers}
 									>
-										{room.playerCount >= room.maxPlayers ? 'Full' : 'Join'}
+										{room.players.length >= room.settings.maxPlayers ? 'Full' : 'Join'}
 									</Button>
 								</div>
 							</div>
