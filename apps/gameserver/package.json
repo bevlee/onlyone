@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/gameserver/src/server.js",
-    "dev": "tsx src/server.ts",
+    "dev": "tsx --env-file=.env src/server.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
