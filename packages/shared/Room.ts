@@ -122,7 +122,7 @@ export interface Room {
   spectators: RoomPlayer[];
   settings: Settings;
   gameState: GameState;
-  roomLeader: string;
+  roomLeader: string | null;
 }
 
 export interface Rooms {

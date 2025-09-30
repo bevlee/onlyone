@@ -18,22 +18,16 @@ interface UserProfile {
 }
 
 interface UserState {
-  // Anonymous user info
-  anonymousName: string;
-
   // Authenticated user info
   user: AuthUser | null;
   profile: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-
-  // Display name (anonymous name or user name)
   displayName: string;
 }
 
 function createUserStore() {
   let state = $state<UserState>({
-    anonymousName: '',
     user: null,
     profile: null,
     isAuthenticated: false,
@@ -41,15 +35,8 @@ function createUserStore() {
     displayName: ''
   });
 
-  // Load anonymous name from localStorage on initialization
+  // Check auth state on initialization
   if (browser) {
-    const saved = localStorage.getItem('onlyone-anonymous-name');
-    if (saved) {
-      state.anonymousName = saved;
-      state.displayName = saved;
-    }
-
-    // Check auth state on initialization
     checkAuthState();
   }
 
@@ -62,12 +49,7 @@ function createUserStore() {
       state.user = result.data.user;
       state.profile = result.data.profile;
       state.isAuthenticated = true;
-      state.displayName = result.data.profile?.name || result.data.user?.email || '';
-    } else {
-      state.user = null;
-      state.profile = null;
-      state.isAuthenticated = false;
-      state.displayName = state.anonymousName;
+      state.displayName = result.data.profile.name;
     }
 
     state.isLoading = false;
@@ -82,26 +64,8 @@ function createUserStore() {
       return state;
     },
 
-    setAnonymousName(name: string) {
-      state.anonymousName = name;
-      if (!state.isAuthenticated) {
-        state.displayName = name;
-      }
-
-      if (browser) {
-        localStorage.setItem('onlyone-anonymous-name', name);
-      }
-    },
-
-    clearAnonymousName() {
-      state.anonymousName = '';
-      if (!state.isAuthenticated) {
-        state.displayName = '';
-      }
-
-      if (browser) {
-        localStorage.removeItem('onlyone-anonymous-name');
-      }
+    setDisplayName(name: string) {
+      state.displayName = name;
     },
 
     async login(email: string, password: string) {
@@ -110,9 +74,8 @@ function createUserStore() {
       if (result.success && result.data) {
         state.user = result.data.user;
         state.isAuthenticated = true;
-        state.displayName = result.data.user.user_metadata?.name || result.data.user.email || '';
 
-        // Get full profile after login
+        // Get full profile after login (sets displayName)
         await checkAuthState();
       }
 
@@ -125,9 +88,8 @@ function createUserStore() {
       if (result.success && result.data) {
         state.user = result.data.user;
         state.isAuthenticated = true;
-        state.displayName = result.data.user.user_metadata?.name || result.data.user.email || '';
 
-        // Get full profile after registration
+        // Get full profile after registration (sets displayName)
         await checkAuthState();
       }
 
@@ -137,11 +99,9 @@ function createUserStore() {
     async signOut() {
       const result = await gameServerAPI.logout();
 
-      // Clear state regardless of API result
       state.user = null;
       state.profile = null;
       state.isAuthenticated = false;
-      state.displayName = state.anonymousName;
 
       return result;
     },
@@ -152,7 +112,7 @@ function createUserStore() {
 
     generateGuestName() {
       const guestName = generateGuestId();
-      this.setAnonymousName(guestName);
+      this.setDisplayName(guestName);
     }
   };
 }

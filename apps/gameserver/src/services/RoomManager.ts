@@ -3,7 +3,7 @@ import { Room, Rooms, RoomPlayer, Settings, GameState, GamePhaseType } from '@on
 export class RoomManager {
   private rooms: Rooms = {};
 
-  createRoom(roomName: string, creatorPlayer: RoomPlayer, settings?: Partial<Settings>): Room {
+  createRoom(roomName: string, settings?: Partial<Settings>): Room {
     if (this.rooms[roomName]) {
       throw new Error(`Room ${roomName} already exists`);
     }
@@ -27,11 +27,11 @@ export class RoomManager {
     this.rooms[roomName] = {
       roomName,
       status: 'waiting',
-      players: [creatorPlayer],
+      players: [],
       spectators: [],
       settings: { ...defaultSettings, ...settings },
       gameState: defaultGameState,
-      roomLeader: creatorPlayer.id
+      roomLeader: null
     };
 
     return this.rooms[roomName];
@@ -48,9 +48,8 @@ export class RoomManager {
       throw new Error('Player already in room');
     }
 
-    // Check for name conflicts in the room
-    if (room.players.find(p => p.name === player.name)) {
-      throw new Error('Player name already taken in this room');
+    if (room.players.length == 0 && !room.roomLeader) {
+      room.roomLeader = player.name;
     }
 
     room.players.push(player);
@@ -102,7 +101,7 @@ export class RoomManager {
   }
 
   // Room leader management methods
-  getRoomLeader(roomName: string): string {
+  getRoomLeader(roomName: string): string | null {
     const room = this.getRoom(roomName);
     return room.roomLeader;
   }

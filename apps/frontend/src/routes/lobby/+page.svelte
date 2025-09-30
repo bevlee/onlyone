@@ -43,15 +43,20 @@
 		}
 	}
 
-	function handleCreateRoom(roomName: string) {
+	async function handleCreateRoom(roomName: string) {
 		isCreating = true;
-		// TODO: Implement room creation when API is available
-		console.log('Creating room:', roomName);
-		setTimeout(() => {
+		error = '';
+
+		const playerName = userStore.state.displayName;
+		const result = await gameServerAPI.createRoom(roomName);
+
+		if (result.success) {
+			// Navigate to the newly created room
+			goto(`/room/${roomName}`);
+		} else {
+			error = result.error || 'Failed to create room';
 			isCreating = false;
-			// Refresh rooms list after creation
-			loadRooms();
-		}, 1000);
+		}
 	}
 
 	function getStatusText(status: Room['status']): string {
