@@ -9,7 +9,7 @@ export interface AuthProvider {
 export interface UserSession {
   token: string;
   socketId?: string;
-  currentRoomId?: string;
+  currentRoomName?: string;
   isOnline: boolean;
   lastSeen: Date;
 }
@@ -96,12 +96,12 @@ export class User {
     });
   }
 
-  joinRoom(roomId: string): void {
-    this.updateSession({ currentRoomId: roomId });
+  joinRoom(roomName: string): void {
+    this.updateSession({ currentRoomName: roomName });
   }
 
   leaveRoom(): void {
-    this.updateSession({ currentRoomId: undefined });
+    this.updateSession({ currentRoomName: undefined });
   }
 
   isAuthenticated(): boolean {
@@ -112,8 +112,8 @@ export class User {
     return !!this.session?.isOnline;
   }
 
-  getCurrentRoomId(): string | undefined {
-    return this.session?.currentRoomId;
+  getCurrentRoomName(): string | undefined {
+    return this.session?.currentRoomName;
   }
 
   getToken(): string | undefined {
@@ -135,7 +135,7 @@ export class User {
       gamesWon: this.gamesWon,
       session: this.session ? {
         isOnline: this.session.isOnline,
-        currentRoomId: this.session.currentRoomId,
+        currentRoomName: this.session.currentRoomName,
         lastSeen: this.session.lastSeen
       } : undefined
     };

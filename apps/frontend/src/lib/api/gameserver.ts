@@ -1,4 +1,5 @@
 import { env } from '$env/dynamic/public';
+import type { Room } from '@onlyone/shared';
 
 const GAMESERVER_URL = env.PUBLIC_GAMESERVER_URL || 'http://localhost:3000';
 
@@ -35,14 +36,6 @@ interface MeResponse {
     gamesPlayed: number;
     gamesWon: number;
   };
-}
-
-interface Room {
-  roomId: string;
-  playerCount: number;
-  maxPlayers: number;
-  status: 'waiting' | 'playing';
-  roomLeader: string;
 }
 
 interface RoomsResponse {
@@ -145,9 +138,9 @@ class GameServerAPI {
     return this.request<RoomsResponse>('/lobby/rooms');
   }
 
-  async joinRoom(roomId: string, playerName?: string) {
+  async joinRoom(roomName: string, playerName?: string) {
     const body = playerName ? { playerName } : {};
-    return this.request(`/lobby/rooms/${roomId}`, {
+    return this.request(`/lobby/rooms/${roomName}`, {
       method: 'POST',
       body: JSON.stringify(body),
     });

@@ -4,9 +4,9 @@ const router: IRouter = Router();
 
 // Join a room (requires authentication)
 router.post('/join', (req, res) => {
-  const { roomId } = req.body;
+  const { roomName } = req.body;
 
-  if (!roomId) {
+  if (!roomName) {
     return res.status(400).json({ error: 'Room ID is required' });
   }
 
@@ -17,7 +17,7 @@ router.post('/join', (req, res) => {
 
   res.json({
     message: 'Successfully joined room',
-    roomId,
+    roomName,
     playerId: 'current-user-id', // TODO: Get from auth middleware
     playerCount: 3,
     maxPlayers: 12
@@ -34,7 +34,7 @@ router.post('/leave', (req, res) => {
 
   res.json({
     message: 'Successfully left room',
-    formerRoomId: 'room123'
+    formerroomName: 'room123'
   });
 });
 
@@ -45,7 +45,7 @@ router.get('/status', (req, res) => {
   // TODO: Return room state and player list
 
   res.json({
-    roomId: 'room123',
+    roomName: 'room123',
     name: 'My Game Room',
     status: 'waiting', // waiting, playing, finished
     players: [

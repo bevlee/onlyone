@@ -5,13 +5,13 @@ import { RoomManager } from '../../src/services/RoomManager';
 describe('RoomManager with Shared Room Types', () => {
   let roomManager: RoomManager;
   let room: Room;
-  let roomId: string;
+  let roomName: string;
 
   beforeEach(() => {
     roomManager = new RoomManager();
-    roomId = 'test-room';
+    roomName = 'test-room';
     const creatorPlayer: RoomPlayer = { id: 'creator', name: 'Creator' };
-    room = roomManager.createRoom(roomId, creatorPlayer, { maxPlayers: 12, timeLimit: 30 });
+    room = roomManager.createRoom(roomName, creatorPlayer, { maxPlayers: 12, timeLimit: 30 });
   });
 
   describe('room creation', () => {
@@ -37,7 +37,7 @@ describe('RoomManager with Shared Room Types', () => {
     it('should add player when room has space', () => {
       const player: RoomPlayer = { id: 'player1', name: 'Alice' };
 
-      const updatedRoom = roomManager.joinRoom(roomId, player);
+      const updatedRoom = roomManager.joinRoom(roomName, player);
 
       expect(updatedRoom.players).to.have.length(2); // Creator + new player
       expect(updatedRoom.players[1]).to.deep.equal(player);
@@ -46,59 +46,59 @@ describe('RoomManager with Shared Room Types', () => {
     it('should reject player when room is full', () => {
       // Fill the room (already has 1 creator, add 11 more)
       for (let i = 0; i < 11; i++) {
-        roomManager.joinRoom(roomId, { id: `player${i}`, name: `Player ${i}` });
+        roomManager.joinRoom(roomName, { id: `player${i}`, name: `Player ${i}` });
       }
 
       const newPlayer: RoomPlayer = { id: 'player13', name: 'Player 13' };
 
-      expect(() => roomManager.joinRoom(roomId, newPlayer)).toThrow('Room is full');
+      expect(() => roomManager.joinRoom(roomName, newPlayer)).toThrow('Room is full');
 
-      const finalRoom = roomManager.getRoom(roomId);
+      const finalRoom = roomManager.getRoom(roomName);
       expect(finalRoom.players).to.have.length(12);
     });
 
     it('should reject duplicate player', () => {
       const player: RoomPlayer = { id: 'player1', name: 'Alice' };
 
-      roomManager.joinRoom(roomId, player);
+      roomManager.joinRoom(roomName, player);
 
-      expect(() => roomManager.joinRoom(roomId, player)).toThrow('Player already in room');
+      expect(() => roomManager.joinRoom(roomName, player)).toThrow('Player already in room');
 
-      const finalRoom = roomManager.getRoom(roomId);
+      const finalRoom = roomManager.getRoom(roomName);
       expect(finalRoom.players).to.have.length(2); // Creator + player
     });
   });
 
   describe('leaveRoom', () => {
     beforeEach(() => {
-      roomManager.joinRoom(roomId, { id: 'player1', name: 'Alice' });
-      roomManager.joinRoom(roomId, { id: 'player2', name: 'Bob' });
+      roomManager.joinRoom(roomName, { id: 'player1', name: 'Alice' });
+      roomManager.joinRoom(roomName, { id: 'player2', name: 'Bob' });
     });
 
     it('should remove existing player', () => {
-      const result = roomManager.leaveRoom(roomId, 'player2');
+      const result = roomManager.leaveRoom(roomName, 'player2');
 
       expect(result).to.be.true;
-      const updatedRoom = roomManager.getRoom(roomId);
+      const updatedRoom = roomManager.getRoom(roomName);
       expect(updatedRoom.players).to.have.length(2); // Creator + player1
       expect(updatedRoom.players[0].id).to.equal('creator');
       expect(updatedRoom.players[1].id).to.equal('player1');
     });
 
     it('should transfer leadership when leader leaves', () => {
-      const result = roomManager.leaveRoom(roomId, 'creator');
+      const result = roomManager.leaveRoom(roomName, 'creator');
 
       expect(result).to.be.true;
-      const updatedRoom = roomManager.getRoom(roomId);
+      const updatedRoom = roomManager.getRoom(roomName);
       expect(updatedRoom.players).to.have.length(2); // player1 + player2
       expect(updatedRoom.roomLeader).to.equal('player1'); // First remaining player becomes leader
     });
 
     it('should return false for non-existent player', () => {
-      const result = roomManager.leaveRoom(roomId, 'non-existent');
+      const result = roomManager.leaveRoom(roomName, 'non-existent');
 
       expect(result).to.be.false;
-      const updatedRoom = roomManager.getRoom(roomId);
+      const updatedRoom = roomManager.getRoom(roomName);
       expect(updatedRoom.players).to.have.length(3); // Creator + 2 players
     });
   });
@@ -110,37 +110,37 @@ describe('RoomManager with Shared Room Types', () => {
     });
 
     it('should transfer leadership when leader leaves', () => {
-      roomManager.joinRoom(roomId, { id: 'player1', name: 'Alice' });
-      roomManager.joinRoom(roomId, { id: 'player2', name: 'Bob' });
+      roomManager.joinRoom(roomName, { id: 'player1', name: 'Alice' });
+      roomManager.joinRoom(roomName, { id: 'player2', name: 'Bob' });
 
-      roomManager.leaveRoom(roomId, 'creator'); // Leader leaves
+      roomManager.leaveRoom(roomName, 'creator'); // Leader leaves
 
-      const updatedRoom = roomManager.getRoom(roomId);
+      const updatedRoom = roomManager.getRoom(roomName);
       expect(updatedRoom.roomLeader).to.equal('player1'); // First remaining player becomes leader
       expect(updatedRoom.players[0].id).to.equal('player1');
     });
 
     it('should check if player is room leader', () => {
-      expect(roomManager.isRoomLeader(roomId, 'creator')).to.be.true;
-      expect(roomManager.isRoomLeader(roomId, 'nonexistent')).to.be.false;
+      expect(roomManager.isRoomLeader(roomName, 'creator')).to.be.true;
+      expect(roomManager.isRoomLeader(roomName, 'nonexistent')).to.be.false;
     });
 
     it('should transfer leadership manually', () => {
-      roomManager.joinRoom(roomId, { id: 'player1', name: 'Alice' });
+      roomManager.joinRoom(roomName, { id: 'player1', name: 'Alice' });
 
-      const result = roomManager.transferLeadership(roomId, 'creator', 'player1');
+      const result = roomManager.transferLeadership(roomName, 'creator', 'player1');
 
       expect(result).to.be.true;
-      const updatedRoom = roomManager.getRoom(roomId);
+      const updatedRoom = roomManager.getRoom(roomName);
       expect(updatedRoom.roomLeader).to.equal('player1');
       expect(updatedRoom.players[0].id).to.equal('player1'); // Moved to first position
     });
 
     it('should reject transfer to non-existent player', () => {
-      const result = roomManager.transferLeadership(roomId, 'creator', 'nonexistent');
+      const result = roomManager.transferLeadership(roomName, 'creator', 'nonexistent');
 
       expect(result).to.be.false;
-      const updatedRoom = roomManager.getRoom(roomId);
+      const updatedRoom = roomManager.getRoom(roomName);
       expect(updatedRoom.roomLeader).to.equal('creator'); // Unchanged
     });
   });

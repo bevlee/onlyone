@@ -3,9 +3,9 @@ import { Room, Rooms, RoomPlayer, Settings, GameState, GamePhaseType } from '@on
 export class RoomManager {
   private rooms: Rooms = {};
 
-  createRoom(roomId: string, creatorPlayer: RoomPlayer, settings?: Partial<Settings>): Room {
-    if (this.rooms[roomId]) {
-      throw new Error(`Room ${roomId} already exists`);
+  createRoom(roomName: string, creatorPlayer: RoomPlayer, settings?: Partial<Settings>): Room {
+    if (this.rooms[roomName]) {
+      throw new Error(`Room ${roomName} already exists`);
     }
 
     const defaultSettings: Settings = {
@@ -24,7 +24,7 @@ export class RoomManager {
       }
     };
 
-    this.rooms[roomId] = {
+    this.rooms[roomName] = {
       players: [creatorPlayer],
       spectators: [],
       settings: { ...defaultSettings, ...settings },
@@ -32,11 +32,11 @@ export class RoomManager {
       roomLeader: creatorPlayer.id
     };
 
-    return this.rooms[roomId];
+    return this.rooms[roomName];
   }
 
-  joinRoom(roomId: string, player: RoomPlayer): Room {
-    const room = this.getRoom(roomId);
+  joinRoom(roomName: string, player: RoomPlayer): Room {
+    const room = this.getRoom(roomName);
 
     if (room.players.length >= room.settings.maxPlayers) {
       throw new Error('Room is full');
@@ -55,8 +55,8 @@ export class RoomManager {
     return room;
   }
 
-  leaveRoom(roomId: string, playerId: string): boolean {
-    const room = this.rooms[roomId];
+  leaveRoom(roomName: string, playerId: string): boolean {
+    const room = this.rooms[roomName];
     if (!room) return false;
 
     const playerIndex = room.players.findIndex(p => p.id === playerId);
@@ -66,7 +66,7 @@ export class RoomManager {
 
     if (room.players.length === 0) {
       // No players left, delete the room
-      delete this.rooms[roomId];
+      delete this.rooms[roomName];
     } else if (room.roomLeader === playerId) {
       // Current leader left, make first remaining player the new leader
       room.roomLeader = room.players[0].id;
@@ -75,48 +75,48 @@ export class RoomManager {
     return true;
   }
 
-  getRoom(roomId: string): Room {
-    const room = this.rooms[roomId];
+  getRoom(roomName: string): Room {
+    const room = this.rooms[roomName];
     if (!room) {
-      throw new Error(`Room ${roomId} not found`);
+      throw new Error(`Room ${roomName} not found`);
     }
     return room;
   }
 
-  getActiveRooms(): { roomId: string; playerCount: number; spectatorCount: number; phase: string }[] {
-    return Object.entries(this.rooms).map(([roomId, room]) => ({
-      roomId,
+  getActiveRooms(): { roomName: string; playerCount: number; spectatorCount: number; phase: string }[] {
+    return Object.entries(this.rooms).map(([roomName, room]) => ({
+      roomName,
       playerCount: room.players.length,
       spectatorCount: room.spectators.length,
       phase: room.gameState.gamePhase.phase
     }));
   }
 
-  deleteRoom(roomId: string): boolean {
-    if (!this.rooms[roomId]) {
+  deleteRoom(roomName: string): boolean {
+    if (!this.rooms[roomName]) {
       return false;
     }
-    delete this.rooms[roomId];
+    delete this.rooms[roomName];
     return true;
   }
 
-  getRoomDetails(roomId: string): Room {
-    return this.getRoom(roomId);
+  getRoomDetails(roomName: string): Room {
+    return this.getRoom(roomName);
   }
 
   // Room leader management methods
-  getRoomLeader(roomId: string): string {
-    const room = this.getRoom(roomId);
+  getRoomLeader(roomName: string): string {
+    const room = this.getRoom(roomName);
     return room.roomLeader;
   }
 
-  isRoomLeader(roomId: string, playerId: string): boolean {
-    const room = this.getRoom(roomId);
+  isRoomLeader(roomName: string, playerId: string): boolean {
+    const room = this.getRoom(roomName);
     return room.roomLeader === playerId;
   }
 
-  transferLeadership(roomId: string, currentLeaderId: string, newLeaderId: string): boolean {
-    const room = this.getRoom(roomId);
+  transferLeadership(roomName: string, currentLeaderId: string, newLeaderId: string): boolean {
+    const room = this.getRoom(roomName);
 
     // Only current leader can transfer leadership
     if (room.roomLeader !== currentLeaderId) {
@@ -138,11 +138,11 @@ export class RoomManager {
     return true;
   }
 
-  updateRoomSettings(roomId: string, playerId: string, newSettings: Partial<Settings>): boolean {
-    const room = this.getRoom(roomId);
+  updateRoomSettings(roomName: string, playerId: string, newSettings: Partial<Settings>): boolean {
+    const room = this.getRoom(roomName);
 
     // Only room leader can update settings
-    if (!this.isRoomLeader(roomId, playerId)) {
+    if (!this.isRoomLeader(roomName, playerId)) {
       return false;
     }
 

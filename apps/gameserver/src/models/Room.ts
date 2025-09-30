@@ -16,7 +16,7 @@ export interface GameState {
 }
 
 export class Room {
-  public readonly roomId: string;
+  public readonly roomName: string;
   public name: string;
   public status: 'waiting' | 'playing' | 'finished';
   public players: Player[];
@@ -27,7 +27,7 @@ export class Room {
   public roomLeader: string;
 
   constructor(
-    roomId: string,
+    roomName: string,
     name: string,
     creatorPlayer: Player,
     maxPlayers: number = 12,
@@ -36,7 +36,7 @@ export class Room {
     },
     createdAt: Date = new Date()
   ) {
-    this.roomId = roomId;
+    this.roomName = roomName;
     this.name = name;
     this.status = 'waiting';
     this.players = [creatorPlayer];
@@ -147,7 +147,7 @@ export class Room {
 
   toJSON() {
     return {
-      roomId: this.roomId,
+      roomName: this.roomName,
       name: this.name,
       status: this.status,
       players: this.players,
@@ -161,7 +161,7 @@ export class Room {
 
   toPublicJSON() {
     return {
-      roomId: this.roomId,
+      roomName: this.roomName,
       name: this.name,
       status: this.status,
       playerCount: this.players.length,

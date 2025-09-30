@@ -11,7 +11,7 @@ export const GET: RequestHandler = async () => {
 
 // POST /lobby - join a room
 export const POST: RequestHandler = async ({ request }) => {
-  // Proxy to gameserver /rooms/:roomId endpoint
+  // Proxy to gameserver /rooms/:roomName endpoint
   return new Response(JSON.stringify({ success: true }), {
     headers: { 'content-type': 'application/json' }
   });

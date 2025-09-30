@@ -7,7 +7,7 @@ export type DbClue = Database['public']['Tables']['clues']['Row'];
 
 export interface GameData {
   id?: string;
-  roomId: string;
+  roomName: string;
   success: boolean;
   secretWord: string;
   finalGuess?: string;
@@ -139,7 +139,7 @@ export class SupabaseDatabase {
       .from('game_records')
       .insert({
         id: gameData.id,
-        room_id: gameData.roomId,
+        room_id: gameData.roomName,
         success: gameData.success,
         secret_word: gameData.secretWord,
         final_guess: gameData.finalGuess || null,

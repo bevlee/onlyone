@@ -32,12 +32,12 @@
 		isLoading = false;
 	}
 
-	async function joinRoom(roomId: string) {
+	async function joinRoom(roomName: string) {
 		const playerName = userStore.state.isAuthenticated ? undefined : userStore.state.displayName;
-		const result = await gameServerAPI.joinRoom(roomId, playerName);
+		const result = await gameServerAPI.joinRoom(roomName, playerName);
 
 		if (result.success) {
-			goto(`/room/${roomId}`);
+			goto(`/room/${roomName}`);
 		} else {
 			error = result.error || 'Failed to join room';
 		}
@@ -56,17 +56,23 @@
 
 	function getStatusText(status: Room['status']): string {
 		switch (status) {
-			case 'waiting': return 'Waiting for players';
-			case 'playing': return 'Game in progress';
-			default: return 'Unknown status';
+			case 'waiting':
+				return 'Waiting for players';
+			case 'playing':
+				return 'Game in progress';
+			default:
+				return 'Unknown status';
 		}
 	}
 
 	function getStatusColor(status: Room['status']): string {
 		switch (status) {
-			case 'waiting': return 'text-green-600';
-			case 'playing': return 'text-yellow-600';
-			default: return 'text-gray-500';
+			case 'waiting':
+				return 'text-green-600';
+			case 'playing':
+				return 'text-yellow-600';
+			default:
+				return 'text-gray-500';
 		}
 	}
 </script>
@@ -94,23 +100,27 @@
 			</div>
 
 			{#if isLoading}
-				<div class="text-center py-8 text-muted-foreground">
+				<div class="text-muted-foreground py-8 text-center">
 					<p>Loading rooms...</p>
 				</div>
 			{:else if rooms.length === 0}
-				<div class="text-center py-8 text-muted-foreground">
+				<div class="text-muted-foreground py-8 text-center">
 					<p>No active rooms. Create one above!</p>
 				</div>
 			{:else}
 				<!-- Scrolling Room List -->
-				<div class="max-h-96 overflow-y-auto space-y-2 pr-2">
-					{#each rooms as room (room.roomId)}
-						<div class="bg-card text-card-foreground rounded-md border p-4 hover:bg-accent/50 transition-colors">
+				<div class="max-h-96 space-y-2 overflow-y-auto pr-2">
+					{#each rooms as room (room.roomName)}
+						<div
+							class="bg-card text-card-foreground hover:bg-accent/50 rounded-md border p-4 transition-colors"
+						>
 							<div class="flex items-center justify-between">
 								<div class="flex-1">
 									<div class="flex items-center gap-2">
-										<span class="font-medium">{room.roomId}</span>
-										<span class="text-xs px-2 py-1 rounded-full bg-secondary text-secondary-foreground">
+										<span class="font-medium">{room.roomName}</span>
+										<span
+											class="bg-secondary text-secondary-foreground rounded-full px-2 py-1 text-xs"
+										>
 											{room.roomLeader}
 										</span>
 									</div>
@@ -119,13 +129,13 @@
 									</div>
 								</div>
 								<div class="flex items-center gap-3">
-									<span class="text-sm text-muted-foreground">
+									<span class="text-muted-foreground text-sm">
 										{room.playerCount}/{room.maxPlayers} players
 									</span>
 									<Button
 										size="sm"
 										class="bg-green-600 text-white hover:bg-green-700"
-										onclick={() => joinRoom(room.roomId)}
+										onclick={() => joinRoom(room.roomName)}
 										disabled={room.playerCount >= room.maxPlayers}
 									>
 										{room.playerCount >= room.maxPlayers ? 'Full' : 'Join'}
