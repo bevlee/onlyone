@@ -1,12 +1,15 @@
 # OnlyOne Game Server API Reference
 
 ## Base URL
+
 `http://localhost:3000` (default development)
 
 ## Authentication
+
 The API uses Supabase authentication with session cookies. Most endpoints support optional authentication (anonymous users) or require authentication.
 
 ### Authentication Middleware Types:
+
 - **requireAuth()**: Endpoint requires authenticated user
 - **optionalAuth()**: Endpoint works for both authenticated and anonymous users
 - **No auth**: Public endpoint
@@ -16,9 +19,11 @@ The API uses Supabase authentication with session cookies. Most endpoints suppor
 ## Authentication Endpoints
 
 ### POST `/auth/register`
+
 Register a new user account.
 
 **Body:**
+
 ```json
 {
   "name": "string",
@@ -28,6 +33,7 @@ Register a new user account.
 ```
 
 **Response:**
+
 ```json
 {
   "user": "SupabaseUser",
@@ -39,9 +45,11 @@ Register a new user account.
 ---
 
 ### POST `/auth/login`
+
 Login with email and password.
 
 **Body:**
+
 ```json
 {
   "email": "string",
@@ -50,6 +58,7 @@ Login with email and password.
 ```
 
 **Response:**
+
 ```json
 {
   "user": "SupabaseUser",
@@ -61,11 +70,13 @@ Login with email and password.
 ---
 
 ### POST `/auth/logout`
+
 🔒 **Requires Authentication**
 
 Logout current user and clear session.
 
 **Response:**
+
 ```json
 {
   "message": "Logged out successfully"
@@ -75,11 +86,13 @@ Logout current user and clear session.
 ---
 
 ### GET `/auth/me`
+
 🔓 **Optional Authentication**
 
 Get current authenticated user info.
 
 **Response:**
+
 ```json
 {
   "user": "SupabaseUser",
@@ -90,9 +103,11 @@ Get current authenticated user info.
 ---
 
 ### POST `/auth/reset-password`
+
 Send password reset email.
 
 **Body:**
+
 ```json
 {
   "email": "string"
@@ -100,6 +115,7 @@ Send password reset email.
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Password reset email sent"
@@ -111,14 +127,17 @@ Send password reset email.
 ## Game API Endpoints
 
 ### GET `/api/users/me/stats`
+
 🔒 **Requires Authentication**
 
 Get current user's game statistics.
 
 **Query Parameters:**
+
 - Period defaults to 30 days
 
 **Response:**
+
 ```json
 {
   "gamesPlayed": "number",
@@ -131,19 +150,22 @@ Get current user's game statistics.
 ---
 
 ### GET `/api/users/me/games`
+
 🔒 **Requires Authentication**
 
 Get current user's game history.
 
 **Query Parameters:**
+
 - `limit`: Number of games to return (default: 10)
 
 **Response:**
+
 ```json
 [
   {
     "id": "string",
-    "roomId": "string",
+    "roomName": "string",
     "success": "boolean",
     "secretWord": "string",
     "finalGuess": "string",
@@ -157,14 +179,17 @@ Get current user's game history.
 ---
 
 ### GET `/api/leaderboard`
+
 🔓 **Optional Authentication**
 
 Get top players leaderboard.
 
 **Query Parameters:**
+
 - `limit`: Number of players to return (default: 10)
 
 **Response:**
+
 ```json
 [
   {
@@ -182,16 +207,18 @@ Get top players leaderboard.
 ## Lobby Endpoints
 
 ### GET `/lobby/rooms`
+
 🌐 **Public**
 
 Get list of all active game rooms.
 
 **Response:**
+
 ```json
 {
   "rooms": [
     {
-      "roomId": "string",
+      "roomName": "string",
       "playerCount": "number",
       "maxPlayers": "number",
       "status": "waiting|playing|finished",
@@ -204,15 +231,57 @@ Get list of all active game rooms.
 
 ---
 
-### POST `/lobby/rooms/:roomId`
+### POST `/lobby/rooms`
+
+🌐 **Public**
+
+Create a new game room.
+
+**Body:**
+
+```json
+{
+  "roomName": "string",
+  "playerName": "string",
+  "settings": {
+    "maxPlayers": "number (optional, default: 12)",
+    "timeLimit": "number (optional, default: 30)"
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "Room created successfully",
+  "room": {
+    "roomName": "string",
+    "playerCount": "number",
+    "maxPlayers": "number",
+    "roomLeader": "string"
+  },
+  "creator": {
+    "id": "string",
+    "name": "string"
+  }
+}
+```
+
+---
+
+### POST `/lobby/rooms/:roomName`
+
 🔓 **Optional Authentication**
 
 Join a specific room from the lobby. Supports both authenticated and anonymous users.
 
 **Path Parameters:**
-- `roomId`: ID of room to join
+
+- `roomName`: ID of room to join
 
 **Body (for anonymous users):**
+
 ```json
 {
   "playerName": "string"
@@ -220,11 +289,12 @@ Join a specific room from the lobby. Supports both authenticated and anonymous u
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Successfully joined room",
   "room": {
-    "roomId": "string",
+    "roomName": "string",
     "playerCount": "number",
     "maxPlayers": "number",
     "roomLeader": "string"
@@ -242,43 +312,49 @@ Join a specific room from the lobby. Supports both authenticated and anonymous u
 ## Room Management Endpoints
 
 ### POST `/room/join`
+
 🔧 **TODO - Not Implemented**
 
 Join a room (legacy endpoint).
 
 **Body:**
+
 ```json
 {
-  "roomId": "string"
+  "roomName": "string"
 }
 ```
 
 ---
 
 ### POST `/room/leave`
+
 🔧 **TODO - Not Implemented**
 
 Leave current room.
 
 **Response:**
+
 ```json
 {
   "message": "Successfully left room",
-  "formerRoomId": "string"
+  "formerroomName": "string"
 }
 ```
 
 ---
 
 ### GET `/room/status`
+
 🔧 **TODO - Not Implemented**
 
 Get current room status and details.
 
 **Response:**
+
 ```json
 {
-  "roomId": "string",
+  "roomName": "string",
   "name": "string",
   "status": "waiting|playing|finished",
   "players": [
@@ -299,11 +375,13 @@ Get current room status and details.
 ---
 
 ### GET `/room/players`
+
 🔧 **TODO - Not Implemented**
 
 Get players in current room.
 
 **Response:**
+
 ```json
 {
   "players": [
@@ -325,14 +403,17 @@ Get players in current room.
 ---
 
 ### POST `/room/kick/:playerId`
+
 🔧 **TODO - Not Implemented**
 
 Kick a player from room (room owner only).
 
 **Path Parameters:**
+
 - `playerId`: ID of player to kick
 
 **Body:**
+
 ```json
 {
   "reason": "string"
@@ -340,6 +421,7 @@ Kick a player from room (room owner only).
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Player {playerId} has been kicked from the room",
@@ -351,11 +433,13 @@ Kick a player from room (room owner only).
 ---
 
 ### POST `/room/invite`
+
 🔧 **TODO - Not Implemented**
 
 Invite a player to current room.
 
 **Body:**
+
 ```json
 {
   "playerName": "string",
@@ -364,6 +448,7 @@ Invite a player to current room.
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Invitation sent to {player}",
@@ -375,11 +460,13 @@ Invite a player to current room.
 ---
 
 ### POST `/room/start`
+
 🔧 **TODO - Not Implemented**
 
 Start game in current room (room owner only).
 
 **Response:**
+
 ```json
 {
   "message": "Game started successfully",
@@ -396,11 +483,13 @@ Start game in current room (room owner only).
 ---
 
 ### POST `/room/stop`
+
 🔧 **TODO - Not Implemented**
 
 Stop/end current game (room owner only).
 
 **Body:**
+
 ```json
 {
   "reason": "string"
@@ -408,6 +497,7 @@ Stop/end current game (room owner only).
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Game stopped successfully",
@@ -425,11 +515,13 @@ Stop/end current game (room owner only).
 ## Health & Status
 
 ### GET `/health`
+
 🌐 **Public**
 
 Health check endpoint.
 
 **Response:**
+
 ```json
 {
   "status": "ok",
@@ -444,6 +536,7 @@ Health check endpoint.
 All endpoints may return these error formats:
 
 **400 Bad Request:**
+
 ```json
 {
   "error": "Error message describing what went wrong"
@@ -451,6 +544,7 @@ All endpoints may return these error formats:
 ```
 
 **401 Unauthorized:**
+
 ```json
 {
   "error": "Not authenticated"
@@ -458,6 +552,7 @@ All endpoints may return these error formats:
 ```
 
 **500 Internal Server Error:**
+
 ```json
 {
   "error": "Internal server error"
