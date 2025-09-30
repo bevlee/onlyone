@@ -116,6 +116,7 @@ export interface CommendEvent {
 
 
 export interface Room {
+  status: 'waiting' | 'playing';
   players: RoomPlayer[];
   spectators: RoomPlayer[];
   settings: Settings;
@@ -124,14 +125,14 @@ export interface Room {
 }
 
 export interface Rooms {
-  [roomId: string]: Room;
+  [roomName: string]: Room;
 }
 
 import { Player } from './Player.js';
 
 export interface GameRecord {
   id: string;
-  roomId: string;
+  roomName: string;
   players: Player[];
   success: boolean;
   startTime: Date;
