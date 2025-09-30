@@ -10,8 +10,8 @@ import { SupabaseAuthMiddleware } from './middleware/supabase-auth.js';
 import lobbyRoutes from './routes/lobby.js';
 import roomRoutes from './routes/room.js';
 
-// Load environment variables
-config({ path: '../../.env' });
+// Load environment variables - local .env first, then root .env
+config({ path: ['../../.env', '.env'] });
 
 const app: Express = express();
 
