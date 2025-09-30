@@ -1,5 +1,5 @@
 import { supabase } from '../config/supabase.js';
-import { Database } from '../config/supabase.js';
+import type { Database } from '../config/supabase.js';
 import { WordManager } from './WordManager.js';
 
 export type DbUser = Database['public']['Tables']['users']['Row'];
@@ -38,7 +38,7 @@ export class SupabaseDatabase {
 
   // User management methods
   async getUserById(id: string): Promise<DbUser | null> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('users')
       .select('*')
       .eq('id', id)
@@ -52,7 +52,7 @@ export class SupabaseDatabase {
   }
 
   async getUserByAuthId(authUserId: string): Promise<DbUser | null> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('users')
       .select('*')
       .eq('auth_user_id', authUserId)
@@ -66,7 +66,7 @@ export class SupabaseDatabase {
   }
 
   async getUserByEmail(email: string): Promise<DbUser | null> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('users')
       .select('*')
       .eq('email', email)
@@ -80,7 +80,7 @@ export class SupabaseDatabase {
   }
 
   async createUser(authUserId: string, name: string, email?: string): Promise<DbUser> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('users')
       .insert({
         auth_user_id: authUserId,
@@ -88,7 +88,7 @@ export class SupabaseDatabase {
         email: email || null,
         games_played: 0,
         games_won: 0
-      })
+      } as any)
       .select()
       .single();
 
@@ -100,12 +100,12 @@ export class SupabaseDatabase {
   }
 
   async updateUserStats(userId: string, gamesPlayed: number, gamesWon: number): Promise<void> {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('users')
       .update({
         games_played: gamesPlayed,
         games_won: gamesWon
-      })
+      } as any)
       .eq('id', userId);
 
     if (error) {
@@ -115,7 +115,7 @@ export class SupabaseDatabase {
 
   // Auto-calculate and update user stats
   async calculateUserStats(userId: string): Promise<void> {
-    const { error } = await supabase.rpc('calculate_user_stats', {
+    const { error } = await (supabase as any).rpc('calculate_user_stats', {
       user_uuid: userId
     });
 
@@ -126,7 +126,7 @@ export class SupabaseDatabase {
 
   // Game record methods
   async recordGame(gameData: GameData): Promise<DbGameRecord> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('game_records')
       .insert({
         id: gameData.id,
@@ -138,7 +138,7 @@ export class SupabaseDatabase {
         end_time: gameData.endTime.toISOString(),
         duration_seconds: gameData.durationSeconds,
         guesser_id: gameData.guesserId || null
-      })
+      } as any)
       .select()
       .single();
 
@@ -150,7 +150,7 @@ export class SupabaseDatabase {
   }
 
   async getGameById(gameId: string): Promise<DbGameRecord | null> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('game_records')
       .select('*')
       .eq('id', gameId)
@@ -164,7 +164,7 @@ export class SupabaseDatabase {
   }
 
   async getGamesByUser(userId: string, limit = 50): Promise<DbGameRecord[]> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('game_records')
       .select('*')
       .eq('guesser_id', userId)
@@ -180,7 +180,7 @@ export class SupabaseDatabase {
 
   // Clue management methods
   async recordClue(clue: ClueData): Promise<DbClue> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('clues')
       .insert({
         game_id: clue.gameId,
@@ -189,7 +189,7 @@ export class SupabaseDatabase {
         helpful_votes: clue.helpfulVotes || 0,
         creative_votes: clue.creativeVotes || 0,
         duplicate: clue.duplicate || false
-      })
+      } as any)
       .select()
       .single();
 
@@ -201,7 +201,7 @@ export class SupabaseDatabase {
   }
 
   async getCluesForGame(gameId: string): Promise<(DbClue & { submitter_name: string })[]> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('clues')
       .select(`
         *,
@@ -217,15 +217,15 @@ export class SupabaseDatabase {
     }
 
     // Transform the data to match expected format
-    return (data || []).map(clue => ({
+    return (data || []).map((clue: any) => ({
       ...clue,
-      submitter_name: (clue.users as any)?.name || 'Unknown'
+      submitter_name: clue.users?.name || 'Unknown'
     }));
   }
 
   // Analytics and leaderboard methods
   async getTopPlayers(limit = 10): Promise<DbUser[]> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('users')
       .select('*')
       .order('games_won', { ascending: false })
@@ -247,7 +247,7 @@ export class SupabaseDatabase {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('game_records')
       .select('success')
       .eq('guesser_id', userId)
@@ -259,7 +259,7 @@ export class SupabaseDatabase {
 
     const games = data || [];
     const gamesPlayed = games.length;
-    const gamesWon = games.filter(g => g.success).length;
+    const gamesWon = games.filter((g: any) => g.success).length;
     const winRate = gamesPlayed > 0 ? gamesWon / gamesPlayed : 0;
 
     return {

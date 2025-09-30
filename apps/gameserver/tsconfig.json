@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "target": "esnext",
-    "module": "esnext",
+    "target": "es2022",
+    "module": "es2022",
     "moduleResolution": "node",
-    "lib": ["esnext"],
+    "lib": ["es2022"],
     "outDir": "./dist",
     "rootDir": "..",
     "baseUrl": "..",
@@ -14,13 +14,12 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
     "allowSyntheticDefaultImports": true,
-    "noEmit": true,
+    "noEmit": false,
     "declaration": true,
     "sourceMap": true,
-    "types": ["node", "mocha", "chai"]
+    "types": ["node"]
   },
-  "include": ["src/**/*", "../shared/**/*", "test/**/*"],
+  "include": ["src/**/*", "../shared/**/*"],
   "exclude": ["node_modules", "dist"]
 }

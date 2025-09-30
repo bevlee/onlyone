@@ -1,10 +1,10 @@
-import { Router } from 'express';
+import { Router, type IRouter } from 'express';
 import { RoomManager } from '../services/RoomManager.js';
 import { SupabaseAuthMiddleware } from '../middleware/supabase-auth.js';
 import { SupabaseAuthService } from '../services/SupabaseAuthService.js';
 import { SupabaseDatabase } from '../services/SupabaseDatabase.js';
 
-const router = Router();
+const router: IRouter = Router();
 const roomManager = new RoomManager();
 
 // Initialize auth services

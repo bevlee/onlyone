@@ -1,20 +1,9 @@
-export interface UserStats {
-  gamesPlayed: number;
-  gamesWon: number;
-  successfulGuesses: number;
-  cluesSubmitted: number;
-  nonDuplicateCluesSubmitted: number;
+import { User } from './User.js';
 
-  // Quality-based clue tracking
-  helpfulVotesReceived: number;
-  creativeVotesReceived: number;
+export class UserProfile {
+  public readonly user: User;
 
-  // Breakdown of clue success
-  helpfulCluesSubmitted: number;  // clues that got helpful votes
-  creativeCluesSubmitted: number; // clues that got creative votes
-}
-
-export class UserStats {
+  // Game statistics
   public gamesPlayed: number = 0;
   public gamesWon: number = 0;
   public successfulGuesses: number = 0;
@@ -25,10 +14,33 @@ export class UserStats {
   public helpfulCluesSubmitted: number = 0;
   public creativeCluesSubmitted: number = 0;
 
-  constructor(stats: Partial<UserStats> = {}) {
+  constructor(user: User, stats: Partial<UserProfile> = {}) {
+    this.user = user;
     Object.assign(this, stats);
   }
 
+  // Delegate common user properties
+  get id(): string {
+    return this.user.id;
+  }
+
+  get name(): string {
+    return this.user.name;
+  }
+
+  get email(): string | undefined {
+    return this.user.email;
+  }
+
+  get createdAt(): Date {
+    return this.user.createdAt;
+  }
+
+  get isOnline(): boolean {
+    return this.user.isOnline();
+  }
+
+  // Stats calculation methods
   getWinRate(): number {
     return this.gamesPlayed > 0 ? this.gamesWon / this.gamesPlayed : 0;
   }
@@ -79,7 +91,37 @@ export class UserStats {
       : 0;
   }
 
-  toJSON() {
+  // Serialization for profile views
+  toProfileJSON() {
+    return {
+      id: this.user.id,
+      name: this.user.name,
+      createdAt: this.user.createdAt,
+      isOnline: this.user.isOnline(),
+      stats: this.getStatsJSON(),
+      winRate: this.getWinRate(),
+      helpfulClueRate: this.getHelpfulClueRate(),
+      creativeClueRate: this.getCreativeClueRate()
+    };
+  }
+
+  // Serialization for leaderboards (public stats only)
+  toLeaderboardJSON() {
+    return {
+      id: this.user.id,
+      name: this.user.name,
+      gamesPlayed: this.gamesPlayed,
+      gamesWon: this.gamesWon,
+      winRate: this.getWinRate(),
+      totalHelpfulVotes: this.getTotalHelpfulVotes(),
+      totalCreativeVotes: this.getTotalCreativeVotes(),
+      helpfulClueRate: this.getHelpfulClueRate(),
+      creativeClueRate: this.getCreativeClueRate()
+    };
+  }
+
+  // Stats only serialization
+  getStatsJSON() {
     return {
       gamesPlayed: this.gamesPlayed,
       gamesWon: this.gamesWon,
@@ -90,6 +132,14 @@ export class UserStats {
       creativeVotesReceived: this.creativeVotesReceived,
       helpfulCluesSubmitted: this.helpfulCluesSubmitted,
       creativeCluesSubmitted: this.creativeCluesSubmitted
+    };
+  }
+
+  // Complete serialization (for admin/full data contexts)
+  toJSON() {
+    return {
+      user: this.user.toJSON(),
+      stats: this.getStatsJSON()
     };
   }
 }

@@ -1,19 +1,19 @@
 import { config } from 'dotenv';
-import express from 'express';
+import express, { type Express } from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 
-import { logger } from './config/logger.ts';
-import { SupabaseAuthService } from './services/SupabaseAuthService.ts';
-import { SupabaseDatabase } from './services/SupabaseDatabase.ts';
-import { SupabaseAuthMiddleware } from './middleware/supabase-auth.ts';
-import lobbyRoutes from './routes/lobby.ts';
-import roomRoutes from './routes/room.ts';
+import { logger } from './config/logger.js';
+import { SupabaseAuthService } from './services/SupabaseAuthService.js';
+import { SupabaseDatabase } from './services/SupabaseDatabase.js';
+import { SupabaseAuthMiddleware } from './middleware/supabase-auth.js';
+import lobbyRoutes from './routes/lobby.js';
+import roomRoutes from './routes/room.js';
 
 // Load environment variables
 config({ path: '../../.env' });
 
-const app = express();
+const app: Express = express();
 
 // Initialize services
 const authService = new SupabaseAuthService();

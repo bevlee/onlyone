@@ -23,13 +23,19 @@ export class User {
   public readonly createdAt: Date;
   public session?: UserSession;
 
+  // Default game stats - start at 0 for new users
+  public gamesPlayed: number = 0;
+  public gamesWon: number = 0;
+
   constructor(
     id: string,
     name: string,
     email?: string,
     passwordHash?: string,
     authProviders: AuthProvider[] = [],
-    createdAt: Date = new Date()
+    createdAt: Date = new Date(),
+    gamesPlayed: number = 0,
+    gamesWon: number = 0
   ) {
     this.id = id;
     this.name = name;
@@ -37,6 +43,8 @@ export class User {
     this.passwordHash = passwordHash;
     this.authProviders = authProviders;
     this.createdAt = createdAt;
+    this.gamesPlayed = gamesPlayed;
+    this.gamesWon = gamesWon;
     this.session = undefined;
   }
 
@@ -123,6 +131,8 @@ export class User {
       email: this.email,
       authProviders: this.authProviders,
       createdAt: this.createdAt,
+      gamesPlayed: this.gamesPlayed,
+      gamesWon: this.gamesWon,
       session: this.session ? {
         isOnline: this.session.isOnline,
         currentRoomId: this.session.currentRoomId,

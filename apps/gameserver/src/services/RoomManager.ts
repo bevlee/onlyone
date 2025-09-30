@@ -1,4 +1,4 @@
-import { Room, Rooms, RoomPlayer, Settings, GameState, GamePhaseType } from '@shared/Room.js';
+import { Room, Rooms, RoomPlayer, Settings, GameState, GamePhaseType } from '@onlyone/shared';
 
 export class RoomManager {
   private rooms: Rooms = {};

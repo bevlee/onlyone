@@ -1,6 +1,6 @@
-import { Router } from 'express';
+import { Router, type IRouter } from 'express';
 
-const router = Router();
+const router: IRouter = Router();
 
 // Join a room (requires authentication)
 router.post('/join', (req, res) => {

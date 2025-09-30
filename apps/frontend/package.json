@@ -46,6 +46,7 @@
 		"vitest": "^3.2.4"
 	},
 	"dependencies": {
+		"@onlyone/shared": "workspace:*",
 		"@tailwindcss/postcss": "^4.1.13",
 		"@tailwindcss/vite": "^4.1.13",
 		"bits-ui": "^2.11.4",

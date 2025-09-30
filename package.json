@@ -2,10 +2,18 @@
   "name": "onlyone",
   "version": "1.0.0",
   "description": "OnlyOne multiplayer word guessing game",
+  "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:front\" \"npm run dev:back\"",
-    "dev:front": "cd front && npm run dev",
-    "dev:back": "cd gameserver && npm start"
+    "dev": "concurrently \"pnpm dev:front\" \"pnpm dev:back\"",
+    "dev:front": "pnpm --filter frontend dev",
+    "dev:back": "pnpm --filter gameserver dev",
+    "build": "pnpm build:shared && pnpm build:front && pnpm build:back",
+    "build:shared": "pnpm --filter @onlyone/shared build",
+    "build:front": "pnpm --filter frontend build",
+    "build:back": "pnpm --filter gameserver build",
+    "test": "pnpm --recursive test",
+    "lint": "pnpm --recursive lint",
+    "format": "pnpm --recursive format"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

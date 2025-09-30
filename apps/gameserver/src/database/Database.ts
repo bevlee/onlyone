@@ -2,9 +2,9 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { User, UserStats } from '../models/User.js';
-import { WordManager } from '../services/WordManager.js';
-import { Clue, ClueCommends } from '@shared/Room.js';
+import { User } from '../models/User.js';
+import { WordManager } from '../services/WordManager';
+import { Clue, ClueCommends } from '@onlyone/shared/Room';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -143,8 +143,8 @@ export class GameDatabase {
       user.email || null,
       user.passwordHash || null,
       user.createdAt.toISOString(),
-      user.stats.gamesPlayed,
-      user.stats.gamesWon
+      user.gamesPlayed,
+      user.gamesWon
     );
 
     return user;
@@ -160,7 +160,8 @@ export class GameDatabase {
     if (!user) return null;
 
     const calculatedStats = this.calculateUserStats(id);
-    user.stats = { ...user.stats, ...calculatedStats };
+    user.gamesPlayed = calculatedStats.gamesPlayed || user.gamesPlayed;
+    user.gamesWon = calculatedStats.gamesWon || user.gamesWon;
     return user;
   }
 
@@ -181,27 +182,14 @@ export class GameDatabase {
 
   updateUser(user: User): void {
     this.preparedStatements.updateUserStats.run(
-      user.stats.gamesPlayed,
-      user.stats.gamesWon,
+      user.gamesPlayed,
+      user.gamesWon,
       user.id
     );
   }
 
 
   private rowToUser(row: any): User {
-    const stats: UserStats = {
-      gamesPlayed: row.games_played,
-      gamesWon: row.games_won,
-      // Other stats will be calculated from game records when needed
-      successfulGuesses: 0,
-      cluesSubmitted: 0,
-      nonDuplicateCluesSubmitted: 0,
-      helpfulVotesReceived: 0,
-      creativeVotesReceived: 0,
-      helpfulCluesSubmitted: 0,
-      creativeCluesSubmitted: 0
-    };
-
     return new User(
       row.id,
       row.name,
@@ -209,7 +197,8 @@ export class GameDatabase {
       row.password_hash,
       [], // authProviders loaded separately if needed
       new Date(row.created_at),
-      stats
+      row.games_played || 0,
+      row.games_won || 0
     );
   }
 
@@ -290,7 +279,17 @@ export class GameDatabase {
   }
 
   // Calculate user stats from game records
-  calculateUserStats(userId: string): Partial<UserStats> {
+  calculateUserStats(userId: string): {
+    gamesPlayed?: number;
+    gamesWon?: number;
+    successfulGuesses?: number;
+    cluesSubmitted?: number;
+    nonDuplicateCluesSubmitted?: number;
+    helpfulVotesReceived?: number;
+    creativeVotesReceived?: number;
+    helpfulCluesSubmitted?: number;
+    creativeCluesSubmitted?: number;
+  } {
     // Get basic game stats
     const gameStats = this.db.prepare(`
       SELECT

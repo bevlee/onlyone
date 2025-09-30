@@ -3,7 +3,7 @@ services:
   # Game backend
   # gameserver:
   #   build:
-  #     context: ./gameserver
+  #     context: ./apps/gameserver
   #     dockerfile: Dockerfile
   #   restart: always
   #   environment:
@@ -53,7 +53,7 @@ services:
 
   # Example game server that depends on the stream being ready
   # gameserver:
-  #   build: ./gameserver
+  #   build: ./apps/gameserver
   #   depends_on:
   #     - nats-init
   #   environment:
