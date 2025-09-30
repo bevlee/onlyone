@@ -1,6 +1,5 @@
 import { supabase } from '../config/supabase.js';
 import type { Database } from '../config/supabase.js';
-import { WordManager } from './WordManager.js';
 
 export type DbUser = Database['public']['Tables']['users']['Row'];
 export type DbGameRecord = Database['public']['Tables']['game_records']['Row'];
@@ -28,15 +27,25 @@ export interface ClueData {
 }
 
 export class SupabaseDatabase {
-  public wordManager: WordManager;
-
   constructor() {
-    // Note: WordManager will need to be updated to work with Supabase
-    // For now, we'll pass the supabase client
-    this.wordManager = new WordManager(supabase as any);
   }
 
-  // User management methods
+  // If a user does not submit a word on time a predefined one is used
+  async getRandomWord(): Promise<string> {
+    const { data, error } = await (supabase as any)
+      .from('predefined_words')
+      .select('word')
+      .order('random()')
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      throw new Error('No words available');
+    }
+
+    return data.word;
+  }
+
   async getUserById(id: string): Promise<DbUser | null> {
     const { data, error } = await (supabase as any)
       .from('users')
@@ -276,8 +285,4 @@ export class SupabaseDatabase {
     return await fn();
   }
 
-  // Close connection (not needed for Supabase)
-  close(): void {
-    // Supabase handles connections automatically
-  }
 }
