@@ -43,6 +43,20 @@ interface RoomsResponse {
   total: number;
 }
 
+interface JoinRoomResponse {
+  message: string;
+  room: {
+    roomName: string;
+    playerCount: number;
+    maxPlayers: number;
+    roomLeader: string | null;
+  };
+  player: {
+    id: string;
+    name: string;
+  };
+}
+
 class GameServerAPI {
   private baseURL: string;
 
@@ -151,9 +165,9 @@ class GameServerAPI {
     });
   }
 
-  async joinRoom(roomName: string, playerName?: string) {
-    const body = playerName ? { playerName } : {};
-    return this.request(`/lobby/rooms/${roomName}`, {
+  async joinRoom(roomName: string, playerName: string): Promise<ApiResponse<JoinRoomResponse>> {
+    const body = { playerName };
+    return this.request<JoinRoomResponse>(`/lobby/rooms/${roomName}`, {
       method: 'POST',
       body: JSON.stringify(body),
     });
@@ -166,4 +180,4 @@ class GameServerAPI {
 }
 
 export const gameServerAPI = new GameServerAPI();
-export type { ApiResponse, AuthResponse, MeResponse, Room, RoomsResponse };
+export type { ApiResponse, AuthResponse, MeResponse, Room, RoomsResponse, JoinRoomResponse };

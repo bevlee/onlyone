@@ -1,4 +1,10 @@
 import { config } from 'dotenv';
+
+// Load environment variables FIRST before any other imports
+// Load root .env first, then local .env (which overrides)
+config({ path: '../../.env' });
+config({ path: '.env', override: true });
+
 import express, { type Express } from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
@@ -7,11 +13,12 @@ import { logger } from './config/logger.js';
 import { SupabaseAuthService } from './services/SupabaseAuthService.js';
 import { SupabaseDatabase } from './services/SupabaseDatabase.js';
 import { SupabaseAuthMiddleware } from './middleware/supabase-auth.js';
-import lobbyRoutes from './routes/lobby.js';
+import { createSocketServer } from './config/socketConfig.js';
+import { setupSocketHandlers } from './handlers/socketHandlers.js';
+import { ConnectionManager } from './services/ConnectionManager.js';
+import { RoomManager } from './services/RoomManager.js';
+import { createLobbyRouter } from './routes/lobby.js';
 import roomRoutes from './routes/room.js';
-
-// Load environment variables - local .env first, then root .env
-config({ path: ['../../.env', '.env'] });
 
 const app: Express = express();
 
@@ -19,6 +26,11 @@ const app: Express = express();
 const authService = new SupabaseAuthService();
 const database = new SupabaseDatabase();
 const authMiddleware = new SupabaseAuthMiddleware(authService, database);
+const connectionManager = new ConnectionManager();
+const roomManager = new RoomManager();
+
+// Create HTTP server with Socket.IO
+const { httpServer, io } = createSocketServer(app);
 
 // Middleware
 app.use(cors({
@@ -35,7 +47,7 @@ app.use(cookieParser());
 app.use(authMiddleware.handleSessionCookies());
 
 // Route handlers
-app.use('/lobby', lobbyRoutes);
+app.use('/lobby', createLobbyRouter(roomManager));
 app.use('/room', roomRoutes);
 
 // Auth routes
@@ -168,10 +180,16 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// WebSocket connection handler
+io.on('connection', (socket) => {
+  setupSocketHandlers(io, socket, roomManager, connectionManager);
+});
+
 const PORT = process.env.GAMESERVER_PORT || 3000;
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
+  logger.info(`WebSocket server enabled`);
   logger.info(`Supabase integration enabled`);
 });
 

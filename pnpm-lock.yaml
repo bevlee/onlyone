@@ -135,6 +135,9 @@ importers:
       lucide-svelte:
         specifier: ^0.544.0
         version: 0.544.0(svelte@5.39.6)
+      socket.io-client:
+        specifier: ^4.8.1
+        version: 4.8.1
       tailwind-variants:
         specifier: ^3.1.1
         version: 3.1.1(tailwind-merge@3.3.1)(tailwindcss@4.1.13)

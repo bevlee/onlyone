@@ -4,16 +4,17 @@ import { SupabaseAuthMiddleware } from '../middleware/supabase-auth.js';
 import { SupabaseAuthService } from '../services/SupabaseAuthService.js';
 import { SupabaseDatabase } from '../services/SupabaseDatabase.js';
 
-const router: IRouter = Router();
-const roomManager = new RoomManager();
-
 // Initialize auth services
 const authService = new SupabaseAuthService();
 const database = new SupabaseDatabase();
 const authMiddleware = new SupabaseAuthMiddleware(authService, database);
 
-// Get all active rooms 
-router.get('/rooms', (req, res) => {
+// Create router factory function that accepts shared RoomManager
+export function createLobbyRouter(roomManager: RoomManager): IRouter {
+  const router: IRouter = Router();
+
+// Get all active rooms
+router.get('/rooms', (_req, res) => {
   try {
     const activeRooms = roomManager.getActiveRooms();
     res.json({
@@ -27,7 +28,7 @@ router.get('/rooms', (req, res) => {
 
 // Create a new room
 router.post('/rooms', (req, res) => {
-  const { roomName, playerName, settings } = req.body;
+  const { roomName, settings } = req.body;
 
   if (!roomName || roomName.trim().length === 0) {
     return res.status(400).json({ error: 'Room ID is required' });
@@ -37,23 +38,9 @@ router.post('/rooms', (req, res) => {
     return res.status(400).json({ error: 'Room ID must be 50 characters or less' });
   }
 
-  if (!playerName || playerName.trim().length === 0) {
-    return res.status(400).json({
-      error: 'Player name is required'
-    });
-  }
-
-  // Generate anonymous ID
-  const anonymousId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-
-  const creator = {
-    id: anonymousId,
-    name: playerName.trim(),
-    socketId: undefined
-  };
 
   try {
-    const room = roomManager.createRoom(roomName.trim(), creator, settings);
+    const room = roomManager.createRoom(roomName.trim(), settings);
     res.status(201).json({
       message: 'Room created successfully',
       room: {
@@ -61,10 +48,6 @@ router.post('/rooms', (req, res) => {
         playerCount: room.players.length,
         maxPlayers: room.settings.maxPlayers,
         roomLeader: room.roomLeader
-      },
-      creator: {
-        id: creator.id,
-        name: creator.name
       }
     });
   } catch (error) {
@@ -79,7 +62,7 @@ router.post('/rooms', (req, res) => {
 // Join a room from the lobby (optional authentication - supports anonymous play)
 router.post('/rooms/:roomName', authMiddleware.optionalAuth(), (req, res) => {
   const { roomName } = req.params;
-  const { playerName } = req.body; // For anonymous users
+  const { playerName } = req.body; 
 
   let player;
 
@@ -91,24 +74,8 @@ router.post('/rooms/:roomName', authMiddleware.optionalAuth(), (req, res) => {
       socketId: undefined
     };
   } else {
-    // Anonymous user
-    if (!playerName || playerName.trim().length === 0) {
-      return res.status(400).json({
-        error: 'Player name is required for anonymous users'
-      });
-    }
-
-    if (playerName.length > 20) {
-      return res.status(400).json({
-        error: 'Player name must be 20 characters or less'
-      });
-    }
-
-    // Generate anonymous ID
-    const anonymousId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-
     player = {
-      id: anonymousId,
+      id: playerName,
       name: playerName.trim(),
       socketId: undefined
     };
@@ -127,7 +94,6 @@ router.post('/rooms/:roomName', authMiddleware.optionalAuth(), (req, res) => {
       player: {
         id: player.id,
         name: player.name,
-        isAnonymous: !req.user
       }
     });
   } catch (error) {
@@ -139,4 +105,9 @@ router.post('/rooms/:roomName', authMiddleware.optionalAuth(), (req, res) => {
   }
 });
 
-export default router;
+  return router;
+}
+
+// Default export for backward compatibility (creates its own instance)
+const defaultRoomManager = new RoomManager();
+export default createLobbyRouter(defaultRoomManager);

@@ -15,6 +15,12 @@
 
 	// Load rooms on mount and set up periodic refresh
 	onMount(() => {
+		// Redirect to home if no display name is set
+		if (!userStore.state.displayName) {
+			goto('/');
+			return;
+		}
+
 		loadRooms();
 		// Refresh rooms every 5 seconds
 		const interval = setInterval(loadRooms, 5000);
@@ -33,9 +39,10 @@
 	}
 
 	async function joinRoom(roomName: string) {
-		const playerName = userStore.state.isAuthenticated ? undefined : userStore.state.displayName;
+		const playerName = userStore.state.displayName;
 		const result = await gameServerAPI.joinRoom(roomName, playerName);
 
+		console.log(`going to ${roomName}`);
 		if (result.success) {
 			goto(`/room/${roomName}`);
 		} else {
@@ -47,13 +54,14 @@
 		isCreating = true;
 		error = '';
 
-		const playerName = userStore.state.displayName;
 		const result = await gameServerAPI.createRoom(roomName);
 
+		console.log(`going to ${roomName}`);
 		if (result.success) {
 			// Navigate to the newly created room
 			goto(`/room/${roomName}`);
 		} else {
+			console.log('failed to create room');
 			error = result.error || 'Failed to create room';
 			isCreating = false;
 		}

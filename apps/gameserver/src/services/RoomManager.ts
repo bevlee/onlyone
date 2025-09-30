@@ -155,4 +155,15 @@ export class RoomManager {
     room.settings = { ...room.settings, ...newSettings };
     return true;
   }
+
+  updatePlayerSocket(roomName: string, playerId: string, socketId: string): boolean {
+    const room = this.rooms[roomName];
+    if (!room) return false;
+
+    const player = room.players.find(p => p.id === playerId);
+    if (!player) return false;
+
+    player.socketId = socketId;
+    return true;
+  }
 }
