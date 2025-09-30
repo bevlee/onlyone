@@ -25,6 +25,7 @@ export class RoomManager {
     };
 
     this.rooms[roomName] = {
+      roomName,
       status: 'waiting',
       players: [creatorPlayer],
       spectators: [],
@@ -84,14 +85,8 @@ export class RoomManager {
     return room;
   }
 
-  getActiveRooms(): { roomName: string; playerCount: number; spectatorCount: number; status: string; phase: string }[] {
-    return Object.entries(this.rooms).map(([roomName, room]) => ({
-      roomName,
-      playerCount: room.players.length,
-      spectatorCount: room.spectators.length,
-      status: room.status,
-      phase: room.gameState.gamePhase.phase
-    }));
+  getActiveRooms(): Room[] {
+    return Object.values(this.rooms);
   }
 
   deleteRoom(roomName: string): boolean {

@@ -116,6 +116,7 @@ export interface CommendEvent {
 
 
 export interface Room {
+  roomName: string;
   status: 'waiting' | 'playing';
   players: RoomPlayer[];
   spectators: RoomPlayer[];
