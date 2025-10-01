@@ -101,6 +101,61 @@ app.post('/auth/login', async (req, res) => {
   }
 });
 
+app.post('/auth/anonymous', async (_req, res) => {
+  try {
+    const result = await authService.signInAnonymously();
+
+    // Set auth cookies for browser clients
+    authMiddleware.setAuthCookies(res, result.session);
+
+    res.json({
+      user: result.user,
+      session: result.session,
+      isNewUser: result.isNewUser,
+      isAnonymous: true
+    });
+
+  } catch (error: any) {
+    logger.error('Anonymous sign in error:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post('/auth/upgrade', authMiddleware.requireAuth(), async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Name, email, and password are required' });
+    }
+
+    // Check if user is anonymous
+    if (!req.isAnonymous) {
+      return res.status(400).json({ error: 'Only anonymous users can upgrade their account' });
+    }
+
+    const result = await authService.upgradeAnonymousUser(name, email, password);
+
+    // Update user profile in database
+    if (req.userProfile) {
+      await database.updateUserEmail(req.userProfile.id, email);
+    }
+
+    // Set new auth cookies
+    authMiddleware.setAuthCookies(res, result.session);
+
+    res.json({
+      user: result.user,
+      session: result.session,
+      message: 'Account upgraded successfully'
+    });
+
+  } catch (error: any) {
+    logger.error('Account upgrade error:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
 app.post('/auth/logout', authMiddleware.requireAuth(), async (_req, res) => {
   try {
     await authService.signOut();
@@ -119,8 +174,40 @@ app.get('/auth/me', authMiddleware.optionalAuth(), async (req, res) => {
 
   res.json({
     user: req.user,
-    profile: req.userProfile
+    profile: req.userProfile,
+    isAnonymous: req.isAnonymous || false
   });
+});
+
+app.post('/auth/avatar', authMiddleware.requireAuth(), async (req, res) => {
+  try {
+    // TODO: Add proper multipart/form-data handling with multer
+    // For now, this is a placeholder that expects base64 data
+    const { avatar } = req.body;
+
+    if (!avatar) {
+      return res.status(400).json({ error: 'Avatar data is required' });
+    }
+
+    // Convert base64 to buffer (simplified - in production use multer)
+    const buffer = Buffer.from(avatar, 'base64');
+    const fileName = `avatar-${Date.now()}.png`;
+
+    const avatarUrl = await database.uploadAvatar(
+      req.userProfile!.id,
+      buffer,
+      fileName
+    );
+
+    res.json({
+      message: 'Avatar uploaded successfully',
+      avatarUrl
+    });
+
+  } catch (error: any) {
+    logger.error('Avatar upload error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.post('/auth/reset-password', async (req, res) => {

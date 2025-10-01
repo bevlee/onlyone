@@ -15,9 +15,15 @@
 	let isLoading = $state(false);
 	let error = $state('');
 
-	function handlePlayAsGuest() {
-		userStore.generateGuestName();
-		goto('/lobby');
+	async function handlePlayAsGuest() {
+		// Sign in anonymously
+		const result = await userStore.signInAnonymously();
+
+		if (result && result.success) {
+			goto('/lobby');
+		} else {
+			error = 'Failed to create guest session';
+		}
 	}
 
 	function toggleAuth() {

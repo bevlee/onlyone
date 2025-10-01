@@ -134,6 +134,26 @@ class GameServerAPI {
     });
   }
 
+  async signInAnonymous(): Promise<ApiResponse<AuthResponse>> {
+    return this.request<AuthResponse>('/auth/anonymous', {
+      method: 'POST',
+    });
+  }
+
+  async upgradeAccount(name: string, email: string, password: string): Promise<ApiResponse<AuthResponse>> {
+    return this.request<AuthResponse>('/auth/upgrade', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password }),
+    });
+  }
+
+  async uploadAvatar(avatarBase64: string): Promise<ApiResponse<{ message: string; avatarUrl: string }>> {
+    return this.request<{ message: string; avatarUrl: string }>('/auth/avatar', {
+      method: 'POST',
+      body: JSON.stringify({ avatar: avatarBase64 }),
+    });
+  }
+
   // Game API endpoints
   async getUserStats() {
     return this.request('/api/users/me/stats');
@@ -165,11 +185,9 @@ class GameServerAPI {
     });
   }
 
-  async joinRoom(roomName: string, playerName: string): Promise<ApiResponse<JoinRoomResponse>> {
-    const body = { playerName };
+  async joinRoom(roomName: string): Promise<ApiResponse<JoinRoomResponse>> {
     return this.request<JoinRoomResponse>(`/lobby/rooms/${roomName}`, {
       method: 'POST',
-      body: JSON.stringify(body),
     });
   }
 

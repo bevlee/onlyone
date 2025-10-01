@@ -39,8 +39,7 @@
 	}
 
 	async function joinRoom(roomName: string) {
-		const playerName = userStore.state.displayName;
-		const result = await gameServerAPI.joinRoom(roomName, playerName);
+		const result = await gameServerAPI.joinRoom(roomName);
 
 		console.log(`going to ${roomName}`);
 		if (result.success) {

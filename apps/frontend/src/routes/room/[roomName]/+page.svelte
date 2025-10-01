@@ -22,7 +22,7 @@
 		}
 
 		// First, join via HTTP API
-		const result = await gameServerAPI.joinRoom(roomName, userStore.state.displayName);
+		const result = await gameServerAPI.joinRoom(roomName);
 
 		if (!result.success) {
 			error = result.error || 'Failed to join room';
@@ -31,7 +31,7 @@
 		}
 
 		// Extract playerId from result
-		const playerId = result.data?.player?.id || userStore.state.user?.id || '12345';
+		const playerId = result.data?.player?.id || userStore.state.user?.id || 'unknown';
 
 		// Setup websocket event handlers
 		websocketStore.onRoomStateUpdate((updatedRoom) => {

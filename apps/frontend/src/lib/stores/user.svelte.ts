@@ -13,6 +13,7 @@ interface UserProfile {
   id: string;
   name: string;
   email: string | null;
+  avatar_url: string | null;
   gamesPlayed: number;
   gamesWon: number;
 }
@@ -22,8 +23,10 @@ interface UserState {
   user: AuthUser | null;
   profile: UserProfile | null;
   isAuthenticated: boolean;
+  isAnonymous: boolean;
   isLoading: boolean;
   displayName: string;
+  avatarUrl: string | null;
 }
 
 function createUserStore() {
@@ -31,8 +34,10 @@ function createUserStore() {
     user: null,
     profile: null,
     isAuthenticated: false,
+    isAnonymous: false,
     isLoading: true,
-    displayName: ''
+    displayName: '',
+    avatarUrl: null
   });
 
   // Check auth state on initialization
@@ -49,14 +54,12 @@ function createUserStore() {
       state.user = result.data.user;
       state.profile = result.data.profile;
       state.isAuthenticated = true;
+      state.isAnonymous = (result.data as any).isAnonymous || false;
       state.displayName = result.data.profile.name;
+      state.avatarUrl = (result.data.profile as any).avatar_url || null;
     }
 
     state.isLoading = false;
-  }
-
-  function generateGuestId(): string {
-    return `Guest-${Math.floor(Math.random() * 10000)}`;
   }
 
   return {
@@ -102,6 +105,8 @@ function createUserStore() {
       state.user = null;
       state.profile = null;
       state.isAuthenticated = false;
+      state.isAnonymous = false;
+      state.avatarUrl = null;
 
       return result;
     },
@@ -110,9 +115,45 @@ function createUserStore() {
       await checkAuthState();
     },
 
-    generateGuestName() {
-      const guestName = generateGuestId();
-      this.setDisplayName(guestName);
+    async signInAnonymously() {
+      if (!browser) return;
+
+      const result = await gameServerAPI.signInAnonymous();
+
+      if (result.success && result.data) {
+        state.user = result.data.user;
+        state.isAuthenticated = true;
+        state.isAnonymous = true;
+
+        // Get full profile after anonymous sign in
+        await checkAuthState();
+      }
+
+      return result;
+    },
+
+    async upgradeAccount(name: string, email: string, password: string) {
+      const result = await gameServerAPI.upgradeAccount(name, email, password);
+
+      if (result.success && result.data) {
+        state.user = result.data.user;
+        state.isAnonymous = false;
+
+        // Get updated profile
+        await checkAuthState();
+      }
+
+      return result;
+    },
+
+    async uploadAvatar(avatarBase64: string) {
+      const result = await gameServerAPI.uploadAvatar(avatarBase64);
+
+      if (result.success && result.data) {
+        state.avatarUrl = result.data.avatarUrl;
+      }
+
+      return result;
     }
   };
 }

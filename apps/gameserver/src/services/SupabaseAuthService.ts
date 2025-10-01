@@ -140,4 +140,56 @@ export class SupabaseAuthService {
 
     return { url: data.url };
   }
+
+  // Sign in anonymously
+  async signInAnonymously(): Promise<AuthResult> {
+    const { data, error } = await supabaseAuth.auth.signInAnonymously();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (!data.user || !data.session) {
+      throw new Error('Anonymous sign in failed');
+    }
+
+    return {
+      user: data.user,
+      session: data.session,
+      isNewUser: true
+    };
+  }
+
+  // Upgrade anonymous user to permanent account
+  async upgradeAnonymousUser(name: string, email: string, password: string): Promise<AuthResult> {
+    // Update the user's email and password
+    const { data: updateData, error: updateError } = await supabaseAuth.auth.updateUser({
+      email,
+      password,
+      data: {
+        name
+      }
+    });
+
+    if (updateError) {
+      throw new Error(updateError.message);
+    }
+
+    if (!updateData.user) {
+      throw new Error('Failed to upgrade anonymous account');
+    }
+
+    // Get new session
+    const { data: sessionData, error: sessionError } = await supabaseAuth.auth.getSession();
+
+    if (sessionError || !sessionData.session) {
+      throw new Error('Failed to get session after upgrade');
+    }
+
+    return {
+      user: updateData.user,
+      session: sessionData.session,
+      isNewUser: false
+    };
+  }
 }

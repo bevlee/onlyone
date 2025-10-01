@@ -10,6 +10,7 @@ declare global {
     interface Request {
       user?: SupabaseUser;
       userProfile?: DbUser;
+      isAnonymous?: boolean;
     }
   }
 }
@@ -49,12 +50,23 @@ export class SupabaseAuthMiddleware {
           const user = await this.authService.getUserFromToken(token);
           if (user) {
             req.user = user;
+            req.isAnonymous = user.is_anonymous || false;
 
-            // Also get the user profile from our database
-            const userProfile = await this.database.getUserByAuthId(user.id);
-            if (userProfile) {
-              req.userProfile = userProfile;
+            // Get or create user profile from our database
+            let userProfile = await this.database.getUserByAuthId(user.id);
+
+            // Auto-create profile if user has session but no profile
+            if (!userProfile) {
+              const userName = user.user_metadata?.name || undefined;
+              userProfile = await this.database.createUser(
+                user.id,
+                userName || 'User',
+                user.email,
+                req.isAnonymous
+              );
             }
+
+            req.userProfile = userProfile;
           }
         }
       } catch (error) {
@@ -82,14 +94,20 @@ export class SupabaseAuthMiddleware {
         }
 
         req.user = user;
+        req.isAnonymous = user.is_anonymous || false;
 
-        // Get user profile from our database
-        const userProfile = await this.database.getUserByAuthId(user.id);
+        // Get or create user profile from our database
+        let userProfile = await this.database.getUserByAuthId(user.id);
+
+        // Auto-create profile if user has session but no profile
         if (!userProfile) {
-          // User exists in auth but not in our database - this shouldn't happen
-          // but let's handle it gracefully
-          res.status(500).json({ error: 'User profile not found' });
-          return;
+          const userName = user.user_metadata?.name || undefined;
+          userProfile = await this.database.createUser(
+            user.id,
+            userName || 'User',
+            user.email,
+            req.isAnonymous
+          );
         }
 
         req.userProfile = userProfile;

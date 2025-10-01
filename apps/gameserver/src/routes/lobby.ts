@@ -26,9 +26,13 @@ router.get('/rooms', (_req, res) => {
   }
 });
 
-// Create a new room
-router.post('/rooms', (req, res) => {
+// Create a new room (requires authentication - anonymous or permanent)
+router.post('/rooms', authMiddleware.requireAuth(), (req, res) => {
   const { roomName, settings } = req.body;
+
+  if (!req.user || !req.userProfile) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
 
   if (!roomName || roomName.trim().length === 0) {
     return res.status(400).json({ error: 'Room ID is required' });
@@ -37,7 +41,6 @@ router.post('/rooms', (req, res) => {
   if (roomName.length > 50) {
     return res.status(400).json({ error: 'Room ID must be 50 characters or less' });
   }
-
 
   try {
     const room = roomManager.createRoom(roomName.trim(), settings);
@@ -59,27 +62,20 @@ router.post('/rooms', (req, res) => {
   }
 });
 
-// Join a room from the lobby (optional authentication - supports anonymous play)
-router.post('/rooms/:roomName', authMiddleware.optionalAuth(), (req, res) => {
+// Join a room from the lobby (requires authentication - anonymous or permanent)
+router.post('/rooms/:roomName', authMiddleware.requireAuth(), (req, res) => {
   const { roomName } = req.params;
-  const { playerName } = req.body; 
 
-  let player;
-
-  if (req.user && req.userProfile) {
-    // Authenticated user
-    player = {
-      id: req.user.id,
-      name: req.userProfile.name,
-      socketId: undefined
-    };
-  } else {
-    player = {
-      id: playerName,
-      name: playerName.trim(),
-      socketId: undefined
-    };
+  if (!req.user || !req.userProfile) {
+    return res.status(401).json({ error: 'Authentication required' });
   }
+
+  // Use session-based player identification
+  const player = {
+    id: req.user.id,
+    name: req.userProfile.name,
+    socketId: undefined
+  };
 
   try {
     const room = roomManager.joinRoom(roomName, player);
