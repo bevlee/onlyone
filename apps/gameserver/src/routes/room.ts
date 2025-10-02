@@ -49,7 +49,48 @@ router.post('/', authMiddleware.requireAuth(), (req, res) => {
   }
 });
 
-// Join a room (requires authentication)
+// Check room access (requires authentication)
+router.get('/:roomName/status', authMiddleware.requireAuth(), (req, res) => {
+  const { roomName } = req.params;
+
+  if (!req.user || !req.userProfile) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  try {
+    const room = roomManager.getRoom(roomName);
+
+    // Check if player is already in room
+    const alreadyJoined = room.players.some(p => p.id === req.user!.id);
+
+    // Check if room is full
+    const isFull = room.players.length >= room.settings.maxPlayers;
+
+    res.json({
+      canJoin: alreadyJoined || !isFull,
+      alreadyJoined,
+      isFull,
+      reason: isFull && !alreadyJoined ? 'Room is full' : null,
+      room: {
+        roomName,
+        playerCount: room.players.length,
+        maxPlayers: room.settings.maxPlayers,
+        status: room.status
+      }
+    });
+  } catch (error) {
+    // Room doesn't exist
+    res.status(404).json({
+      canJoin: false,
+      alreadyJoined: false,
+      isFull: false,
+      reason: 'Room not found',
+      room: null
+    });
+  }
+});
+
+// Join a room (requires authentication) - idempotent
 router.post('/:roomName/join', authMiddleware.requireAuth(), (req, res) => {
   const { roomName } = req.params;
 
@@ -57,22 +98,46 @@ router.post('/:roomName/join', authMiddleware.requireAuth(), (req, res) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  // Use session-based player identification
-  const player = {
-    id: req.user.id,
-    name: req.userProfile.name,
-    socketId: undefined
-  };
-
   try {
-    const room = roomManager.joinRoom(roomName, player);
+    const room = roomManager.getRoom(roomName);
+
+    // Check if player is already in room
+    const existingPlayer = room.players.find(p => p.id === req.user!.id);
+
+    if (existingPlayer) {
+      // Already joined - return success anyway (idempotent)
+      return res.json({
+        message: 'Already in room',
+        alreadyJoined: true,
+        room: {
+          roomName,
+          playerCount: room.players.length,
+          maxPlayers: room.settings.maxPlayers,
+          roomLeader: room.roomLeader
+        },
+        player: {
+          id: existingPlayer.id,
+          name: existingPlayer.name,
+        }
+      });
+    }
+
+    // Use session-based player identification
+    const player = {
+      id: req.user.id,
+      name: req.userProfile.name,
+      socketId: undefined
+    };
+
+    const updatedRoom = roomManager.joinRoom(roomName, player);
     res.json({
       message: 'Successfully joined room',
+      alreadyJoined: false,
       room: {
         roomName,
-        playerCount: room.players.length,
-        maxPlayers: room.settings.maxPlayers,
-        roomLeader: room.roomLeader
+        playerCount: updatedRoom.players.length,
+        maxPlayers: updatedRoom.settings.maxPlayers,
+        roomLeader: updatedRoom.roomLeader
       },
       player: {
         id: player.id,

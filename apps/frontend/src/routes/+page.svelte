@@ -4,6 +4,7 @@
 	import { userStore } from '$lib/stores/user.svelte.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/stores';
 
 	let name = $state('');
 	let showAuth = $state(false);
@@ -15,12 +16,16 @@
 	let isSignup = $state(false);
 	let isLoading = $state(false);
 	let error = $state('');
+
+	// Get return URL from query params
+	let returnTo = $derived($page.url.searchParams.get('returnTo') || '/lobby');
+
 	async function handlePlayAsGuest() {
 		// Sign in anonymously
 		const result = await userStore.signInAnonymously();
 
 		if (result && result.success) {
-			goto(resolve('/lobby'));
+			goto(resolve(returnTo));
 		} else {
 			error = 'Failed to create guest session';
 		}
@@ -72,7 +77,7 @@
 				return;
 			}
 
-			goto(resolve('/lobby'));
+			goto(resolve(returnTo));
 		} catch (err) {
 			error = 'Network error. Please try again.';
 			console.error('Auth error:', err);

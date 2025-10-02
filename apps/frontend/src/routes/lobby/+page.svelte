@@ -32,9 +32,9 @@
 	}
 
 	async function joinRoom(roomName: string) {
+		// Join via HTTP, then navigate
 		const result = await gameServerAPI.joinRoom(roomName);
 
-		console.log(`going to ${roomName}`);
 		if (result.success) {
 			goto(resolve(`/room/${roomName}`));
 		} else {
@@ -48,9 +48,8 @@
 
 		const result = await gameServerAPI.createRoom(roomName);
 
-		console.log(`going to ${roomName}`);
 		if (result.success) {
-			// Navigate to the newly created room
+			// Navigate to the newly created room (HTTP join happens on room page)
 			goto(resolve(`/room/${roomName}`));
 		} else {
 			console.log('failed to create room');

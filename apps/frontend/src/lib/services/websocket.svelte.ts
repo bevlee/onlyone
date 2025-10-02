@@ -1,8 +1,12 @@
 import { io, Socket } from 'socket.io-client';
 import type { Room } from '@onlyone/shared';
+import { browser } from '$app/environment';
 import { env } from '$env/dynamic/public';
 
-const GAMESERVER_URL = env.PUBLIC_GAMESERVER_URL || 'http://localhost:3000';
+// For Socket.IO, we need the base URL (not /gameserver path)
+// The path option handles the /gameserver/socket.io routing
+const SOCKET_URL = browser && !env.PUBLIC_GAMESERVER_URL ? '/' : (env.PUBLIC_GAMESERVER_URL?.replace('/gameserver', '') || 'http://localhost:3000');
+
 
 interface WebSocketState {
   connected: boolean;
@@ -24,6 +28,7 @@ function createWebSocketStore() {
   let onPlayerJoined: ((data: any) => void) | null = null;
   let onPlayerLeft: ((data: any) => void) | null = null;
   let onChatMessage: ((data: any) => void) | null = null;
+  let onError: ((error: string) => void) | null = null;
 
   function connect(roomName: string, playerName: string, playerId: string) {
     if (socket?.connected) {
@@ -31,7 +36,8 @@ function createWebSocketStore() {
       return;
     }
 
-    socket = io(GAMESERVER_URL, {
+    socket = io(SOCKET_URL, {
+      path: '/gameserver/socket.io',
       auth: { roomName, playerName, playerId },
       withCredentials: true
     });
@@ -51,6 +57,14 @@ function createWebSocketStore() {
       console.error('WebSocket connection error:', error);
       state.error = error.message;
       state.connected = false;
+      onError?.(error.message);
+    });
+
+    // Room errors (room not found, full, etc.)
+    socket.on('error', (data: { message: string }) => {
+      console.error('Room error:', data.message);
+      state.error = data.message;
+      onError?.(data.message);
     });
 
     // Room state events
@@ -118,6 +132,9 @@ function createWebSocketStore() {
     },
     onChatMessage: (callback: (data: any) => void) => {
       onChatMessage = callback;
+    },
+    onError: (callback: (error: string) => void) => {
+      onError = callback;
     }
   };
 }

@@ -3,7 +3,8 @@ import { SupabaseAuthService } from '../services/SupabaseAuthService.js';
 import { SupabaseDatabase } from '../services/SupabaseDatabase.js';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { DbUser } from '../services/SupabaseDatabase.js';
-
+import { logger } from '../config/logger.js';
+import { log } from 'console';
 // Extend Express Request to include user data
 declare global {
   namespace Express {
@@ -45,33 +46,55 @@ export class SupabaseAuthMiddleware {
   optionalAuth() {
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
-        const token = this.extractToken(req);
+        let token = this.extractToken(req);
+        let user: any = null;
+
+        // Try to use access token first
         if (token) {
-          const user = await this.authService.getUserFromToken(token);
-          if (user) {
-            req.user = user;
-            req.isAnonymous = user.is_anonymous || false;
+          user = await this.authService.getUserFromToken(token);
+        }
 
-            // Get or create user profile from our database
-            let userProfile = await this.database.getUserByAuthId(user.id);
-
-            // Auto-create profile if user has session but no profile
-            if (!userProfile) {
-              const userName = user.user_metadata?.name || undefined;
-              userProfile = await this.database.createUser(
-                user.id,
-                userName || 'User',
-                user.email,
-                req.isAnonymous
-              );
+        // If no valid access token, try refresh token
+        if (!user) {
+          const refreshToken = req.cookies?.['sb-refresh-token'];
+          if (refreshToken) {
+            logger.info('No valid access token, attempting refresh...');
+            const refreshResult = await this.authService.refreshSession(refreshToken);
+            if (refreshResult) {
+              user = refreshResult.user;
+              // Set new auth cookies with refreshed tokens
+              this.setAuthCookies(res, refreshResult.session);
+              logger.info('Session refreshed successfully');
             }
-
-            req.userProfile = userProfile;
           }
+        }
+
+        if (user) {
+          logger.info(`User authenticated: ${user.id}`);
+          req.user = user;
+          req.isAnonymous = user.is_anonymous || false;
+
+          // Get or create user profile from our database
+          let userProfile = await this.database.getUserByAuthId(user.id);
+
+          // Auto-create profile if user has session but no profile
+          if (!userProfile) {
+            const userName = user.user_metadata?.name || undefined;
+            userProfile = await this.database.createUser(
+              user.id,
+              userName || 'User',
+              user.email,
+              req.isAnonymous
+            );
+          }
+
+          req.userProfile = userProfile;
+        } else {
+          logger.info('Continuing without authentication');
         }
       } catch (error) {
         // Token invalid - continue without user
-        console.warn('Invalid token in optional auth:', error);
+        logger.warn(`Invalid token in optional auth: ${error}`);
       }
       next();
     };
@@ -81,15 +104,29 @@ export class SupabaseAuthMiddleware {
   requireAuth() {
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
-        const token = this.extractToken(req);
-        if (!token) {
-          res.status(401).json({ error: 'No authentication token provided' });
-          return;
+        let token = this.extractToken(req);
+        let user: any = null;
+
+        // Try to use access token first
+        if (token) {
+          user = await this.authService.getUserFromToken(token);
         }
 
-        const user = await this.authService.getUserFromToken(token);
+        // If no valid access token, try refresh token
         if (!user) {
-          res.status(401).json({ error: 'Invalid authentication token' });
+          const refreshToken = req.cookies?.['sb-refresh-token'];
+          if (refreshToken) {
+            const refreshResult = await this.authService.refreshSession(refreshToken);
+            if (refreshResult) {
+              user = refreshResult.user;
+              // Set new auth cookies with refreshed tokens
+              this.setAuthCookies(res, refreshResult.session);
+            }
+          }
+        }
+
+        if (!user) {
+          res.status(401).json({ error: 'Invalid or expired authentication' });
           return;
         }
 

@@ -16,17 +16,16 @@
 	let error = $state('');
 
 	onMount(async () => {
-		// Join via HTTP API
-		const result = await gameServerAPI.joinRoom(roomName);
+		// If not already joined, join via HTTP first
+		if (!data.alreadyJoined) {
+			const joinResult = await gameServerAPI.joinRoom(roomName);
 
-		if (!result.success) {
-			error = result.error || 'Failed to join room';
-			goto(resolve('/lobby'));
-			return;
+			if (!joinResult.success) {
+				error = joinResult.error || 'Failed to join room';
+				setTimeout(() => goto(resolve('/lobby')), 2000);
+				return;
+			}
 		}
-
-		// Extract playerId from result
-		const playerId = result.data?.player?.id || userStore.state.user?.id || 'unknown';
 
 		// Setup websocket event handlers
 		websocketStore.onRoomStateUpdate((updatedRoom) => {
@@ -44,7 +43,14 @@
 			// Could show notification: "${data.player.name} left"
 		});
 
-		// Connect to websocket
+		websocketStore.onError((errorMsg) => {
+			error = errorMsg;
+			// If connection error, redirect to lobby
+			setTimeout(() => goto(resolve('/lobby')), 2000);
+		});
+
+		// Connect to websocket for real-time updates
+		const playerId = userStore.state.user?.id || 'unknown';
 		websocketStore.connect(roomName, userStore.state.displayName, playerId);
 	});
 

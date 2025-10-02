@@ -177,6 +177,10 @@ class GameServerAPI {
   }
 
   // Room endpoints
+  async checkRoomStatus(roomName: string) {
+    return this.request(`/room/${roomName}/status`);
+  }
+
   async createRoom(roomName: string, maxPlayers = 12, timeLimit = 30) {
     return this.request('/room', {
       method: 'POST',
