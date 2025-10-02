@@ -5,15 +5,13 @@ export async function load() {
 	// Check if user is authenticated
 	const result = await gameServerAPI.getMe();
 
-	if (!result.success || !result.data?.profile?.name) {
-		// Not authenticated, redirect to home
-		throw redirect(303, '/');
+	if (result.success && result.data?.profile?.name) {
+		// User is authenticated, redirect to lobby
+		throw redirect(303, '/lobby');
 	}
 
-	// User is authenticated, allow access to lobby
+	// Not authenticated, show login page
 	return {};
 }
 
-// Disable SSR for real-time lobby page
 export const ssr = false;
-export const prerender = false;

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { userStore } from '$lib/stores/user.svelte.js';
 	import { websocketStore } from '$lib/services/websocket.svelte.js';
 	import { gameServerAPI, type Room } from '$lib/api/gameserver.js';
@@ -15,18 +16,12 @@
 	let error = $state('');
 
 	onMount(async () => {
-		// Redirect if no display name
-		if (!userStore.state.displayName) {
-			goto('/');
-			return;
-		}
-
-		// First, join via HTTP API
+		// Join via HTTP API
 		const result = await gameServerAPI.joinRoom(roomName);
 
 		if (!result.success) {
 			error = result.error || 'Failed to join room';
-			goto('/lobby');
+			goto(resolve('/lobby'));
 			return;
 		}
 
@@ -57,9 +52,14 @@
 		// Cleanup websocket connection when leaving page
 		websocketStore.disconnect();
 	});
+
+	function handleLeaveRoom() {
+		websocketStore.disconnect();
+		goto(resolve('/lobby'));
+	}
 </script>
 
-<RoomHeader {roomName} username={userStore.state.displayName} />
+<RoomHeader {roomName} username={userStore.state.displayName} onLeaveRoom={handleLeaveRoom} />
 <div class="container mx-auto px-4 py-8">
 	{#if error}
 		<div class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-600">

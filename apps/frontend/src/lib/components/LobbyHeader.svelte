@@ -4,11 +4,11 @@
 	import { Settings, User, LogOut } from 'lucide-svelte';
 	import { userStore } from '$lib/stores/user.svelte.js';
 	import { goto } from '$app/navigation';
-
+	import { resolve } from '$app/paths';
 	const handleLogout = async () => {
 		await userStore.signOut();
 		// Optionally redirect after logout
-		goto('/');
+		goto(resolve('/'));
 	};
 	let username = $derived(userStore.state.displayName);
 </script>

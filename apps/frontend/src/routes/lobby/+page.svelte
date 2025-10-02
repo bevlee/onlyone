@@ -5,22 +5,15 @@
 	import LobbyHeader from '$lib/components/LobbyHeader.svelte';
 	import CreateRoomForm from '$lib/components/CreateRoomForm.svelte';
 	import { gameServerAPI, type Room } from '$lib/api/gameserver.js';
-	import { userStore } from '$lib/stores/user.svelte.js';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
 	let rooms = $state<Room[]>([]);
 	let isLoading = $state(true);
 	let error = $state('');
 	let isCreating = $state(false);
-
 	// Load rooms on mount and set up periodic refresh
 	onMount(() => {
-		// Redirect to home if no display name is set
-		if (!userStore.state.displayName) {
-			goto('/');
-			return;
-		}
-
 		loadRooms();
 		// Refresh rooms every 5 seconds
 		const interval = setInterval(loadRooms, 5000);
@@ -43,7 +36,7 @@
 
 		console.log(`going to ${roomName}`);
 		if (result.success) {
-			goto(`/room/${roomName}`);
+			goto(resolve(`/room/${roomName}`));
 		} else {
 			error = result.error || 'Failed to join room';
 		}
@@ -58,7 +51,7 @@
 		console.log(`going to ${roomName}`);
 		if (result.success) {
 			// Navigate to the newly created room
-			goto(`/room/${roomName}`);
+			goto(resolve(`/room/${roomName}`));
 		} else {
 			console.log('failed to create room');
 			error = result.error || 'Failed to create room';
@@ -124,14 +117,7 @@
 						>
 							<div class="flex items-center justify-between">
 								<div class="flex-1">
-									<div class="flex items-center gap-2">
-										<span class="font-medium">{room.roomName}</span>
-										<span
-											class="bg-secondary text-secondary-foreground rounded-full px-2 py-1 text-xs"
-										>
-											{room.roomLeader}
-										</span>
-									</div>
+									<span class="font-medium">{room.roomName}</span>
 									<div class="text-sm {getStatusColor(room.status)} mt-1">
 										{getStatusText(room.status)}
 									</div>

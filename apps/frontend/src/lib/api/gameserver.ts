@@ -176,8 +176,9 @@ class GameServerAPI {
     return this.request<RoomsResponse>('/lobby/rooms');
   }
 
+  // Room endpoints
   async createRoom(roomName: string, maxPlayers = 12, timeLimit = 30) {
-    return this.request('/lobby/rooms', {
+    return this.request('/room', {
       method: 'POST',
       body: JSON.stringify({
         roomName,
@@ -190,7 +191,7 @@ class GameServerAPI {
   }
 
   async joinRoom(roomName: string): Promise<ApiResponse<JoinRoomResponse>> {
-    return this.request<JoinRoomResponse>(`/lobby/rooms/${roomName}`, {
+    return this.request<JoinRoomResponse>(`/room/${roomName}/join`, {
       method: 'POST',
     });
   }

@@ -3,6 +3,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { userStore } from '$lib/stores/user.svelte.js';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
 	let name = $state('');
 	let showAuth = $state(false);
@@ -14,13 +15,12 @@
 	let isSignup = $state(false);
 	let isLoading = $state(false);
 	let error = $state('');
-
 	async function handlePlayAsGuest() {
 		// Sign in anonymously
 		const result = await userStore.signInAnonymously();
 
 		if (result && result.success) {
-			goto('/lobby');
+			goto(resolve('/lobby'));
 		} else {
 			error = 'Failed to create guest session';
 		}
@@ -72,7 +72,7 @@
 				return;
 			}
 
-			goto('/lobby');
+			goto(resolve('/lobby'));
 		} catch (err) {
 			error = 'Network error. Please try again.';
 			console.error('Auth error:', err);
