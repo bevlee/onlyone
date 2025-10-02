@@ -8,24 +8,7 @@ export default defineConfig({
 	resolve: { alias: { $lib: path.resolve('./src/lib') } },
 	server: {
 		proxy: {
-			'/api': {
-				target: 'http://localhost:3000',
-				changeOrigin: true,
-				rewrite: (path) => path.replace(/^\/api/, '')
-			},
-			'/auth': {
-				target: 'http://localhost:3000',
-				changeOrigin: true
-			},
-			'/lobby/rooms': {
-				target: 'http://localhost:3000',
-				changeOrigin: true
-			},
-			'/room': {
-				target: 'http://localhost:3000',
-				changeOrigin: true
-			},
-			'/health': {
+			'/gameserver': {
 				target: 'http://localhost:3000',
 				changeOrigin: true
 			}

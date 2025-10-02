@@ -3,7 +3,7 @@ import { browser } from '$app/environment';
 import type { Room } from '@onlyone/shared';
 
 // Use relative URLs in browser (for proxy), absolute URLs in server-side rendering
-const GAMESERVER_URL = browser && !env.PUBLIC_GAMESERVER_URL ? '' : (env.PUBLIC_GAMESERVER_URL || 'http://localhost:3000');
+const GAMESERVER_URL = browser && !env.PUBLIC_GAMESERVER_URL ? '/gameserver' : (env.PUBLIC_GAMESERVER_URL || 'http://localhost:3000/gameserver');
 
 interface ApiResponse<T> {
   success: boolean;
