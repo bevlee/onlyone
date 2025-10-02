@@ -3,7 +3,7 @@ import { Room, Rooms, RoomPlayer, Settings, GameState, GamePhaseType } from '@on
 export class RoomManager {
   private rooms: Rooms = {};
 
-  createRoom(roomName: string, settings?: Partial<Settings>): Room {
+  createRoom(roomName: string): Room {
     if (this.rooms[roomName]) {
       throw new Error(`Room ${roomName} already exists`);
     }
@@ -19,7 +19,7 @@ export class RoomManager {
       gamePhase: {
         phase: GamePhaseType.Lobby,
         state: {
-          minPlayersToStart: 3
+          minPlayersToStart: 2
         }
       }
     };
@@ -29,7 +29,7 @@ export class RoomManager {
       status: 'waiting',
       players: [],
       spectators: [],
-      settings: { ...defaultSettings, ...settings },
+      settings: defaultSettings,
       gameState: defaultGameState,
       roomLeader: null
     };
@@ -49,7 +49,7 @@ export class RoomManager {
     }
 
     if (room.players.length == 0 && !room.roomLeader) {
-      room.roomLeader = player.name;
+      room.roomLeader = player.id;
     }
 
     room.players.push(player);

@@ -142,6 +142,7 @@ export class SupabaseAuthMiddleware {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax' as const,
+      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined,
     };
 
     res.cookie('sb-access-token', session.access_token, {

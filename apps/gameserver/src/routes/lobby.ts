@@ -28,7 +28,7 @@ router.get('/rooms', (_req, res) => {
 
 // Create a new room (requires authentication - anonymous or permanent)
 router.post('/rooms', authMiddleware.requireAuth(), (req, res) => {
-  const { roomName, settings } = req.body;
+  const { roomName } = req.body;
 
   if (!req.user || !req.userProfile) {
     return res.status(401).json({ error: 'Authentication required' });
@@ -43,7 +43,7 @@ router.post('/rooms', authMiddleware.requireAuth(), (req, res) => {
   }
 
   try {
-    const room = roomManager.createRoom(roomName.trim(), settings);
+    const room = roomManager.createRoom(roomName.trim());
     res.status(201).json({
       message: 'Room created successfully',
       room: {

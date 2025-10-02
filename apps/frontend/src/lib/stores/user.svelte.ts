@@ -118,6 +118,7 @@ function createUserStore() {
     async signInAnonymously() {
       if (!browser) return;
 
+      // Always generate random name on backend, don't accept user input
       const result = await gameServerAPI.signInAnonymous();
 
       if (result.success && result.data) {

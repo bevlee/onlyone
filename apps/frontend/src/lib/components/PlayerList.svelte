@@ -59,7 +59,7 @@
 	{#if expanded}
 		<div transition:slide={{ duration: 200 }} class="px-4 pb-4">
 			<div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-				{#each players as player}
+				{#each players as player (player.id)}
 					<div class="bg-card text-card-foreground flex items-center gap-3 rounded-lg border p-3">
 						<div class="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-full">
 							<UserIcon class="text-primary h-4 w-4" />
@@ -70,8 +70,8 @@
 								{#if player.name === currentUser}
 									<span class="text-muted-foreground ml-1 text-xs">(you)</span>
 								{/if}
-								{#if roomLeader && player.name === roomLeader}
-									<span class="text-yellow-600 dark:text-yellow-400 ml-1 text-xs">★</span>
+								{#if roomLeader && player.id === roomLeader}
+									<span class="ml-1 text-xs text-yellow-600 dark:text-yellow-400">★</span>
 								{/if}
 							</div>
 						</div>

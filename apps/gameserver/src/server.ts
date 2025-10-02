@@ -101,7 +101,7 @@ app.post('/auth/login', async (req, res) => {
   }
 });
 
-app.post('/auth/anonymous', async (_req, res) => {
+app.post('/auth/anonymous', async (req, res) => {
   try {
     const result = await authService.signInAnonymously();
 

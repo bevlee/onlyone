@@ -1,5 +1,6 @@
-import { supabaseAuth } from '../config/supabase.js';
+import { supabaseAuth, supabase } from '../config/supabase.js';
 import { User as SupabaseUser } from '@supabase/supabase-js';
+import { uniqueNamesGenerator, adjectives, animals } from 'unique-names-generator';
 
 export interface AuthResult {
   user: SupabaseUser;
@@ -143,7 +144,45 @@ export class SupabaseAuthService {
 
   // Sign in anonymously
   async signInAnonymously(): Promise<AuthResult> {
-    const { data, error } = await supabaseAuth.auth.signInAnonymously();
+    // Generate unique name by checking against existing names in database
+    let attempts = 0;
+    const maxAttempts = 10;
+    let guestName: string;
+
+    do {
+      guestName = uniqueNamesGenerator({
+        dictionaries: [adjectives, animals],
+        separator: '-',
+        style: 'capital'
+      });
+
+      // Check if name already exists in public.users table
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('name', guestName)
+        .single();
+
+      // If name doesn't exist, we're good
+      if (!existingUser) {
+        break;
+      }
+
+      attempts++;
+    } while (attempts < maxAttempts);
+
+    // If we hit max attempts, add a random suffix to guarantee uniqueness
+    if (attempts === maxAttempts) {
+      guestName = `${guestName}-${Math.random().toString(36).substring(2, 6)}`;
+    }
+
+    const { data, error } = await supabaseAuth.auth.signInAnonymously({
+      options: {
+        data: {
+          name: guestName
+        }
+      }
+    });
 
     if (error) {
       throw new Error(error.message);

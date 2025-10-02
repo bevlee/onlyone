@@ -1,7 +1,9 @@
 import { env } from '$env/dynamic/public';
+import { browser } from '$app/environment';
 import type { Room } from '@onlyone/shared';
 
-const GAMESERVER_URL = env.PUBLIC_GAMESERVER_URL || 'http://localhost:3000';
+// Use relative URLs in browser (for proxy), absolute URLs in server-side rendering
+const GAMESERVER_URL = browser && !env.PUBLIC_GAMESERVER_URL ? '' : (env.PUBLIC_GAMESERVER_URL || 'http://localhost:3000');
 
 interface ApiResponse<T> {
   success: boolean;
@@ -114,6 +116,7 @@ class GameServerAPI {
     return this.request<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+      credentials: 'include'
     });
   }
 
@@ -137,6 +140,7 @@ class GameServerAPI {
   async signInAnonymous(): Promise<ApiResponse<AuthResponse>> {
     return this.request<AuthResponse>('/auth/anonymous', {
       method: 'POST',
+      body: JSON.stringify({}),
     });
   }
 
