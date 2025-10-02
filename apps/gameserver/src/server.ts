@@ -18,7 +18,7 @@ import { setupSocketHandlers } from './handlers/socketHandlers.js';
 import { ConnectionManager } from './services/ConnectionManager.js';
 import { RoomManager } from './services/RoomManager.js';
 import { createLobbyRouter } from './routes/lobby.js';
-import roomRoutes from './routes/room.js';
+import { createRoomRouter } from './routes/room.js';
 
 const app: Express = express();
 
@@ -48,7 +48,7 @@ app.use(authMiddleware.handleSessionCookies());
 
 // Route handlers
 app.use('/lobby', createLobbyRouter(roomManager));
-app.use('/room', roomRoutes);
+app.use('/room', createRoomRouter(roomManager));
 
 // Auth routes
 app.post('/auth/register', async (req, res) => {
