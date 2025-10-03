@@ -1,4 +1,5 @@
 import { Router, type IRouter } from 'express';
+import { Server } from 'socket.io';
 import { RoomManager } from '../services/RoomManager.js';
 import { SupabaseAuthMiddleware } from '../middleware/supabase-auth.js';
 import { SupabaseAuthService } from '../services/SupabaseAuthService.js';
@@ -9,8 +10,8 @@ const authService = new SupabaseAuthService();
 const database = new SupabaseDatabase();
 const authMiddleware = new SupabaseAuthMiddleware(authService, database);
 
-// Create router factory function that accepts shared RoomManager
-export function createRoomRouter(roomManager: RoomManager): IRouter {
+// Create router factory function that accepts shared RoomManager and Socket.IO server
+export function createRoomRouter(roomManager: RoomManager, io?: Server): IRouter {
   const router: IRouter = Router();
 
 // Create a new room (requires authentication)
@@ -130,6 +131,18 @@ router.post('/:roomName/join', authMiddleware.requireAuth(), (req, res) => {
     };
 
     const updatedRoom = roomManager.joinRoom(roomName, player);
+
+    // Broadcast room state to all connected players via WebSocket
+    if (io) {
+      io.to(roomName).emit('playerJoined', {
+        player: {
+          id: player.id,
+          name: player.name
+        },
+        room: updatedRoom
+      });
+    }
+
     res.json({
       message: 'Successfully joined room',
       alreadyJoined: false,
@@ -218,21 +231,71 @@ router.get('/players', (req, res) => {
 
 
 // Kick a player from room (requires authentication, being in room, and being room owner)
-router.post('/kick/:playerId', (req, res) => {
-  const { playerId } = req.params;
+router.post('/:roomName/kick/:playerId', authMiddleware.requireAuth(), (req, res) => {
+  const { roomName, playerId } = req.params;
   const { reason = 'No reason provided' } = req.body;
 
-  // TODO: Implement authentication check
-  // TODO: Verify user is room owner
-  // TODO: Verify target player is in same room
-  // TODO: Remove player from room
-  // TODO: Notify kicked player and remaining players
+  if (!req.user || !req.userProfile) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
 
-  res.json({
-    message: `Player ${playerId} has been kicked from the room`,
-    kickedPlayerId: playerId,
-    reason
-  });
+  try {
+    const room = roomManager.getRoom(roomName);
+
+    // Check if current user is the room leader
+    if (room.roomLeader !== req.user.id) {
+      return res.status(403).json({ error: 'Only room leader can kick players' });
+    }
+
+    // Check if target player is in the room
+    const targetPlayer = room.players.find(p => p.id === playerId);
+    if (!targetPlayer) {
+      return res.status(404).json({ error: 'Player not found in room' });
+    }
+
+    // Cannot kick yourself
+    if (playerId === req.user.id) {
+      return res.status(400).json({ error: 'Cannot kick yourself. Use leave instead.' });
+    }
+
+    // Remove player from room
+    roomManager.leaveRoom(roomName, playerId);
+
+    // Get updated room state
+    const updatedRoom = roomManager.getRoom(roomName);
+
+    // Notify via WebSocket if available
+    if (io) {
+      // Notify the kicked player
+      io.to(roomName).emit('playerKicked', {
+        playerId,
+        playerName: targetPlayer.name,
+        reason,
+        kickedBy: req.userProfile.name
+      });
+
+      // Broadcast updated room state to all remaining players
+      io.to(roomName).emit('roomState', updatedRoom);
+    }
+
+    res.json({
+      message: `Player ${targetPlayer.name} has been kicked from the room`,
+      kickedPlayerId: playerId,
+      reason,
+      room: {
+        roomName,
+        playerCount: updatedRoom.players.length,
+        maxPlayers: updatedRoom.settings.maxPlayers,
+        roomLeader: updatedRoom.roomLeader
+      }
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Failed to kick player' });
+    }
+  }
 });
 
 // Invite player to room (requires authentication and being in a room)

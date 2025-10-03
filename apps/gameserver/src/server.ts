@@ -52,7 +52,7 @@ app.use(authMiddleware.handleSessionCookies());
 app.use('/gameserver/auth', authRoutes);
 app.use('/gameserver/api', apiRoutes);
 app.use('/gameserver/lobby', createLobbyRouter(roomManager));
-app.use('/gameserver/room', createRoomRouter(roomManager));
+app.use('/gameserver/room', createRoomRouter(roomManager, io));
 
 // Gameserver health check
 app.get('/gameserver/health', (_req, res) => {

@@ -58,7 +58,10 @@ export function setupSocketHandlers(
     // Send current room state to connecting player
     socket.emit('roomState', room);
 
-    // Don't emit playerJoined here - that was already done via HTTP join
+    // Handle when player is kicked
+    socket.on('playerKicked', () => {
+      socket.disconnect();
+    });
 
     // Chat message handler
     socket.on('chatMessage', (message: string) => {

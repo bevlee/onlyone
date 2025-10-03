@@ -27,6 +27,7 @@ function createWebSocketStore() {
   let onRoomStateUpdate: ((room: Room) => void) | null = null;
   let onPlayerJoined: ((data: any) => void) | null = null;
   let onPlayerLeft: ((data: any) => void) | null = null;
+  let onPlayerKicked: ((data: any) => void) | null = null;
   let onChatMessage: ((data: any) => void) | null = null;
   let onError: ((error: string) => void) | null = null;
 
@@ -84,6 +85,11 @@ function createWebSocketStore() {
       console.log('Player left:', data);
       state.room = data.room;
       onPlayerLeft?.(data);
+    });
+
+    socket.on('playerKicked', (data) => {
+      console.log('Player kicked:', data);
+      onPlayerKicked?.(data);
     });
 
     socket.on('chatMessage', (data) => {
