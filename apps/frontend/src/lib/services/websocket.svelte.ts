@@ -136,6 +136,9 @@ function createWebSocketStore() {
     onPlayerLeft: (callback: (data: any) => void) => {
       onPlayerLeft = callback;
     },
+    onPlayerKicked: (callback: (data: any) => void) => {
+      onPlayerKicked = callback;
+    },
     onChatMessage: (callback: (data: any) => void) => {
       onChatMessage = callback;
     },

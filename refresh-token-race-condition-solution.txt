@@ -1,0 +1,114 @@
+REFRESH TOKEN RACE CONDITION - SOLUTION DESIGN
+
+## Problem
+Supabase uses refresh token rotation for security. Each refresh token can only be used ONCE.
+When multiple concurrent requests have expired access tokens, they all try to refresh with
+the same old token, causing "refresh token already used" errors.
+
+## Current Flow (Broken)
+Request 1 (GET /lobby/rooms)  →  expired access token  →  refresh with token ABC
+Request 2 (GET /auth/me)      →  expired access token  →  refresh with token ABC
+
+Timeline:
+T1: Request 1 calls refreshSession(ABC) ← Supabase accepts, returns new token XYZ
+T2: Request 2 calls refreshSession(ABC) ← Supabase rejects "already used" ❌
+
+## Solution: In-Memory Refresh Lock (Option 1)
+
+Add a Map to store in-flight refresh promises. When multiple requests need to refresh
+with the same token, they share a single refresh call instead of making duplicate calls.
+
+### Implementation Changes
+
+File: apps/gameserver/src/middleware/supabase-auth.ts
+
+1. Add private field to SupabaseAuthMiddleware class:
+   private refreshPromises: Map<string, Promise<{session: any; user: SupabaseUser} | null>>;
+
+2. Initialize in constructor:
+   this.refreshPromises = new Map();
+
+3. Add new private method:
+
+   private async getOrRefreshSession(refreshToken: string): Promise<{session: any; user: SupabaseUser} | null> {
+     // Check if refresh is already in progress for this token
+     const existingPromise = this.refreshPromises.get(refreshToken);
+     if (existingPromise) {
+       logger.info('Waiting for existing refresh to complete...');
+       return existingPromise;
+     }
+
+     // Start new refresh and store the promise
+     const refreshPromise = this.authService.refreshSession(refreshToken)
+       .finally(() => {
+         // Clean up after refresh completes (success or failure)
+         this.refreshPromises.delete(refreshToken);
+       });
+
+     this.refreshPromises.set(refreshToken, refreshPromise);
+     return refreshPromise;
+   }
+
+4. Update optionalAuth() middleware (around line 62):
+   Replace:
+     const refreshResult = await this.authService.refreshSession(refreshToken);
+   With:
+     const refreshResult = await this.getOrRefreshSession(refreshToken);
+
+5. Update requireAuth() middleware (around line 120):
+   Replace:
+     const refreshResult = await this.authService.refreshSession(refreshToken);
+   With:
+     const refreshResult = await this.getOrRefreshSession(refreshToken);
+
+### How It Works
+
+1. **First concurrent request**:
+   - Expired access token → needs refresh
+   - Checks refreshPromises.get(token) → not found
+   - Calls refreshSession() and stores promise in Map
+   - Supabase returns new tokens → cookies updated
+   - Promise resolves → removes itself from Map
+
+2. **Second concurrent request** (happens simultaneously):
+   - Expired access token → needs refresh
+   - Checks refreshPromises.get(token) → FOUND!
+   - Waits for existing promise instead of calling Supabase again
+   - Gets same refresh result → both requests get new tokens
+   - No "already used" error! ✅
+
+3. **Subsequent requests**:
+   - Have fresh access token from cookies → no refresh needed
+   - OR if they need refresh, it's a new token → different Map key
+
+### Benefits
+✅ Prevents duplicate refresh calls for same token
+✅ All concurrent requests share single refresh result
+✅ Automatic cleanup after refresh completes
+✅ Works across both optionalAuth() and requireAuth()
+✅ No external dependencies (just in-memory Map)
+✅ Thread-safe in Node.js (single-threaded event loop)
+
+### Edge Cases Handled
+- Timeout: If refresh hangs, all waiting requests fail together (fail-fast)
+- Error: If refresh fails, promise rejects → Map cleanup → next request tries fresh
+- Memory leak: Map auto-cleans on promise completion (finally block)
+- Token rotation: Each new refresh token gets its own Map entry
+
+### Alternative Solutions (Not Chosen)
+
+Option 2: Better error handling
+- When refresh fails with "already used", clear cookies and force re-auth
+- Simpler but worse UX (user gets logged out)
+
+Option 3: Client-side token management
+- Frontend tracks token expiry and proactively refreshes
+- Requires more client complexity and doesn't solve server race condition
+
+## Testing Scenarios
+
+1. Single request with expired token → normal refresh
+2. Two concurrent requests with expired token → shared refresh
+3. Refresh fails → both requests fail, Map cleanup happens
+4. Refresh succeeds → new cookies set, both requests authenticated
+5. Third request arrives after refresh → uses new access token (no refresh needed)

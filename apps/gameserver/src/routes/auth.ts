@@ -128,6 +128,7 @@ router.post('/logout', authMiddleware.requireAuth(), async (_req, res) => {
 });
 
 router.get('/me', authMiddleware.optionalAuth(), async (req, res) => {
+  logger.info('GET /me called with req', req);
   if (!req.user) {
     return res.status(401).json({ error: 'Not authenticated' });
   }

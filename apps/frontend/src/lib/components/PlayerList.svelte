@@ -2,6 +2,7 @@
 	import UserIcon from 'lucide-svelte/icons/user';
 	import UsersIcon from 'lucide-svelte/icons/users';
 	import ChevronDownIcon from 'lucide-svelte/icons/chevron-down';
+	import XCircleIcon from 'lucide-svelte/icons/x-circle';
 	import { slide } from 'svelte/transition';
 	import type { RoomPlayer } from '@onlyone/shared';
 	import { browser } from '$app/environment';
@@ -9,13 +10,17 @@
 	let {
 		players,
 		currentUser,
+		currentUserId,
 		minPlayers = 3,
-		roomLeader
+		roomLeader,
+		onKickPlayer
 	}: {
 		players: RoomPlayer[];
 		currentUser: string;
+		currentUserId: string;
 		minPlayers?: number;
 		roomLeader: string | null;
+		onKickPlayer?: (playerId: string, playerName: string) => void;
 	} = $props();
 
 	const playerCount = $derived(players.length);
@@ -75,6 +80,15 @@
 								{/if}
 							</div>
 						</div>
+						{#if roomLeader === currentUserId && player.id !== currentUserId && onKickPlayer}
+							<button
+								onclick={() => onKickPlayer?.(player.id, player.name)}
+								class="text-muted-foreground hover:text-destructive transition-colors"
+								title="Kick {player.name}"
+							>
+								<XCircleIcon class="h-4 w-4" />
+							</button>
+						{/if}
 					</div>
 				{/each}
 			</div>

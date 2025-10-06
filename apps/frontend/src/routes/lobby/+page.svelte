@@ -7,14 +7,22 @@
 	import { gameServerAPI, type Room } from '$lib/api/gameserver.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { toast } from '$lib/utils.js';
 
-	let rooms = $state<Room[]>([]);
-	let isLoading = $state(true);
-	let error = $state('');
+	let { data } = $props();
+	let rooms = $state<Room[]>(data.initialRooms || []);
+	let isLoading = $state(false);
 	let isCreating = $state(false);
+
 	// Load rooms on mount and set up periodic refresh
 	onMount(() => {
-		loadRooms();
+		// Show toast if there's a message from redirect
+		if (data.toastMessage) {
+			toast.error(data.toastMessage);
+			// Clean URL by replacing current history entry
+			window.history.replaceState({}, '', '/lobby');
+		}
+
 		// Refresh rooms every 5 seconds
 		const interval = setInterval(loadRooms, 5000);
 		return () => clearInterval(interval);
@@ -24,9 +32,8 @@
 		const result = await gameServerAPI.getRooms();
 		if (result.success && result.data) {
 			rooms = result.data.rooms;
-			error = '';
 		} else {
-			error = result.error || 'Failed to load rooms';
+			toast.error(result.error || 'Failed to load rooms');
 		}
 		isLoading = false;
 	}
@@ -38,22 +45,28 @@
 		if (result.success) {
 			goto(resolve(`/room/${roomName}`));
 		} else {
-			error = result.error || 'Failed to join room';
+			toast.error(result.error || 'Failed to join room');
 		}
 	}
 
 	async function handleCreateRoom(roomName: string) {
 		isCreating = true;
-		error = '';
 
-		const result = await gameServerAPI.createRoom(roomName);
+		const createResult = await gameServerAPI.createRoom(roomName);
 
-		if (result.success) {
-			// Navigate to the newly created room (HTTP join happens on room page)
+		if (!createResult.success) {
+			toast.error(createResult.error || 'Failed to create room');
+			isCreating = false;
+			return;
+		}
+
+		// Automatically join the room we just created
+		const joinResult = await gameServerAPI.joinRoom(roomName);
+
+		if (joinResult.success) {
 			goto(resolve(`/room/${roomName}`));
 		} else {
-			console.log('failed to create room');
-			error = result.error || 'Failed to create room';
+			toast.error(joinResult.error || 'Failed to join room');
 			isCreating = false;
 		}
 	}
@@ -82,13 +95,6 @@
 	<div class="mx-auto max-w-2xl space-y-8">
 		<!-- Create New Room -->
 		<CreateRoomForm onCreateRoom={handleCreateRoom} disabled={isCreating} />
-
-		<!-- Error Display -->
-		{#if error}
-			<div class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-				{error}
-			</div>
-		{/if}
 
 		<!-- Active Rooms -->
 		<div class="space-y-4">

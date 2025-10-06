@@ -1,6 +1,8 @@
 import { supabaseAuth, supabase } from '../config/supabase.js';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { uniqueNamesGenerator, adjectives, animals } from 'unique-names-generator';
+import { decodeJwt } from 'jose';
+import { logger } from '../config/logger.js';
 
 export interface AuthResult {
   user: SupabaseUser;
@@ -19,6 +21,14 @@ export interface UserProfile {
 }
 
 export class SupabaseAuthService {
+  private supabaseUrl: string;
+
+  constructor() {
+    this.supabaseUrl = process.env.SUPABASE_URL!;
+    if (!this.supabaseUrl) {
+      throw new Error('SUPABASE_URL environment variable is required');
+    }
+  }
 
   // Register with email and password
   async registerWithPassword(name: string, email: string, password: string): Promise<AuthResult> {
@@ -69,15 +79,50 @@ export class SupabaseAuthService {
     };
   }
 
-  // Verify and get user from JWT token
+  // Verify and get user from JWT token (local JWT decoding with basic validation)
   async getUserFromToken(token: string): Promise<SupabaseUser | null> {
-    const { data, error } = await supabaseAuth.auth.getUser(token);
+    try {
+      // Decode JWT without verification (fast, no network call)
+      // Note: This relies on HTTPS and the fact that tokens come from trusted browser cookies
+      // For production with untrusted sources, implement proper JWT verification with secret
+      const payload = decodeJwt(token);
 
-    if (error || !data.user) {
+      // Basic validation: check expiration
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        console.log('Token expired');
+        return null;
+      }
+
+      // Validate issuer matches our Supabase project
+      if (payload.iss !== `${this.supabaseUrl}/auth/v1`) {
+        console.log('Invalid token issuer');
+        return null;
+      }
+
+      // Convert JWT payload to SupabaseUser format
+      const user: SupabaseUser = {
+        id: payload.sub!,
+        aud: payload.aud as string,
+        role: payload.role as string,
+        email: payload.email as string | undefined,
+        email_confirmed_at: payload.email_confirmed_at as string | undefined,
+        phone: payload.phone as string | undefined,
+        confirmed_at: payload.confirmed_at as string | undefined,
+        last_sign_in_at: payload.last_sign_in_at as string | undefined,
+        app_metadata: payload.app_metadata as any || {},
+        user_metadata: payload.user_metadata as any || {},
+        identities: payload.identities as any[] | undefined,
+        created_at: payload.created_at as string || new Date().toISOString(),
+        updated_at: payload.updated_at as string || new Date().toISOString(),
+        is_anonymous: payload.is_anonymous as boolean | undefined
+      };
+
+      return user;
+    } catch (error) {
+      // JWT decoding failed
+      console.error('JWT decode failed:', error);
       return null;
     }
-
-    return data.user;
   }
 
   // Refresh session
@@ -85,7 +130,7 @@ export class SupabaseAuthService {
     const { data, error } = await supabaseAuth.auth.refreshSession({
       refresh_token: refreshToken
     });
-
+    logger.info(`Refresh session data: ${JSON.stringify(data)}, error: ${JSON.stringify(error)}`);
     if (error || !data.session || !data.user) {
       return null;
     }

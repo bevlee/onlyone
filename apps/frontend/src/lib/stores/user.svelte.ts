@@ -1,5 +1,6 @@
 import { browser } from '$app/environment';
 import { gameServerAPI } from '$lib/api/gameserver.js';
+import { goto } from '$app/navigation';
 
 interface AuthUser {
   id: string;
@@ -35,37 +36,46 @@ function createUserStore() {
     profile: null,
     isAuthenticated: false,
     isAnonymous: false,
-    isLoading: true,
+    isLoading: false,
     displayName: '',
     avatarUrl: null
   });
 
-  // Check auth state on initialization
-  if (browser) {
-    checkAuthState();
-  }
+  // Helper to update state from user data
+  function updateFromUserData(userData: any) {
+    // Guard: only update if data actually changed
+    const newUserId = userData?.user?.id;
+    const currentUserId = state.user?.id;
 
-  async function checkAuthState() {
-    if (!browser) return;
-
-    const result = await gameServerAPI.getMe();
-
-    if (result.success && result.data) {
-      state.user = result.data.user;
-      state.profile = result.data.profile;
-      state.isAuthenticated = true;
-      state.isAnonymous = (result.data as any).isAnonymous || false;
-      state.displayName = result.data.profile.name;
-      state.avatarUrl = (result.data.profile as any).avatar_url || null;
+    if (newUserId === currentUserId && userData && state.user) {
+      // Same user, don't update to prevent unnecessary reactivity
+      return;
     }
 
-    state.isLoading = false;
+    if (userData) {
+      state.user = userData.user;
+      state.profile = userData.profile;
+      state.isAuthenticated = true;
+      state.isAnonymous = userData.isAnonymous || false;
+      state.displayName = userData.profile.name;
+      state.avatarUrl = userData.profile.avatar_url || null;
+    } else {
+      state.user = null;
+      state.profile = null;
+      state.isAuthenticated = false;
+      state.isAnonymous = false;
+      state.displayName = '';
+      state.avatarUrl = null;
+    }
   }
 
   return {
     get state() {
       return state;
     },
+
+    // Update store from page data (called from +layout.svelte)
+    updateFromUserData,
 
     setDisplayName(name: string) {
       state.displayName = name;
@@ -74,12 +84,9 @@ function createUserStore() {
     async login(email: string, password: string) {
       const result = await gameServerAPI.login(email, password);
 
-      if (result.success && result.data) {
-        state.user = result.data.user;
-        state.isAuthenticated = true;
-
-        // Get full profile after login (sets displayName)
-        await checkAuthState();
+      if (result.success && browser) {
+        // Navigate to lobby - this naturally runs load functions
+        await goto('/lobby');
       }
 
       return result;
@@ -88,12 +95,9 @@ function createUserStore() {
     async register(name: string, email: string, password: string) {
       const result = await gameServerAPI.register(name, email, password);
 
-      if (result.success && result.data) {
-        state.user = result.data.user;
-        state.isAuthenticated = true;
-
-        // Get full profile after registration (sets displayName)
-        await checkAuthState();
+      if (result.success && browser) {
+        // Navigate to lobby - this naturally runs load functions
+        await goto('/lobby');
       }
 
       return result;
@@ -102,32 +106,22 @@ function createUserStore() {
     async signOut() {
       const result = await gameServerAPI.logout();
 
-      state.user = null;
-      state.profile = null;
-      state.isAuthenticated = false;
-      state.isAnonymous = false;
-      state.avatarUrl = null;
+      if (browser) {
+        // Navigate to home - this naturally runs load functions
+        await goto('/');
+      }
 
       return result;
-    },
-
-    async refreshAuth() {
-      await checkAuthState();
     },
 
     async signInAnonymously() {
       if (!browser) return;
 
-      // Always generate random name on backend, don't accept user input
       const result = await gameServerAPI.signInAnonymous();
 
-      if (result.success && result.data) {
-        state.user = result.data.user;
-        state.isAuthenticated = true;
-        state.isAnonymous = true;
-
-        // Get full profile after anonymous sign in
-        await checkAuthState();
+      if (result.success) {
+        // Navigate to lobby - this naturally runs load functions
+        await goto('/lobby');
       }
 
       return result;
@@ -136,12 +130,9 @@ function createUserStore() {
     async upgradeAccount(name: string, email: string, password: string) {
       const result = await gameServerAPI.upgradeAccount(name, email, password);
 
-      if (result.success && result.data) {
-        state.user = result.data.user;
-        state.isAnonymous = false;
-
-        // Get updated profile
-        await checkAuthState();
+      if (result.success && browser) {
+        // Navigate to lobby - this naturally runs load functions
+        await goto('/lobby');
       }
 
       return result;

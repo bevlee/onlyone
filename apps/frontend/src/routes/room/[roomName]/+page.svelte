@@ -5,6 +5,7 @@
 	import { userStore } from '$lib/stores/user.svelte.js';
 	import { websocketStore } from '$lib/services/websocket.svelte.js';
 	import { gameServerAPI, type Room } from '$lib/api/gameserver.js';
+	import { setToastCookie } from '$lib/utils.js';
 	import RoomHeader from '$lib/components/RoomHeader.svelte';
 	import PlayerList from '$lib/components/PlayerList.svelte';
 
@@ -13,7 +14,6 @@
 
 	let room = $state<Room | null>(null);
 	let isLoading = $state(true);
-	let error = $state('');
 
 	onMount(async () => {
 		// If not already joined, join via HTTP first
@@ -21,8 +21,9 @@
 			const joinResult = await gameServerAPI.joinRoom(roomName);
 
 			if (!joinResult.success) {
-				error = joinResult.error || 'Failed to join room';
-				setTimeout(() => goto(resolve('/lobby')), 2000);
+				const message = joinResult.error || 'Failed to join room';
+				setToastCookie(message);
+				goto(resolve('/lobby'));
 				return;
 			}
 		}
@@ -43,10 +44,21 @@
 			// Could show notification: "${data.player.name} left"
 		});
 
+		websocketStore.onPlayerKicked((data) => {
+			const currentUserId = userStore.state.user?.id;
+			// If current user was kicked, redirect to lobby
+			if (data.playerId === currentUserId) {
+				const message = `You were kicked from the room. Reason: ${data.reason}`;
+				setToastCookie(message);
+				goto(resolve('/lobby'));
+			}
+			// Could show notification for other kicked players: "${data.playerName} was kicked"
+		});
+
 		websocketStore.onError((errorMsg) => {
-			error = errorMsg;
-			// If connection error, redirect to lobby
-			setTimeout(() => goto(resolve('/lobby')), 2000);
+			// If connection error, redirect to lobby with toast
+			setToastCookie(errorMsg);
+			goto(resolve('/lobby'));
 		});
 
 		// Connect to websocket for real-time updates
@@ -63,15 +75,25 @@
 		websocketStore.disconnect();
 		goto(resolve('/lobby'));
 	}
+
+	async function handleKickPlayer(playerId: string, playerName: string) {
+		if (!confirm(`Are you sure you want to kick ${playerName}?`)) {
+			return;
+		}
+
+		const result = await gameServerAPI.kickPlayer(roomName, playerId);
+
+		if (!result.success) {
+			const message = result.error || `Failed to kick player ${playerName}`;
+			setToastCookie(message);
+			goto(resolve('/lobby'));
+		}
+	}
 </script>
 
 <RoomHeader {roomName} username={userStore.state.displayName} onLeaveRoom={handleLeaveRoom} />
 <div class="container mx-auto px-4 py-8">
-	{#if error}
-		<div class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-			{error}
-		</div>
-	{:else if isLoading}
+	{#if isLoading}
 		<div class="text-muted-foreground py-8 text-center">
 			<p>Connecting to room...</p>
 		</div>
@@ -80,7 +102,9 @@
 			<PlayerList
 				players={room.players}
 				currentUser={userStore.state.displayName}
+				currentUserId={userStore.state.user?.id || ''}
 				roomLeader={room.roomLeader}
+				onKickPlayer={handleKickPlayer}
 			/>
 
 			<div class="text-muted-foreground">

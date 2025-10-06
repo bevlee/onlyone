@@ -55,6 +55,7 @@
 		"class-variance-authority": "^0.7.1",
 		"lucide-svelte": "^0.544.0",
 		"socket.io-client": "^4.8.1",
+		"svelte-sonner": "^1.0.5",
 		"tailwind-variants": "^3.1.1"
 	}
 }

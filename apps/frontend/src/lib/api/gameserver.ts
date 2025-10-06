@@ -11,6 +11,13 @@ interface ApiResponse<T> {
   error?: string;
 }
 
+interface Session {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  token_type: string;
+}
+
 interface AuthResponse {
   user: {
     id: string;
@@ -19,7 +26,7 @@ interface AuthResponse {
       name?: string;
     };
   };
-  session: any;
+  session: Session;
   isNewUser?: boolean;
 }
 
@@ -197,6 +204,13 @@ class GameServerAPI {
   async joinRoom(roomName: string): Promise<ApiResponse<JoinRoomResponse>> {
     return this.request<JoinRoomResponse>(`/room/${roomName}/join`, {
       method: 'POST',
+    });
+  }
+
+  async kickPlayer(roomName: string, playerId: string, reason?: string) {
+    return this.request(`/room/${roomName}/kick/${playerId}`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
     });
   }
 

@@ -1,10 +1,22 @@
 <script lang="ts">
 	import favicon from '$lib/assets/favicon.svg';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+	import { userStore } from '$lib/stores/user.svelte.js';
+	import { Toaster } from 'svelte-sonner';
+	import { untrack } from 'svelte';
 	import '../app.css';
 
-	let { children } = $props();
+	let { data, children } = $props();
 	let title = 'Only One';
+
+	// Track the data.user to update store, but don't track store updates
+	$effect(() => {
+		const user = data.user; // Track data.user changes
+		untrack(() => {
+			// Don't track store updates to prevent loops
+			userStore.updateFromUserData(user);
+		});
+	});
 </script>
 
 <svelte:head>
@@ -24,3 +36,5 @@
 
 	{@render children()}
 </div>
+
+<Toaster />

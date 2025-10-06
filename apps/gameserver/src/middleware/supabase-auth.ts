@@ -19,10 +19,12 @@ declare global {
 export class SupabaseAuthMiddleware {
   private authService: SupabaseAuthService;
   private database: SupabaseDatabase;
+  private refreshPromises: Map<string, Promise<{session: any; user: SupabaseUser} | null>>;
 
   constructor(authService: SupabaseAuthService, database: SupabaseDatabase) {
     this.authService = authService;
     this.database = database;
+    this.refreshPromises = new Map();
   }
 
   // Extract token from Authorization header or cookies
@@ -42,13 +44,33 @@ export class SupabaseAuthMiddleware {
     return null;
   }
 
+  // Deduplicated refresh session - prevents concurrent refresh token reuse
+  private async getOrRefreshSession(refreshToken: string): Promise<{session: any; user: SupabaseUser} | null> {
+    // Check if refresh is already in progress for this token
+    const existingPromise = this.refreshPromises.get(refreshToken);
+    if (existingPromise) {
+      logger.info('Waiting for existing refresh to complete...');
+      return existingPromise;
+    }
+
+    // Start new refresh and store the promise
+    const refreshPromise = this.authService.refreshSession(refreshToken)
+      .finally(() => {
+        // Clean up after refresh completes (success or failure)
+        this.refreshPromises.delete(refreshToken);
+      });
+
+    this.refreshPromises.set(refreshToken, refreshPromise);
+    return refreshPromise;
+  }
+
   // Middleware for optional authentication
   optionalAuth() {
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
         let token = this.extractToken(req);
         let user: any = null;
-
+        logger.info(`token is: ${token}`);
         // Try to use access token first
         if (token) {
           user = await this.authService.getUserFromToken(token);
@@ -59,12 +81,13 @@ export class SupabaseAuthMiddleware {
           const refreshToken = req.cookies?.['sb-refresh-token'];
           if (refreshToken) {
             logger.info('No valid access token, attempting refresh...');
-            const refreshResult = await this.authService.refreshSession(refreshToken);
+            const refreshResult = await this.getOrRefreshSession(refreshToken);
+            logger.info(`Refresh result: ${JSON.stringify(refreshResult)}`);
             if (refreshResult) {
               user = refreshResult.user;
               // Set new auth cookies with refreshed tokens
               this.setAuthCookies(res, refreshResult.session);
-              logger.info('Session refreshed successfully');
+              logger.info('Session refreshed successfully', { userId: user.id, refreshResult });
             }
           }
         }
@@ -116,7 +139,7 @@ export class SupabaseAuthMiddleware {
         if (!user) {
           const refreshToken = req.cookies?.['sb-refresh-token'];
           if (refreshToken) {
-            const refreshResult = await this.authService.refreshSession(refreshToken);
+            const refreshResult = await this.getOrRefreshSession(refreshToken);
             if (refreshResult) {
               user = refreshResult.user;
               // Set new auth cookies with refreshed tokens

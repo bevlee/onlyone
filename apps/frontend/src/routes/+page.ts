@@ -1,11 +1,9 @@
 import { redirect } from '@sveltejs/kit';
-import { gameServerAPI } from '$lib/api/gameserver.js';
 
-export async function load() {
-	// Check if user is authenticated
-	const result = await gameServerAPI.getMe();
+export async function load({ parent }) {
+	const { user } = await parent();
 
-	if (result.success && result.data?.profile?.name) {
+	if (user?.profile?.name) {
 		// User is authenticated, redirect to lobby
 		throw redirect(303, '/lobby');
 	}
@@ -13,5 +11,3 @@ export async function load() {
 	// Not authenticated, show login page
 	return {};
 }
-
-export const ssr = false;
