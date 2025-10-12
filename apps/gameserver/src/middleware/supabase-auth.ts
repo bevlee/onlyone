@@ -87,7 +87,7 @@ export class SupabaseAuthMiddleware {
               user = refreshResult.user;
               // Set new auth cookies with refreshed tokens
               this.setAuthCookies(res, refreshResult.session);
-              logger.info('Session refreshed successfully', { userId: user.id, refreshResult });
+              logger.info({ userId: user.id }, 'Session refreshed successfully');
             }
           }
         }

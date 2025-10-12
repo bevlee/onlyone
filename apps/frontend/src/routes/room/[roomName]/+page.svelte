@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { userStore } from '$lib/stores/user.svelte.js';
+	import { userSession } from '$lib/stores/user.svelte.js';
 	import { websocketStore } from '$lib/services/websocket.svelte.js';
 	import { gameServerAPI, type Room } from '$lib/api/gameserver.js';
 	import { setToastCookie } from '$lib/utils.js';
@@ -16,6 +16,12 @@
 	let isLoading = $state(true);
 
 	onMount(async () => {
+		// Check if user is authenticated, redirect to home if not
+		if (!userSession.state.isAuthenticated) {
+			goto('/');
+			return;
+		}
+
 		// If not already joined, join via HTTP first
 		if (!data.alreadyJoined) {
 			const joinResult = await gameServerAPI.joinRoom(roomName);
@@ -45,7 +51,7 @@
 		});
 
 		websocketStore.onPlayerKicked((data) => {
-			const currentUserId = userStore.state.user?.id;
+			const currentUserId = userSession.state.user?.id;
 			// If current user was kicked, redirect to lobby
 			if (data.playerId === currentUserId) {
 				const message = `You were kicked from the room. Reason: ${data.reason}`;
@@ -62,8 +68,8 @@
 		});
 
 		// Connect to websocket for real-time updates
-		const playerId = userStore.state.user?.id || 'unknown';
-		websocketStore.connect(roomName, userStore.state.displayName, playerId);
+		const playerId = userSession.state.user?.id || 'unknown';
+		websocketStore.connect(roomName, userSession.state.displayName, playerId);
 	});
 
 	onDestroy(() => {
@@ -91,7 +97,7 @@
 	}
 </script>
 
-<RoomHeader {roomName} username={userStore.state.displayName} onLeaveRoom={handleLeaveRoom} />
+<RoomHeader {roomName} username={userSession.state.displayName} onLeaveRoom={handleLeaveRoom} />
 <div class="container mx-auto px-4 py-8">
 	{#if isLoading}
 		<div class="text-muted-foreground py-8 text-center">
@@ -101,8 +107,8 @@
 		<div class="mx-auto max-w-4xl space-y-6">
 			<PlayerList
 				players={room.players}
-				currentUser={userStore.state.displayName}
-				currentUserId={userStore.state.user?.id || ''}
+				currentUser={userSession.state.displayName}
+				currentUserId={userSession.state.user?.id || ''}
 				roomLeader={room.roomLeader}
 				onKickPlayer={handleKickPlayer}
 			/>

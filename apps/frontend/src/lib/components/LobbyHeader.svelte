@@ -2,15 +2,15 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Settings, User, LogOut } from 'lucide-svelte';
-	import { userStore } from '$lib/stores/user.svelte.js';
+	import { userSession } from '$lib/stores/user.svelte.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	const handleLogout = async () => {
-		await userStore.signOut();
+		await userSession.signOut();
 		// Optionally redirect after logout
 		goto(resolve('/'));
 	};
-	let username = $derived(userStore.state.displayName);
+	let username = $derived(userSession.state.displayName);
 </script>
 
 <div

@@ -8,6 +8,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from '$lib/utils.js';
+	import { userSession } from '$lib/stores/user.svelte.js';
 
 	let { data } = $props();
 	let rooms = $state<Room[]>(data.initialRooms || []);
@@ -16,6 +17,12 @@
 
 	// Load rooms on mount and set up periodic refresh
 	onMount(() => {
+		// Check if user is authenticated, redirect to home if not
+		if (!userSession.state.isAuthenticated) {
+			goto('/');
+			return;
+		}
+
 		// Show toast if there's a message from redirect
 		if (data.toastMessage) {
 			toast.error(data.toastMessage);

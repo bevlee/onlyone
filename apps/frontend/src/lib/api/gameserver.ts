@@ -9,6 +9,7 @@ interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+  cause?: unknown;
 }
 
 interface Session {
@@ -42,9 +43,12 @@ interface MeResponse {
     id: string;
     name: string;
     email: string | null;
+    avatar_url: string | null;
     gamesPlayed: number;
     gamesWon: number;
   };
+  isAnonymous?: boolean;
+  expiresAt?: number;
 }
 
 interface RoomsResponse {
@@ -68,6 +72,7 @@ interface JoinRoomResponse {
 
 class GameServerAPI {
   private baseURL: string;
+  private defaultTimeout = 30000; // 30 seconds
 
   constructor() {
     this.baseURL = GAMESERVER_URL;
@@ -75,10 +80,15 @@ class GameServerAPI {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    isRetry = false
   ): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseURL}${endpoint}`;
+
+      // Create an AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.defaultTimeout);
 
       const response = await fetch(url, {
         credentials: 'include', // Important for session cookies
@@ -86,10 +96,44 @@ class GameServerAPI {
           'Content-Type': 'application/json',
           ...options.headers,
         },
+        signal: controller.signal,
         ...options,
       });
 
+      clearTimeout(timeoutId);
+
       const data = await response.json();
+
+      // If 401 and not already retrying, attempt refresh by calling /auth/me
+      if (response.status === 401 && !isRetry && endpoint !== '/auth/me') {
+        console.log('[API] Got 401, attempting token refresh...');
+
+        // Call /auth/me to trigger middleware refresh
+        const refreshResult = await this.getMe();
+
+        if (!refreshResult.success) {
+          console.error('[API] Token refresh failed:', refreshResult.error);
+          return {
+            success: false,
+            error: 'Authentication failed. Please log in again.',
+          };
+        }
+
+        console.log('[API] Token refresh successful, retrying original request...');
+
+        // Retry original request once
+        const retryResult = await this.request<T>(endpoint, options, true);
+
+        if (!retryResult.success && retryResult.error?.includes('401')) {
+          console.error('[API] Retry after refresh still failed with 401');
+          return {
+            success: false,
+            error: 'Authentication failed after refresh. Please log in again.',
+          };
+        }
+
+        return retryResult;
+      }
 
       if (!response.ok) {
         return {
@@ -104,9 +148,20 @@ class GameServerAPI {
       };
     } catch (error) {
       console.error('GameServer API error:', error);
+
+      // Handle timeout specifically
+      if (error instanceof Error && error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Request timed out. Please try again.',
+          cause: error,
+        };
+      }
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Network error',
+        cause: error,
       };
     }
   }
@@ -123,7 +178,6 @@ class GameServerAPI {
     return this.request<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
-      credentials: 'include'
     });
   }
 

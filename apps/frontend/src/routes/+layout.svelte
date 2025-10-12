@@ -1,21 +1,28 @@
 <script lang="ts">
 	import favicon from '$lib/assets/favicon.svg';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
-	import { userStore } from '$lib/stores/user.svelte.js';
+	import { userSession } from '$lib/stores/user.svelte.js';
 	import { Toaster } from 'svelte-sonner';
-	import { untrack } from 'svelte';
+	import { gameServerAPI } from '$lib/api/gameserver.js';
+	import { goto } from '$app/navigation';
 	import '../app.css';
+	import { onMount } from 'svelte';
 
-	let { data, children } = $props();
+	let { children } = $props();
 	let title = 'Only One';
 
-	// Track the data.user to update store, but don't track store updates
-	$effect(() => {
-		const user = data.user; // Track data.user changes
-		untrack(() => {
-			// Don't track store updates to prevent loops
-			userStore.updateFromUserData(user);
-		});
+	// Check auth once on app mount
+	onMount(async () => {
+		const result = await gameServerAPI.getMe();
+		console.log('Auth check result:', result);
+		if (result.success && result.data) {
+			userSession.updateFromUserData(result.data);
+
+			// Redirect authenticated users from home page to lobby
+			if (window.location.pathname === '/') {
+				await goto('/lobby');
+			}
+		}
 	});
 </script>
 

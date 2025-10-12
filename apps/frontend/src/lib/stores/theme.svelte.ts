@@ -59,5 +59,5 @@ function createThemeStore() {
   };
 }
 
-export const themeStore = createThemeStore();
+export const theme = createThemeStore();
 export type { Theme };

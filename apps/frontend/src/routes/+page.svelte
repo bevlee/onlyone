@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import { userStore } from '$lib/stores/user.svelte.js';
+	import { userSession } from '$lib/stores/user.svelte.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
@@ -20,9 +20,16 @@
 	// Get return URL from query params
 	let returnTo = $derived($page.url.searchParams.get('returnTo') || '/lobby');
 
+	// Redirect if already authenticated (redundant guard - +layout.svelte handles this too)
+	$effect(() => {
+		if (userSession.state.isAuthenticated) {
+			goto('/lobby');
+		}
+	});
+
 	async function handlePlayAsGuest() {
 		// Sign in anonymously
-		const result = await userStore.signInAnonymously();
+		const result = await userSession.signInAnonymously();
 
 		if (result && result.success) {
 			goto(resolve(returnTo));
@@ -69,8 +76,8 @@
 
 		try {
 			const result = isSignup
-				? await userStore.register(name.trim(), email.trim(), password)
-				: await userStore.login(email.trim(), password);
+				? await userSession.register(name.trim(), email.trim(), password)
+				: await userSession.login(email.trim(), password);
 
 			if (!result.success) {
 				error = result.error || 'Authentication failed';

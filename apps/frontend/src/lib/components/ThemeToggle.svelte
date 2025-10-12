@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button } from "$lib/components/ui/button/index.js";
-	import { themeStore } from "$lib/stores/theme.svelte.js";
+	import { theme } from "$lib/stores/theme.svelte.js";
 
 	interface Props {
 		variant?: "default" | "outline" | "ghost" | "secondary";
@@ -11,7 +11,7 @@
 	let { variant = "outline", size = "icon", class: className = "" }: Props = $props();
 
 	function handleToggle() {
-		themeStore.toggle();
+		theme.toggle();
 	}
 </script>
 
@@ -20,9 +20,9 @@
 	{size}
 	onclick={handleToggle}
 	class="bg-white/90 text-orange-600 hover:bg-white hover:text-orange-700 border-white/50 transition-all hover:scale-110 {className}"
-	title={themeStore.isDark ? "Switch to light mode" : "Switch to dark mode"}
+	title={theme.isDark ? "Switch to light mode" : "Switch to dark mode"}
 >
-	{#if themeStore.isDark}
+	{#if theme.isDark}
 		<!-- Sun icon for switching to light mode -->
 		<svg
 			xmlns="http://www.w3.org/2000/svg"

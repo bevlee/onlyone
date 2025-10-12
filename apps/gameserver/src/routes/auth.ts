@@ -3,6 +3,7 @@ import { SupabaseAuthService } from '../services/SupabaseAuthService.js';
 import { SupabaseDatabase } from '../services/SupabaseDatabase.js';
 import { SupabaseAuthMiddleware } from '../middleware/supabase-auth.js';
 import { logger } from '../config/logger.js';
+import { decodeJwt } from 'jose';
 
 // Initialize auth services
 const authService = new SupabaseAuthService();
@@ -128,15 +129,31 @@ router.post('/logout', authMiddleware.requireAuth(), async (_req, res) => {
 });
 
 router.get('/me', authMiddleware.optionalAuth(), async (req, res) => {
-  logger.info('GET /me called with req', req);
+  logger.info('GET /me called');
+
+  // If no user, return 401 since optionalAuth already tried to refresh
   if (!req.user) {
     return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  // Extract token expiry for frontend tracking
+  let expiresAt: number | undefined;
+  try {
+    const token = req.cookies?.['sb-access-token'] ||
+                  req.headers.authorization?.substring(7);
+    if (token) {
+      const payload = decodeJwt(token);
+      expiresAt = payload.exp;
+    }
+  } catch (error) {
+    logger.warn({ error }, 'Failed to decode token for expiry');
   }
 
   res.json({
     user: req.user,
     profile: req.userProfile,
-    isAnonymous: req.isAnonymous || false
+    isAnonymous: req.isAnonymous || false,
+    expiresAt
   });
 });
 
