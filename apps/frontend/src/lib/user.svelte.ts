@@ -1,6 +1,19 @@
+/**
+ * User session store for client-side auth operations
+ *
+ * This store syncs with SSR data from $page.data.user (via +layout.svelte)
+ * and provides methods for auth actions (login, logout, register, etc.)
+ *
+ * State is primarily managed via SSR, this store provides:
+ * - Reactive state access for components
+ * - Action methods for authentication operations
+ * - Display helpers (displayName, avatarUrl)
+ */
+
 import { browser } from '$app/environment';
 import { gameServerAPI, type MeResponse } from '$lib/api/gameserver.js';
 import { goto } from '$app/navigation';
+import type { UserProfile } from '@onlyone/shared';
 
 interface AuthUser {
   id: string;
@@ -10,18 +23,9 @@ interface AuthUser {
   };
 }
 
-interface UserProfile {
-  id: string;
-  name: string;
-  email: string | null;
-  avatar_url: string | null;
-  gamesPlayed: number;
-  gamesWon: number;
-}
-
 interface UserState {
-  // Authenticated user info
-  user: AuthUser | null;
+  // Authenticated user info (from Supabase)
+  auth: AuthUser | null;
   profile: UserProfile | null;
   isAuthenticated: boolean;
   isAnonymous: boolean;
@@ -32,7 +36,7 @@ interface UserState {
 
 function createUserSession() {
   let state = $state<UserState>({
-    user: null,
+    auth: null,
     profile: null,
     isAuthenticated: false,
     isAnonymous: false,
@@ -41,34 +45,35 @@ function createUserSession() {
     avatarUrl: null
   });
 
- 
-
   return {
     get state() {
       return state;
     },
 
-     // Helper to update state from user data
+    /**
+     * Update state from SSR user data
+     * Called by +layout.svelte when $page.data.user changes
+     */
     updateFromUserData(userData: MeResponse | null) {
       // Guard: only update if data actually changed
-      const newUserId = userData?.user?.id;
-      const currentUserId = state.user?.id;
+      const newUserId = userData?.auth?.id;
+      const currentUserId = state.auth?.id;
 
-      if (newUserId === currentUserId && userData && state.user) {
+      if (newUserId === currentUserId && userData && state.auth) {
         // Same user, don't update to prevent unnecessary reactivity
         return;
       }
       console.log('Updating user session state from user data:', userData);
 
       if (userData) {
-        state.user = userData.user;
+        state.auth = userData.auth;
         state.profile = userData.profile;
         state.isAuthenticated = true;
         state.isAnonymous = userData.isAnonymous || false;
         state.displayName = userData.profile.name;
         state.avatarUrl = userData.profile.avatar_url || null;
       } else {
-        state.user = null;
+        state.auth = null;
         state.profile = null;
         state.isAuthenticated = false;
         state.isAnonymous = false;
@@ -88,7 +93,7 @@ function createUserSession() {
         // Fetch full user data including profile
         const meResult = await gameServerAPI.getMe();
 
-        if (meResult.success && meResult.data && meResult.data.user) {
+        if (meResult.success && meResult.data && meResult.data.auth) {
           // Only update session if we got valid user data
           this.updateFromUserData(meResult.data);
 
@@ -116,7 +121,7 @@ function createUserSession() {
         // Fetch full user data including profile
         const meResult = await gameServerAPI.getMe();
 
-        if (meResult.success && meResult.data && meResult.data.user) {
+        if (meResult.success && meResult.data && meResult.data.auth) {
           // Only update session if we got valid user data
           this.updateFromUserData(meResult.data);
 
@@ -159,8 +164,8 @@ function createUserSession() {
       if (result.success) {
         // Fetch full user data including profile
         const meResult = await gameServerAPI.getMe();
-
-        if (meResult.success && meResult.data && meResult.data.user) {
+        console.log('Me result after anonymous sign-in:', meResult);
+        if (meResult.success && meResult.data && meResult.data.auth) {
           // Only update session if we got valid user data
           this.updateFromUserData(meResult.data);
 
@@ -186,7 +191,7 @@ function createUserSession() {
         // Fetch full user data including profile
         const meResult = await gameServerAPI.getMe();
 
-        if (meResult.success && meResult.data && meResult.data.user) {
+        if (meResult.success && meResult.data && meResult.data.auth) {
           // Only update session if we got valid user data
           this.updateFromUserData(meResult.data);
 

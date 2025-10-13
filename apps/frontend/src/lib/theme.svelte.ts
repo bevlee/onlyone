@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 
-type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark';
 
 function createThemeStore() {
   let theme = $state<Theme>('light');

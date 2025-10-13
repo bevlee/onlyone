@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { userSession } from '$lib/stores/user.svelte.js';
+	import { userSession } from '$lib/user.svelte';
 	import { websocketStore } from '$lib/services/websocket.svelte.js';
 	import { gameServerAPI, type Room } from '$lib/api/gameserver.js';
 	import { setToastCookie } from '$lib/utils.js';
@@ -18,7 +18,7 @@
 	onMount(async () => {
 		// Check if user is authenticated, redirect to home if not
 		if (!userSession.state.isAuthenticated) {
-			goto('/');
+			goto(resolve('/'));
 			return;
 		}
 
@@ -51,7 +51,7 @@
 		});
 
 		websocketStore.onPlayerKicked((data) => {
-			const currentUserId = userSession.state.user?.id;
+			const currentUserId = userSession.state.auth?.id;
 			// If current user was kicked, redirect to lobby
 			if (data.playerId === currentUserId) {
 				const message = `You were kicked from the room. Reason: ${data.reason}`;
@@ -68,7 +68,7 @@
 		});
 
 		// Connect to websocket for real-time updates
-		const playerId = userSession.state.user?.id || 'unknown';
+		const playerId = userSession.state.auth?.id || 'unknown';
 		websocketStore.connect(roomName, userSession.state.displayName, playerId);
 	});
 
@@ -108,7 +108,7 @@
 			<PlayerList
 				players={room.players}
 				currentUser={userSession.state.displayName}
-				currentUserId={userSession.state.user?.id || ''}
+				currentUserId={userSession.state.auth?.id || ''}
 				roomLeader={room.roomLeader}
 				onKickPlayer={handleKickPlayer}
 			/>

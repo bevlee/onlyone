@@ -1,29 +1,14 @@
 <script lang="ts">
 	import favicon from '$lib/assets/favicon.svg';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
-	import { userSession } from '$lib/stores/user.svelte.js';
+	import { userSession } from '$lib/user.svelte';
 	import { Toaster } from 'svelte-sonner';
-	import { gameServerAPI } from '$lib/api/gameserver.js';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import '../app.css';
-	import { onMount } from 'svelte';
 
-	let { children } = $props();
+	let { children, data } = $props();
 	let title = 'Only One';
-
-	// Check auth once on app mount
-	onMount(async () => {
-		const result = await gameServerAPI.getMe();
-		console.log('Auth check result:', result);
-		if (result.success && result.data) {
-			userSession.updateFromUserData(result.data);
-
-			// Redirect authenticated users from home page to lobby
-			if (window.location.pathname === '/') {
-				await goto('/lobby');
-			}
-		}
-	});
 </script>
 
 <svelte:head>

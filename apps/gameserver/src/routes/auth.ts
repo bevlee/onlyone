@@ -150,7 +150,7 @@ router.get('/me', authMiddleware.optionalAuth(), async (req, res) => {
   }
 
   res.json({
-    user: req.user,
+    auth: req.user,
     profile: req.userProfile,
     isAnonymous: req.isAnonymous || false,
     expiresAt

@@ -8,24 +8,20 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from '$lib/utils.js';
-	import { userSession } from '$lib/stores/user.svelte.js';
 
 	let { data } = $props();
-	let rooms = $state<Room[]>(data.initialRooms || []);
+
+	const { user, toastMessage, initialRooms } = data;
+	console.log('Lobby page data', data);
+	let rooms = $state<Room[]>(initialRooms || []);
 	let isLoading = $state(false);
 	let isCreating = $state(false);
 
 	// Load rooms on mount and set up periodic refresh
 	onMount(() => {
-		// Check if user is authenticated, redirect to home if not
-		if (!userSession.state.isAuthenticated) {
-			goto('/');
-			return;
-		}
-
 		// Show toast if there's a message from redirect
-		if (data.toastMessage) {
-			toast.error(data.toastMessage);
+		if (toastMessage) {
+			toast.error(toastMessage);
 			// Clean URL by replacing current history entry
 			window.history.replaceState({}, '', '/lobby');
 		}
@@ -97,7 +93,7 @@
 	}
 </script>
 
-<LobbyHeader />
+<LobbyHeader {user} />
 <div class="container mx-auto px-4 py-8">
 	<div class="mx-auto max-w-2xl space-y-8">
 		<!-- Create New Room -->

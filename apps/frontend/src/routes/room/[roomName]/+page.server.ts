@@ -1,13 +1,26 @@
 import { redirect } from '@sveltejs/kit';
-import { gameServerAPI } from '$lib/api/gameserver.js';
+import { createGameServerAPI } from '$lib/api/gameserver.server.js';
 import type { Room } from '@onlyone/shared';
+import type { PageServerLoad } from './$types';
 
+export const load: PageServerLoad = async ({ params, cookies, locals, request, url }) => {
 
-export async function load({ params, cookies }) {
+	console.log('Loading room page for', locals.user);
+	// Server-side auth check - redirect to home with returnTo if not authenticated
+	if (!locals.user) {
+		// Encode the full path including search params
+		const returnTo = encodeURIComponent(url.pathname + url.search);
+		throw redirect(303, `/?returnTo=${returnTo}`);
+	}
+
+	// Create API instance with cookies for SSR
+	const api = createGameServerAPI(request.headers.get('cookie') || '');
+
 	// Check room access
-	const roomStatus: Partial<Room> = await gameServerAPI.checkRoomStatus(params.roomName);
-	console.log('Room status:', roomStatus);
-	if (!roomStatus) {
+	const roomStatusResult = await api.checkRoomStatus(params.roomName);
+	console.log('Room status result:', roomStatusResult);
+
+	if (!roomStatusResult.success || !roomStatusResult.data) {
 		// Room doesn't exist - set toast cookie and redirect
 		cookies.set('toast', 'Room not found', {
 			path: '/',
@@ -17,21 +30,11 @@ export async function load({ params, cookies }) {
 		throw redirect(303, '/lobby');
 	}
 
-	// if (roomStatus.data && !roomStatus.data.canJoin) {
-	// 	// Can't join room (full, etc.) - set toast cookie and redirect
-	// 	const reason = roomStatus.data.reason || 'Cannot join room';
-	// 	console.log('Cannot join room:', reason);
-	// 	cookies.set('toast', reason, {
-	// 		path: '/',
-	// 		maxAge: 60,
-	// 		httpOnly: false
-	// 	});
-	// 	throw redirect(303, '/lobby');
-	// }
+	const roomStatus = roomStatusResult.data as Partial<Room> & { alreadyJoined?: boolean };
 
 	return {
 		roomName: params.roomName,
-		alreadyJoined: roomStatus?.alreadyJoined || false
+		alreadyJoined: roomStatus.alreadyJoined || false
 	};
 }
 

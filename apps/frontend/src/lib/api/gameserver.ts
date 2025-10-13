@@ -1,9 +1,5 @@
-import { env } from '$env/dynamic/public';
 import { browser } from '$app/environment';
-import type { Room } from '@onlyone/shared';
-
-// Use relative URLs in browser (for proxy), absolute URLs in server-side rendering
-const GAMESERVER_URL = browser && !env.PUBLIC_GAMESERVER_URL ? '/gameserver' : (env.PUBLIC_GAMESERVER_URL || 'http://localhost:3000/gameserver');
+import type { Room, UserData } from '@onlyone/shared';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -31,25 +27,8 @@ interface AuthResponse {
   isNewUser?: boolean;
 }
 
-interface MeResponse {
-  user: {
-    id: string;
-    email?: string;
-    user_metadata?: {
-      name?: string;
-    };
-  };
-  profile: {
-    id: string;
-    name: string;
-    email: string | null;
-    avatar_url: string | null;
-    gamesPlayed: number;
-    gamesWon: number;
-  };
-  isAnonymous?: boolean;
-  expiresAt?: number;
-}
+// Use UserData from shared package
+type MeResponse = UserData;
 
 interface RoomsResponse {
   rooms: Room[];
@@ -70,12 +49,14 @@ interface JoinRoomResponse {
   };
 }
 
-class GameServerAPI {
+export class GameServerAPI {
   private baseURL: string;
   private defaultTimeout = 30000; // 30 seconds
+  private cookieHeader?: string; // For SSR requests
 
-  constructor() {
-    this.baseURL = GAMESERVER_URL;
+  constructor(baseURL: string, cookieHeader?: string) {
+    this.baseURL = baseURL;
+    this.cookieHeader = cookieHeader;
   }
 
   private async request<T>(
@@ -90,12 +71,20 @@ class GameServerAPI {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.defaultTimeout);
 
+      // Build headers - in browser use credentials, in SSR use cookie header
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(options.headers as Record<string, string>),
+      };
+
+      // In SSR context, add cookie header if provided
+      if (!browser && this.cookieHeader) {
+        headers.cookie = this.cookieHeader;
+      }
+
       const response = await fetch(url, {
-        credentials: 'include', // Important for session cookies
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
+        credentials: browser ? 'include' : undefined, // Only use credentials in browser
+        headers,
         signal: controller.signal,
         ...options,
       });
@@ -274,5 +263,7 @@ class GameServerAPI {
   }
 }
 
-export const gameServerAPI = new GameServerAPI();
+// Client instance - uses relative URL for Vite proxy in browser
+export const gameServerAPI = new GameServerAPI('/gameserver');
+
 export type { ApiResponse, AuthResponse, MeResponse, Room, RoomsResponse, JoinRoomResponse };

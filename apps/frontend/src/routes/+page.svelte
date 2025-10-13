@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import { userSession } from '$lib/stores/user.svelte.js';
+	import { userSession } from '$lib/user.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/stores';
 
 	let name = $state('');
 	let showAuth = $state(false);
@@ -17,22 +16,25 @@
 	let isLoading = $state(false);
 	let error = $state('');
 
-	// Get return URL from query params
-	let returnTo = $derived($page.url.searchParams.get('returnTo') || '/lobby');
+	let { data } = $props();
+	console.log('Page data', data);
+	// Get return URL from server load function
+	const lobbyPath = '/lobby';
 
-	// Redirect if already authenticated (redundant guard - +layout.svelte handles this too)
-	$effect(() => {
-		if (userSession.state.isAuthenticated) {
-			goto('/lobby');
-		}
-	});
+	let returnTo: string | null = $derived(data.returnTo);
+
+	// Note: Auth redirect is handled by +layout.svelte
 
 	async function handlePlayAsGuest() {
 		// Sign in anonymously
 		const result = await userSession.signInAnonymously();
 
 		if (result && result.success) {
-			goto(resolve(returnTo));
+			if (returnTo) {
+				goto(resolve(returnTo));
+			} else {
+				goto(resolve(lobbyPath));
+			}
 		} else {
 			error = 'Failed to create guest session';
 		}
@@ -84,7 +86,11 @@
 				return;
 			}
 
-			goto(resolve(returnTo));
+			if (returnTo) {
+				goto(resolve(returnTo));
+			} else {
+				goto(resolve(lobbyPath));
+			}
 		} catch (err) {
 			error = 'Network error. Please try again.';
 			console.error('Auth error:', err);
