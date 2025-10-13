@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import { userSession } from '$lib/user.svelte';
+	import { gameServerAPI } from '$lib/api/gameserver';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
@@ -17,24 +17,17 @@
 	let error = $state('');
 
 	let { data } = $props();
-	console.log('Page data', data);
-	// Get return URL from server load function
 	const lobbyPath = '/lobby';
 
 	let returnTo: string | null = $derived(data.returnTo);
 
-	// Note: Auth redirect is handled by +layout.svelte
-
 	async function handlePlayAsGuest() {
 		// Sign in anonymously
-		const result = await userSession.signInAnonymously();
+		const result = await gameServerAPI.signInAnonymous();
 
 		if (result && result.success) {
-			if (returnTo) {
-				goto(resolve(returnTo));
-			} else {
-				goto(resolve(lobbyPath));
-			}
+			// Server sets cookies, redirect to intended destination
+			goto(resolve(returnTo || lobbyPath));
 		} else {
 			error = 'Failed to create guest session';
 		}
@@ -78,19 +71,16 @@
 
 		try {
 			const result = isSignup
-				? await userSession.register(name.trim(), email.trim(), password)
-				: await userSession.login(email.trim(), password);
+				? await gameServerAPI.register(name.trim(), email.trim(), password)
+				: await gameServerAPI.login(email.trim(), password);
 
 			if (!result.success) {
 				error = result.error || 'Authentication failed';
 				return;
 			}
 
-			if (returnTo) {
-				goto(resolve(returnTo));
-			} else {
-				goto(resolve(lobbyPath));
-			}
+			// Server sets cookies, redirect to intended destination
+			goto(resolve(returnTo || lobbyPath));
 		} catch (err) {
 			error = 'Network error. Please try again.';
 			console.error('Auth error:', err);

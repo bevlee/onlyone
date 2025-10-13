@@ -2,19 +2,24 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Settings, User, LogOut } from 'lucide-svelte';
-	import { userSession } from '$lib/user.svelte';
+	import { gameServerAPI } from '$lib/api/gameserver';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import type { UserData } from '@onlyone/shared';
 
-	const { user } = $props();
-	console.log('LobbyHeader user', user);
+	type Props = {
+		user: UserData | null;
+	};
+
+	const { user }: Props = $props();
+
 	const handleLogout = async () => {
-		await userSession.signOut();
-		// Optionally redirect after logout
+		await gameServerAPI.logout();
+		// Server clears cookies, redirect to home
 		goto(resolve('/'));
 	};
 
-	let username = $derived(user.profile.name);
+	let username = $derived(user?.profile?.name);
 </script>
 
 <div

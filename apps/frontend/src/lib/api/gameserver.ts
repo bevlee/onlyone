@@ -16,7 +16,7 @@ interface Session {
 }
 
 interface AuthResponse {
-  user: {
+  auth: {
     id: string;
     email?: string;
     user_metadata?: {

@@ -2,7 +2,6 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { userSession } from '$lib/user.svelte';
 	import { websocketStore } from '$lib/services/websocket.svelte.js';
 	import { gameServerAPI, type Room } from '$lib/api/gameserver.js';
 	import { setToastCookie } from '$lib/utils.js';
@@ -11,17 +10,12 @@
 
 	let { data } = $props();
 	const roomName = data.roomName;
+	const user = $derived(data.user); // User data from SSR
 
 	let room = $state<Room | null>(null);
 	let isLoading = $state(true);
 
 	onMount(async () => {
-		// Check if user is authenticated, redirect to home if not
-		if (!userSession.state.isAuthenticated) {
-			goto(resolve('/'));
-			return;
-		}
-
 		// If not already joined, join via HTTP first
 		if (!data.alreadyJoined) {
 			const joinResult = await gameServerAPI.joinRoom(roomName);
@@ -51,7 +45,7 @@
 		});
 
 		websocketStore.onPlayerKicked((data) => {
-			const currentUserId = userSession.state.auth?.id;
+			const currentUserId = user?.auth?.id;
 			// If current user was kicked, redirect to lobby
 			if (data.playerId === currentUserId) {
 				const message = `You were kicked from the room. Reason: ${data.reason}`;
@@ -68,8 +62,9 @@
 		});
 
 		// Connect to websocket for real-time updates
-		const playerId = userSession.state.auth?.id || 'unknown';
-		websocketStore.connect(roomName, userSession.state.displayName, playerId);
+		const playerId = user?.auth?.id || 'unknown';
+		const displayName = user?.profile?.name || 'Unknown';
+		websocketStore.connect(roomName, displayName, playerId);
 	});
 
 	onDestroy(() => {
@@ -97,7 +92,7 @@
 	}
 </script>
 
-<RoomHeader {roomName} username={userSession.state.displayName} onLeaveRoom={handleLeaveRoom} />
+<RoomHeader {roomName} username={user?.profile?.name || 'Unknown'} onLeaveRoom={handleLeaveRoom} />
 <div class="container mx-auto px-4 py-8">
 	{#if isLoading}
 		<div class="text-muted-foreground py-8 text-center">
@@ -107,8 +102,8 @@
 		<div class="mx-auto max-w-4xl space-y-6">
 			<PlayerList
 				players={room.players}
-				currentUser={userSession.state.displayName}
-				currentUserId={userSession.state.auth?.id || ''}
+				currentUser={user?.profile?.name || 'Unknown'}
+				currentUserId={user?.auth?.id || ''}
 				roomLeader={room.roomLeader}
 				onKickPlayer={handleKickPlayer}
 			/>

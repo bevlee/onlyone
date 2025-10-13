@@ -1,13 +1,10 @@
 <script lang="ts">
 	import favicon from '$lib/assets/favicon.svg';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
-	import { userSession } from '$lib/user.svelte';
 	import { Toaster } from 'svelte-sonner';
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
 	import '../app.css';
 
-	let { children, data } = $props();
+	let { children } = $props();
 	let title = 'Only One';
 </script>
 

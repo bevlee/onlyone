@@ -12,7 +12,7 @@
 	let { data } = $props();
 
 	const { user, toastMessage, initialRooms } = data;
-	console.log('Lobby page data', data);
+
 	let rooms = $state<Room[]>(initialRooms || []);
 	let isLoading = $state(false);
 	let isCreating = $state(false);
@@ -47,7 +47,9 @@
 
 		if (result.success) {
 			goto(resolve(`/room/${roomName}`));
+			console.log('Joined room, navigating to /room/' + roomName);
 		} else {
+			console.error('Failed to join room:', result.error);
 			toast.error(result.error || 'Failed to join room');
 		}
 	}

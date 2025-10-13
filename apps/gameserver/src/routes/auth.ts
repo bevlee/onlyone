@@ -70,7 +70,7 @@ router.post('/anonymous', async (req, res) => {
     authMiddleware.setAuthCookies(res, result.session);
 
     res.json({
-      user: result.user,
+      auth: result.user,
       session: result.session,
       isNewUser: result.isNewUser,
       isAnonymous: true
@@ -130,7 +130,6 @@ router.post('/logout', authMiddleware.requireAuth(), async (_req, res) => {
 
 router.get('/me', authMiddleware.optionalAuth(), async (req, res) => {
   logger.info('GET /me called');
-
   // If no user, return 401 since optionalAuth already tried to refresh
   if (!req.user) {
     return res.status(401).json({ error: 'Not authenticated' });
