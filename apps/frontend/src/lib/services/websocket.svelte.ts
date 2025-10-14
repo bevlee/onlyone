@@ -1,5 +1,6 @@
 import { io, Socket } from 'socket.io-client';
-import type { Room } from '@onlyone/shared';
+import { MessageType, PLAYER_COLORS } from '@onlyone/shared';
+import type { Room, ServerToClientEvents, ClientToServerEvents, ChatMessage, MessageColor } from '@onlyone/shared';
 import { browser } from '$app/environment';
 import { env } from '$env/dynamic/public';
 
@@ -7,22 +8,37 @@ import { env } from '$env/dynamic/public';
 // The path option handles the /gameserver/socket.io routing
 const SOCKET_URL = browser && !env.PUBLIC_GAMESERVER_URL ? '/' : (env.PUBLIC_GAMESERVER_URL?.replace('/gameserver', '') || 'http://localhost:3000');
 
+/**
+ * Get a color for a player based on their index in the room
+ */
+function getPlayerColor(playerName: string, room: Room | null): MessageColor {
+  if (!room) return PLAYER_COLORS[0];
+
+  const playerIndex = room.players.findIndex(p => p.name === playerName);
+  if (playerIndex === -1) return PLAYER_COLORS[0];
+
+  // Assign color based on player index, wrapping around if more than 15 players
+  return PLAYER_COLORS[playerIndex % PLAYER_COLORS.length];
+}
+
 
 interface WebSocketState {
   connected: boolean;
   room: Room | null;
   error: string | null;
-  messages: string[];
+  messages: ChatMessage[];
+  kickedPlayerId: string | null;
 }
 
 function createWebSocketStore() {
-  let socket: Socket | null = null;
+  let socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null;
 
   let state = $state<WebSocketState>({
     connected: false,
     room: null,
     error: null,
     messages: [],
+    kickedPlayerId: null
 
   });
 
@@ -71,20 +87,49 @@ function createWebSocketStore() {
     socket.on('playerJoined', (data) => {
       console.log('Player joined:', data);
       state.room = data.room;
+      state.messages = [...state.messages, {
+        type: MessageType.System,
+        text: `${data.player.name} joined the room`,
+        playerName: data.player.name,
+        timestamp: new Date().toISOString(),
+        color: getPlayerColor(data.player.name, data.room)
+      }];
     });
 
     socket.on('playerLeft', (data) => {
       console.log('Player left:', data);
       state.room = data.room;
+      state.messages = [...state.messages, {
+        type: MessageType.System,
+        text: `${data.player.name} left the room`,
+        playerName: data.player.name,
+        timestamp: new Date().toISOString(),
+        color: getPlayerColor(data.player.name, data.room)
+      }];
     });
 
     socket.on('playerKicked', (data) => {
+      console.log('Player kicked:', data);
       state.room = data.room;
+      state.kickedPlayerId = data.playerId;
+      state.messages = [...state.messages, {
+        type: MessageType.System,
+        text: data.message,
+        playerName: data.playerName,
+        timestamp: new Date().toISOString(),
+        color: getPlayerColor(data.playerName, data.room)
+      }];
     });
 
-    socket.on('chatMessage', (message: string) => {
-      console.log('Chat message:', message);
-      state.messages = [...state.messages, message];
+    socket.on('chatMessage', (data) => {
+      console.log('Chat message:', data);
+      state.messages = [...state.messages, {
+        type: MessageType.User,
+        text: data.message,
+        playerName: data.playerName,
+        timestamp: data.timestamp,
+        color: getPlayerColor(data.playerName, state.room)
+      }];
     });
   }
 

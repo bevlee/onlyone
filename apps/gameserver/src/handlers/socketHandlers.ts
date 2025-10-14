@@ -1,11 +1,15 @@
 import { Server, Socket } from 'socket.io';
+import type {
+  ServerToClientEvents,
+  ClientToServerEvents
+} from '@onlyone/shared';
 import { RoomManager } from '../services/RoomManager.js';
 import { ConnectionManager } from '../services/ConnectionManager.js';
 import { logger } from '../config/logger.js';
 
 export function setupSocketHandlers(
-  io: Server,
-  socket: Socket,
+  io: Server<ClientToServerEvents, ServerToClientEvents>,
+  socket: Socket<ClientToServerEvents, ServerToClientEvents>,
   roomManager: RoomManager,
   connectionManager: ConnectionManager
 ) {
@@ -58,11 +62,6 @@ export function setupSocketHandlers(
     // Send current room state to connecting player
     socket.emit('roomState', room);
 
-    // Handle when player is kicked
-    socket.on('playerKicked', () => {
-      socket.disconnect();
-    });
-
     // Chat message handler
     socket.on('chatMessage', (message: string) => {
       logger.debug({ roomName, playerName, message }, 'Chat message');
@@ -82,7 +81,7 @@ export function setupSocketHandlers(
 
       if (connection) {
         // Remove player from room
-        const wasRemoved = roomManager.leaveRoom(roomName, playerId);
+        const wasRemoved = roomManager.removePlayerFromRoom(roomName, playerId);
 
         if (wasRemoved) {
           // Get updated room (might be deleted if empty)

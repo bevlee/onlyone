@@ -15,6 +15,7 @@
 	const room = $derived(websocketStore.state.room);
 	const roomLog = $derived(websocketStore.state.messages);
 	const connected = $derived(websocketStore.state.connected);
+	const kickedPlayerId = $derived(websocketStore.state.kickedPlayerId);
 
 	let isLoading = $state(true);
 
@@ -35,6 +36,13 @@
 		const playerId = user?.auth?.id || 'unknown';
 		const displayName = user?.profile?.name || 'Unknown';
 		websocketStore.connect(roomName, displayName, playerId);
+	});
+
+	$effect(() => {
+		if (kickedPlayerId === user?.auth?.id) {
+			setToastCookie('You have been kicked from the room');
+			goto(resolve('/lobby'));
+		}
 	});
 
 	onDestroy(() => {

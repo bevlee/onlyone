@@ -56,7 +56,7 @@ export class RoomManager {
     return room;
   }
 
-  leaveRoom(roomName: string, playerId: string): boolean {
+  removePlayerFromRoom(roomName: string, playerId: string): boolean {
     const room = this.rooms[roomName];
     if (!room) return false;
 

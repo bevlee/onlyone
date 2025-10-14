@@ -1,5 +1,9 @@
 import { Router, type IRouter } from 'express';
 import { Server } from 'socket.io';
+import type {
+  ServerToClientEvents,
+  ClientToServerEvents
+} from '@onlyone/shared';
 import { RoomManager } from '../services/RoomManager.js';
 import { SupabaseAuthMiddleware } from '../middleware/supabase-auth.js';
 import { SupabaseAuthService } from '../services/SupabaseAuthService.js';
@@ -11,7 +15,10 @@ const database = new SupabaseDatabase();
 const authMiddleware = new SupabaseAuthMiddleware(authService, database);
 
 // Create router factory function that accepts shared RoomManager and Socket.IO server
-export function createRoomRouter(roomManager: RoomManager, io?: Server): IRouter {
+export function createRoomRouter(
+  roomManager: RoomManager,
+  io?: Server<ClientToServerEvents, ServerToClientEvents>
+): IRouter {
   const router: IRouter = Router();
 
 // Create a new room (requires authentication)
@@ -259,23 +266,20 @@ router.post('/:roomName/kick/:playerId', authMiddleware.requireAuth(), (req, res
     }
 
     // Remove player from room
-    roomManager.leaveRoom(roomName, playerId);
+    roomManager.removePlayerFromRoom(roomName, playerId);
 
     // Get updated room state
     const updatedRoom = roomManager.getRoom(roomName);
 
-    // Notify via WebSocket if available
     if (io) {
-      // Notify the kicked player
+      // Notify all players in the room (including the kicked player)
       io.to(roomName).emit('playerKicked', {
         playerId,
         playerName: targetPlayer.name,
-        reason,
-        kickedBy: req.userProfile.name
+        kickedBy: req.userProfile.name,
+        message: `Player ${targetPlayer.name} has been kicked from the room`,
+        room: updatedRoom
       });
-
-      // Broadcast updated room state to all remaining players
-      io.to(roomName).emit('roomState', updatedRoom);
     }
 
     res.json({

@@ -81,7 +81,7 @@ describe('RoomManager', () => {
     });
   });
 
-  describe('leaveRoom', () => {
+  describe('removePlayerFromRoom', () => {
     beforeEach(() => {
       roomManager.createRoom('test-room');
       roomManager.joinRoom('test-room', { id: 'player-1', name: 'Alice' });
@@ -89,7 +89,7 @@ describe('RoomManager', () => {
     });
 
     it('should remove player from room', () => {
-      const result = roomManager.leaveRoom('test-room', 'player-2');
+      const result = roomManager.removePlayerFromRoom('test-room', 'player-2');
 
       expect(result).toBe(true);
       const room = roomManager.getRoom('test-room');
@@ -101,7 +101,7 @@ describe('RoomManager', () => {
       const initialRoom = roomManager.getRoom('test-room');
       expect(initialRoom.roomLeader).toBe('player-1');
 
-      const result = roomManager.leaveRoom('test-room', 'player-1');
+      const result = roomManager.removePlayerFromRoom('test-room', 'player-1');
 
       expect(result).toBe(true);
       const room = roomManager.getRoom('test-room');
@@ -110,8 +110,8 @@ describe('RoomManager', () => {
     });
 
     it('should delete room when last player leaves', () => {
-      roomManager.leaveRoom('test-room', 'player-1');
-      const result = roomManager.leaveRoom('test-room', 'player-2');
+      roomManager.removePlayerFromRoom('test-room', 'player-1');
+      const result = roomManager.removePlayerFromRoom('test-room', 'player-2');
 
       expect(result).toBe(true);
       expect(() => roomManager.getRoom('test-room')).toThrow('Room test-room not found');
@@ -400,7 +400,7 @@ describe('RoomManager', () => {
       roomManager.joinRoom('test-room', { id: 'player-1', name: 'Alice' });
       roomManager.joinRoom('test-room', { id: 'player-2', name: 'Bob' });
 
-      const result = roomManager.leaveRoom('test-room', 'player-1');
+      const result = roomManager.removePlayerFromRoom('test-room', 'player-1');
 
       expect(result).toBe(true);
       const room = roomManager.getRoom('test-room');
@@ -409,7 +409,7 @@ describe('RoomManager', () => {
     });
 
     it('should return false when leaving non-existent room', () => {
-      const result = roomManager.leaveRoom('nonexistent-room', 'player-1');
+      const result = roomManager.removePlayerFromRoom('nonexistent-room', 'player-1');
 
       expect(result).toBe(false);
     });
@@ -418,7 +418,7 @@ describe('RoomManager', () => {
       roomManager.createRoom('test-room');
       roomManager.joinRoom('test-room', { id: 'player-1', name: 'Alice' });
 
-      const result = roomManager.leaveRoom('test-room', 'nonexistent-player');
+      const result = roomManager.removePlayerFromRoom('test-room', 'nonexistent-player');
 
       expect(result).toBe(false);
       const room = roomManager.getRoom('test-room');
