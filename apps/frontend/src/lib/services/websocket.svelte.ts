@@ -29,7 +29,6 @@ function createWebSocketStore() {
   let onPlayerLeft: ((data: any) => void) | null = null;
   let onPlayerKicked: ((data: any) => void) | null = null;
   let onChatMessage: ((data: any) => void) | null = null;
-  let onError: ((error: string) => void) | null = null;
 
   function connect(roomName: string, playerName: string, playerId: string) {
     if (socket?.connected) {
@@ -38,6 +37,7 @@ function createWebSocketStore() {
     }
 
     socket = io(SOCKET_URL, {
+      reconnection: true,
       path: '/gameserver/socket.io',
       auth: { roomName, playerName, playerId },
       withCredentials: true
@@ -141,9 +141,6 @@ function createWebSocketStore() {
     },
     onChatMessage: (callback: (data: any) => void) => {
       onChatMessage = callback;
-    },
-    onError: (callback: (error: string) => void) => {
-      onError = callback;
     }
   };
 }

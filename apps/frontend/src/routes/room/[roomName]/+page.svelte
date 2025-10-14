@@ -55,12 +55,6 @@
 			// Could show notification for other kicked players: "${data.playerName} was kicked"
 		});
 
-		websocketStore.onError((errorMsg) => {
-			// If connection error, redirect to lobby with toast
-			setToastCookie(errorMsg);
-			goto(resolve('/lobby'));
-		});
-
 		// Connect to websocket for real-time updates
 		const playerId = user?.auth?.id || 'unknown';
 		const displayName = user?.profile?.name || 'Unknown';
