@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { websocketStore } from '$lib/services/websocket.svelte.js';
-	import { gameServerAPI, type Room } from '$lib/api/gameserver.js';
+	import { gameServerAPI } from '$lib/api/gameserver.js';
 	import { setToastCookie } from '$lib/utils.js';
 	import RoomHeader from '$lib/components/RoomHeader.svelte';
 	import PlayerList from '$lib/components/PlayerList.svelte';
@@ -12,7 +12,10 @@
 	const roomName = data.roomName;
 	const user = $derived(data.user); // User data from SSR
 
-	let room = $state<Room | null>(null);
+	const room = $derived(websocketStore.state.room);
+	const roomLog = $derived(websocketStore.state.messages);
+	const connected = $derived(websocketStore.state.connected);
+
 	let isLoading = $state(true);
 
 	onMount(async () => {
@@ -27,33 +30,6 @@
 				return;
 			}
 		}
-
-		// Setup websocket event handlers
-		websocketStore.onRoomStateUpdate((updatedRoom) => {
-			room = updatedRoom;
-			isLoading = false;
-		});
-
-		websocketStore.onPlayerJoined((data) => {
-			room = data.room;
-			// Could show notification: "${data.player.name} joined"
-		});
-
-		websocketStore.onPlayerLeft((data) => {
-			room = data.room;
-			// Could show notification: "${data.player.name} left"
-		});
-
-		websocketStore.onPlayerKicked((data) => {
-			const currentUserId = user?.auth?.id;
-			// If current user was kicked, redirect to lobby
-			if (data.playerId === currentUserId) {
-				const message = `You were kicked from the room. Reason: ${data.reason}`;
-				setToastCookie(message);
-				goto(resolve('/lobby'));
-			}
-			// Could show notification for other kicked players: "${data.playerName} was kicked"
-		});
 
 		// Connect to websocket for real-time updates
 		const playerId = user?.auth?.id || 'unknown';
@@ -81,7 +57,6 @@
 		if (!result.success) {
 			const message = result.error || `Failed to kick player ${playerName}`;
 			setToastCookie(message);
-			goto(resolve('/lobby'));
 		}
 	}
 </script>

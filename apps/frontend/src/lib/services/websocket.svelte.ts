@@ -12,6 +12,7 @@ interface WebSocketState {
   connected: boolean;
   room: Room | null;
   error: string | null;
+  messages: string[];
 }
 
 function createWebSocketStore() {
@@ -20,15 +21,10 @@ function createWebSocketStore() {
   let state = $state<WebSocketState>({
     connected: false,
     room: null,
-    error: null
-  });
+    error: null,
+    messages: [],
 
-  // Event callbacks
-  let onRoomStateUpdate: ((room: Room) => void) | null = null;
-  let onPlayerJoined: ((data: any) => void) | null = null;
-  let onPlayerLeft: ((data: any) => void) | null = null;
-  let onPlayerKicked: ((data: any) => void) | null = null;
-  let onChatMessage: ((data: any) => void) | null = null;
+  });
 
   function connect(roomName: string, playerName: string, playerId: string) {
     if (socket?.connected) {
@@ -58,43 +54,37 @@ function createWebSocketStore() {
       console.error('WebSocket connection error:', error);
       state.error = error.message;
       state.connected = false;
-      onError?.(error.message);
     });
 
     // Room errors (room not found, full, etc.)
     socket.on('error', (data: { message: string }) => {
       console.error('Room error:', data.message);
       state.error = data.message;
-      onError?.(data.message);
     });
 
     // Room state events
     socket.on('roomState', (room: Room) => {
       console.log('Received room state:', room);
       state.room = room;
-      onRoomStateUpdate?.(room);
     });
 
     socket.on('playerJoined', (data) => {
       console.log('Player joined:', data);
       state.room = data.room;
-      onPlayerJoined?.(data);
     });
 
     socket.on('playerLeft', (data) => {
       console.log('Player left:', data);
       state.room = data.room;
-      onPlayerLeft?.(data);
     });
 
     socket.on('playerKicked', (data) => {
-      console.log('Player kicked:', data);
-      onPlayerKicked?.(data);
+      state.room = data.room;
     });
 
-    socket.on('chatMessage', (data) => {
-      console.log('Chat message:', data);
-      onChatMessage?.(data);
+    socket.on('chatMessage', (message: string) => {
+      console.log('Chat message:', message);
+      state.messages = [...state.messages, message];
     });
   }
 
@@ -127,21 +117,6 @@ function createWebSocketStore() {
     disconnect,
     sendChatMessage,
     startGame,
-    onRoomStateUpdate: (callback: (room: Room) => void) => {
-      onRoomStateUpdate = callback;
-    },
-    onPlayerJoined: (callback: (data: any) => void) => {
-      onPlayerJoined = callback;
-    },
-    onPlayerLeft: (callback: (data: any) => void) => {
-      onPlayerLeft = callback;
-    },
-    onPlayerKicked: (callback: (data: any) => void) => {
-      onPlayerKicked = callback;
-    },
-    onChatMessage: (callback: (data: any) => void) => {
-      onChatMessage = callback;
-    }
   };
 }
 
