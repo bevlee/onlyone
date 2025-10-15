@@ -34,8 +34,65 @@ Real-time multiplayer word-guessing game server built with TypeScript, Express, 
 - TypeScript with ES modules
 - Express.js for HTTP server
 - Socket.IO for real-time communication
+- Supabase for authentication and user management
 - Pino for logging
 - Better SQLite3 for data persistence
+
+## Authentication
+
+The gameserver handles all authentication server-side using Supabase Auth:
+
+### Architecture
+
+- **Server-Side Only**: All auth logic runs on the gameserver
+- **HttpOnly Cookies**: Tokens never exposed to client JavaScript
+- **Automatic Token Refresh**: Middleware handles refresh transparently
+- **JWT Validation**: Fast local JWT decoding with basic validation
+
+### Authentication Endpoints
+
+- `POST /auth/register` - Register with email and password
+- `POST /auth/login` - Login with email and password
+- `POST /auth/anonymous` - Create anonymous guest session
+- `POST /auth/logout` - Clear auth cookies and end session
+- `GET /auth/me` - Get current user session (used by frontend SSR)
+
+### Middleware
+
+**SupabaseAuthMiddleware** provides two modes:
+
+1. **optionalAuth()** - Attaches user to request if authenticated, continues if not
+2. **requireAuth()** - Returns 401 if no valid authentication
+
+### Cookie Management
+
+Authentication tokens are stored in httpOnly cookies:
+
+- `sb-access-token` - Short-lived JWT (expires per session settings)
+- `sb-refresh-token` - Long-lived token (7 days)
+
+**Cookie Security:**
+- HttpOnly: Prevents client-side JavaScript access
+- Secure: HTTPS-only in production
+- SameSite: 'lax' for CSRF protection
+- Domain: Configurable via `COOKIE_DOMAIN` env var
+
+### Token Refresh Flow
+
+1. Client request includes httpOnly cookies
+2. Middleware extracts `sb-access-token`
+3. If token expired, middleware uses `sb-refresh-token`
+4. New tokens automatically set in response cookies
+5. Request continues with fresh session
+
+**Deduplication:** Concurrent refresh requests are deduplicated to prevent refresh token reuse errors.
+
+### User Profile Management
+
+The middleware automatically:
+- Creates user profiles in local database on first authentication
+- Attaches `req.user` (Supabase auth user) and `req.userProfile` (local DB user)
+- Tracks anonymous vs. permanent accounts via `isAnonymous` flag
 
 ## State Synchronization Strategy
 
