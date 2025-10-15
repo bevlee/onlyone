@@ -27,13 +27,8 @@ export class SupabaseAuthMiddleware {
     this.refreshPromises = new Map();
   }
 
-  // Extract token from Authorization header or cookies
+  // Extract access token from cookies
   private extractToken(req: Request): string | null {
-    // Try Authorization header first
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      return authHeader.substring(7);
-    }
 
     // Try cookies
     const cookieToken = req.cookies?.['sb-access-token'];
@@ -59,7 +54,6 @@ export class SupabaseAuthMiddleware {
         // Clean up after refresh completes (success or failure)
         this.refreshPromises.delete(refreshToken);
       });
-
     this.refreshPromises.set(refreshToken, refreshPromise);
     return refreshPromise;
   }
@@ -68,9 +62,8 @@ export class SupabaseAuthMiddleware {
   optionalAuth() {
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
-        let token = this.extractToken(req);
+        let token = this.extractToken(req); //TODO: change to extractAccessToken
         let user: any = null;
-        logger.info(`token is: ${token}`);
         // Try to use access token first
         if (token) {
           user = await this.authService.getUserFromToken(token);
@@ -179,22 +172,6 @@ export class SupabaseAuthMiddleware {
     };
   }
 
-  // Middleware to handle Supabase session cookies
-  handleSessionCookies() {
-    return (req: Request, res: Response, next: NextFunction): void => {
-      // Set up cookie handling for Supabase auth
-      // This helps with browser-based authentication
-      const accessToken = req.cookies?.['sb-access-token'];
-      const refreshToken = req.cookies?.['sb-refresh-token'];
-
-      if (accessToken) {
-        // Set authorization header from cookie
-        req.headers.authorization = `Bearer ${accessToken}`;
-      }
-
-      next();
-    };
-  }
 
   // Helper method to set auth cookies (for browser clients)
   setAuthCookies(res: Response, session: any): void {

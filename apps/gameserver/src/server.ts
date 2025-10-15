@@ -27,7 +27,6 @@ const app: Express = express();
 // Initialize services
 const authService = new SupabaseAuthService();
 const database = new SupabaseDatabase();
-const authMiddleware = new SupabaseAuthMiddleware(authService, database);
 const connectionManager = new ConnectionManager();
 const roomManager = new RoomManager();
 
@@ -46,7 +45,6 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
-app.use(authMiddleware.handleSessionCookies());
 
 // Mount all gameserver routes under /gameserver prefix
 app.use('/gameserver/auth', authRoutes);
