@@ -13,11 +13,10 @@
 	const user = $derived(data.user); // User data from SSR
 
 	const room = $derived(websocketStore.state.room);
+	console.log(room);
 	const roomLog = $derived(websocketStore.state.messages);
 	const connected = $derived(websocketStore.state.connected);
 	const kickedPlayerId = $derived(websocketStore.state.kickedPlayerId);
-
-	let isLoading = $state(true);
 
 	onMount(async () => {
 		// If not already joined, join via HTTP first
@@ -71,11 +70,11 @@
 
 <RoomHeader {roomName} username={user?.profile?.name || 'Unknown'} onLeaveRoom={handleLeaveRoom} />
 <div class="container mx-auto px-4 py-8">
-	{#if isLoading}
+	{#if !room}
 		<div class="text-muted-foreground py-8 text-center">
 			<p>Connecting to room...</p>
 		</div>
-	{:else if room}
+	{:else}
 		<div class="mx-auto max-w-4xl space-y-6">
 			<PlayerList
 				players={room.players}
