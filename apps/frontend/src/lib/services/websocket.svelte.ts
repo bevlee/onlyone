@@ -1,12 +1,14 @@
 import { io, Socket } from 'socket.io-client';
 import { MessageType, PLAYER_COLORS } from '@onlyone/shared';
 import type { Room, ServerToClientEvents, ClientToServerEvents, ChatMessage, MessageColor } from '@onlyone/shared';
-import { browser } from '$app/environment';
 import { env } from '$env/dynamic/public';
 
 // For Socket.IO, we need the base URL (not /gameserver path)
 // The path option handles the /gameserver/socket.io routing
-const SOCKET_URL = browser && !env.PUBLIC_GAMESERVER_URL ? '/' : (env.PUBLIC_GAMESERVER_URL?.replace('/gameserver', '') || 'http://localhost:3000');
+if (!env.PUBLIC_GAMESERVER_URL) {
+  throw new Error('PUBLIC_GAMESERVER_URL environment variable is required');
+}
+const SOCKET_URL = env.PUBLIC_GAMESERVER_URL;
 
 /**
  * Get a color for a player based on their index in the room
@@ -50,7 +52,7 @@ function createWebSocketStore() {
 
     socket = io(SOCKET_URL, {
       reconnection: true,
-      path: '/gameserver/socket.io',
+      path: '/socket.io',
       auth: { roomName, playerName, playerId },
       withCredentials: true
     });
