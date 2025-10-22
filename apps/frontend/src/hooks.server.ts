@@ -1,11 +1,12 @@
 import { env } from '$env/dynamic/private';
 import type { Handle } from '@sveltejs/kit';
 
+import { setHeaders } from '$lib/cookie.server';
 // Use absolute URL for server-side requests
 const GAMESERVER_URL = env.GAMESERVER_URL || 'http://localhost:3000/gameserver';
 
 // Key: cookie string, Value: userData
-const userCache = new Map<string, App.Locals['user']>();
+export const userCache = new Map<string, App.Locals['user']>();
 const MAX_CACHE_SIZE = 1000; 
 
 /**
@@ -26,10 +27,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return resolve(event);
 	}
 
-	const cookies = event.request.headers.get('cookie') || '';
+	const requestCookies = event.request.headers.get('cookie') || '';
 
-	const cached = userCache.get(cookies);
-
+	const cached = userCache.get(requestCookies);
 	if (cached !== undefined) {
 		event.locals.user = cached;
 	} else {
@@ -38,7 +38,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			// Call gameserver /auth/me endpoint to check session (handles refresh)
 			const response = await fetch(`${GAMESERVER_URL}/auth/me`, {
 				headers: {
-					cookie: cookies,
+					cookie: requestCookies,
 				},
 			});
 
@@ -46,7 +46,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 				const userData = await response.json() as App.Locals['user'];
 				event.locals.user = userData;
 
-				userCache.set(cookies, userData);
+				userCache.set(requestCookies, userData);
+
+            	setHeaders(event.cookies, response.headers.getSetCookie());
 
 				// Prevent memory leaks - clean up old entries
 				if (userCache.size > MAX_CACHE_SIZE) {
@@ -56,7 +58,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 				}
 			} else {
 				event.locals.user = null;
-				userCache.set(cookies, null);
+				userCache.set(requestCookies, null);
 			}
 		} catch (error) {
 			console.error('[hooks.server] Failed to fetch user session:', error);

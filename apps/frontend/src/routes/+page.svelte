@@ -1,9 +1,7 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import { gameServerAPI } from '$lib/api/gameserver';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
+	import { fail } from '@sveltejs/kit';
 
 	let name = $state('');
 	let showAuth = $state(false);
@@ -16,22 +14,17 @@
 	let isLoading = $state(false);
 	let error = $state('');
 
-	let { data } = $props();
-	const lobbyPath = '/lobby';
+	let { data, form } = $props();
 
 	let returnTo: string | null = $derived(data.returnTo);
 
-	async function handlePlayAsGuest() {
-		// Sign in anonymously
-		const result = await gameServerAPI.signInAnonymous();
-
-		if (result && result.success) {
-			// Server sets cookies, redirect to intended destination
-			goto(resolve(returnTo || lobbyPath));
-		} else {
-			error = 'Failed to create guest session';
+	// Show errors from form actions
+	$effect(() => {
+		if (form?.error) {
+			error = form.error;
+			isLoading = false;
 		}
-	}
+	});
 
 	function toggleAuth() {
 		showAuth = !showAuth;
@@ -47,51 +40,19 @@
 		confirmPassword = '';
 	}
 
-	async function handleAuth() {
-		if (isLoading) return;
-
-		error = '';
-
-		if (!email.trim() || !password.trim()) {
-			error = 'Email and password are required';
-			return;
-		}
-
+	function validatePasswords() {
 		if (isSignup && password !== confirmPassword) {
 			error = 'Passwords do not match';
-			return;
+			return false;
 		}
-
 		if (isSignup && !name.trim()) {
 			error = 'Name is required for signup';
-			return;
+			return false;
 		}
-
-		isLoading = true;
-
-		try {
-			const result = isSignup
-				? await gameServerAPI.register(name.trim(), email.trim(), password)
-				: await gameServerAPI.login(email.trim(), password);
-
-			if (!result.success) {
-				error = result.error || 'Authentication failed';
-				return;
-			}
-
-			// Server sets cookies, redirect to intended destination
-			goto(resolve(returnTo || lobbyPath));
-		} catch (err) {
-			error = 'Network error. Please try again.';
-			console.error('Auth error:', err);
-		} finally {
-			isLoading = false;
-		}
+		return true;
 	}
 
-	async function handleGoogleAuth() {
-		// Note: Google OAuth will need to be implemented on the gameserver
-		// For now, show a placeholder message
+	function handleGoogleAuth() {
 		error = 'Google OAuth is not yet implemented on the game server';
 	}
 </script>
@@ -107,9 +68,15 @@
 		<!-- Guest Play -->
 		<div class="space-y-4">
 			<h2 class="text-xl font-semibold">Quick Play</h2>
-			<Button onclick={handlePlayAsGuest} class="w-full bg-green-700 text-white hover:bg-green-800">
-				Play as Guest
-			</Button>
+			<form method="POST" action="?/anonymous">
+				<Button
+					type="submit"
+					class="w-full bg-green-700 text-white hover:bg-green-800"
+					disabled={isLoading}
+				>
+					{isLoading ? 'Creating guest session...' : 'Play as Guest'}
+				</Button>
+			</form>
 			<p class="text-muted-foreground text-center text-sm">
 				We'll assign you a random name. Sign up to choose your own!
 			</p>
@@ -139,19 +106,16 @@
 				{/if}
 
 				<!-- Email/Password Form -->
-				<form
-					class="space-y-3"
-					onsubmit={(e) => {
-						e.preventDefault();
-						handleAuth();
-					}}
-				>
+				<form method="POST" action={isSignup ? '?/register' : '?/login'} class="space-y-3">
+					<input type="hidden" name="returnTo" value={returnTo || ''} />
+
 					{#if isSignup}
-						<Input bind:value={name} placeholder="Name" disabled={isLoading} required />
+						<Input name="name" bind:value={name} placeholder="Name" disabled={isLoading} required />
 					{/if}
 
 					<Input
 						type="email"
+						name="email"
 						bind:value={email}
 						placeholder="Email"
 						disabled={isLoading}
@@ -160,6 +124,7 @@
 
 					<Input
 						type="password"
+						name="password"
 						bind:value={password}
 						placeholder="Password"
 						disabled={isLoading}
