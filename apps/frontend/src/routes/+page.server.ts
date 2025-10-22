@@ -41,13 +41,11 @@ export const actions: Actions = {
 
             setHeaders(cookies, response.headers.getSetCookie());
 
-            // Note: Cookies are set by gameserver, but we can't forward them here
-            // The hook will pick them up on the next page load
-            return redirect(303, returnTo || '/lobby');
         } catch (error) {
             console.error('Anonymous sign-in error:', error);
             return { error: 'Network error. Please try again.' };
         }
+        redirect(303, returnTo || '/lobby');
     },
 
     login: async ({ request, cookies }) => {
@@ -76,13 +74,13 @@ export const actions: Actions = {
             }
 
 
-            setHeaders(cookies, response.headers.getSetCookie());
-            // Cookies are set by gameserver, hook will pick them up
-            return redirect(303, returnTo || '/lobby');
-        } catch (error) {
+            setHeaders(cookies, response.headers.getSetCookie());} catch (error) {
             console.error('Login error:', error);
             return { error: 'Network error. Please try again.' };
         }
+        
+        return redirect(303, returnTo || '/lobby');
+        
     },
 
     register: async ({ request, cookies }) => {
@@ -113,11 +111,10 @@ export const actions: Actions = {
             
             setHeaders(cookies, response.headers.getSetCookie());
 
-            // Cookies are set by gameserver, hook will pick them up
-            return redirect(303, returnTo || '/lobby');
         } catch (error) {
             console.error('Registration error:', error);
             return { error: 'Network error. Please try again.' };
         }
+        redirect(303, returnTo || '/lobby');
     }
 }
