@@ -26,15 +26,14 @@
 	const playerCount = $derived(players.length);
 	const hasEnoughPlayers = $derived(playerCount >= minPlayers);
 
-	// Initialize state
-	const getInitialState = () => {
-		if (!browser) return true;
-		const saved = localStorage.getItem('playerListExpanded');
-		// Default to expanded for first-time visitors (null), collapsed for returning users
-		return saved === null ? true : saved === 'true';
-	};
+	let expanded = $state(true);
 
-	let expanded = $state(getInitialState());
+	$effect.pre(() => {
+		if (browser) {
+			const saved = localStorage.getItem('playerListExpanded');
+			expanded = saved === null ? true : saved === 'true';
+		}
+	});
 
 	const toggle = () => {
 		expanded = !expanded;
@@ -62,7 +61,7 @@
 	</button>
 
 	{#if expanded}
-		<div transition:slide={{ duration: 200 }} class="px-4 pb-4">
+		<div class="px-4 pb-4">
 			<div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
 				{#each players as player (player.id)}
 					<div class="bg-card text-card-foreground flex items-center gap-3 rounded-lg border p-3">

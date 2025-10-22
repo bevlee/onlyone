@@ -12,12 +12,6 @@
 	const roomName = data.roomName;
 	const user = $derived(data.user); // User data from SSR
 
-	const room = $derived(websocketStore.state.room);
-	console.log(room);
-	const roomLog = $derived(websocketStore.state.messages);
-	const connected = $derived(websocketStore.state.connected);
-	const kickedPlayerId = $derived(websocketStore.state.kickedPlayerId);
-
 	onMount(async () => {
 		// If not already joined, join via HTTP first
 		if (!data.alreadyJoined) {
@@ -37,12 +31,12 @@
 		websocketStore.connect(roomName, displayName, playerId);
 	});
 
-	$effect(() => {
-		if (kickedPlayerId === user?.auth?.id) {
-			setToastCookie('You have been kicked from the room');
-			goto(resolve('/lobby'));
-		}
-	});
+	// $effect(() => {
+	// 	if (kickedPlayerId === user?.auth?.id) {
+	// 		setToastCookie('You have been kicked from the room');
+	// 		goto(resolve('/lobby'));
+	// 	}
+	// });
 
 	onDestroy(() => {
 		// Cleanup websocket connection when leaving page
@@ -70,22 +64,22 @@
 
 <RoomHeader {roomName} username={user?.profile?.name || 'Unknown'} onLeaveRoom={handleLeaveRoom} />
 <div class="container mx-auto px-4 py-8">
-	{#if !room}
+	{#if !websocketStore.state.room}
 		<div class="text-muted-foreground py-8 text-center">
 			<p>Connecting to room...</p>
 		</div>
 	{:else}
 		<div class="mx-auto max-w-4xl space-y-6">
-			<PlayerList
-				players={room.players}
+			<!-- <PlayerList
+				players={websocketStore.state.room.players}
 				currentUser={user?.profile?.name || 'Unknown'}
 				currentUserId={user?.auth?.id || ''}
-				roomLeader={room.roomLeader}
+				roomLeader={websocketStore.state.room.roomLeader}
 				onKickPlayer={handleKickPlayer}
-			/>
+			/> -->
 
 			<div class="text-muted-foreground">
-				<p>Game Status: {room.status}</p>
+				<p>Game Status: {websocketStore.state.room.status}</p>
 				<p>Connected: {websocketStore.state.connected ? '✓' : '✗'}</p>
 			</div>
 		</div>
