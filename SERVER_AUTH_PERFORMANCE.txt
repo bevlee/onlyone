@@ -1,0 +1,16 @@
+# Server-Side Auth Performance Summary
+
+## How It Works
+The hook validates cookies on every page request, but uses an in-memory cache (Map) to avoid repeated network calls. Cache hits take ~1ms (just a Map lookup), while cache misses require a network call to gameserver (~10-200ms depending on location).
+
+## Performance Impact
+After initial authentication, all subsequent page navigations hit the cache and are effectively instant (~1ms). The only slow requests are: (1) first page load after auth (cache miss), and (2) when cookies change (token refresh). Your cache stores 1000 unique cookie strings, which is plenty for typical usage.
+
+## Optimization Strategy
+Pre-populate the cache in form actions after setting cookies - call /auth/me immediately and store the result in userCache. This eliminates even the first cache miss after auth. With this approach, every page navigation after login is instant with no network delay.
+
+## Client-Side vs Server-Side UX
+Client-side auth renders the page immediately but shows a loading spinner while fetching user data (~50ms), causing content to "pop in". Server-side auth waits slightly longer for first paint (~51ms with cache hit, ~100ms on miss) but delivers complete content immediately with no loading states or content shift. Users perceive server-side as faster because there's no spinner or layout shift.
+
+## Recommendation
+Keep server-side auth with cache pre-population. The performance is excellent (1ms for most requests) and provides better UX, better SEO, and more security than client-side alternatives.
