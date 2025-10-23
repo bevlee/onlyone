@@ -50,9 +50,11 @@ function createWebSocketStore() {
       return;
     }
 
+    console.log("Connecting to WebSocket:", SOCKET_URL, { roomName, playerName, playerId });
+
     socket = io(SOCKET_URL, {
       reconnection: true,
-      path: '/socket.io',
+      path: '/gameserver/socket.io',
       auth: { roomName, playerName, playerId },
       withCredentials: true
     });
