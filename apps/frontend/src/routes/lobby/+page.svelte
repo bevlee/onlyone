@@ -5,6 +5,7 @@
 	import LobbyHeader from '$lib/components/LobbyHeader.svelte';
 	import CreateRoomForm from '$lib/components/CreateRoomForm.svelte';
 	import { gameServerAPI, type Room } from '$lib/api/gameserver.js';
+	import { replaceState } from '$app/navigation';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from '$lib/utils.js';
@@ -23,7 +24,7 @@
 		if (toastMessage) {
 			toast.error(toastMessage);
 			// Clean URL by replacing current history entry
-			window.history.replaceState({}, '', '/lobby');
+			replaceState('', {});
 		}
 
 		// Refresh rooms every 5 seconds
