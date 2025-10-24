@@ -11,6 +11,7 @@
 	let { data } = $props();
 	const roomName = data.roomName;
 	const user = $derived(data.user); // User data from SSR
+	const kickedPlayerId = websocketStore.state.kickedPlayerId;
 
 	onMount(async () => {
 		// If not already joined, join via HTTP first
@@ -31,12 +32,12 @@
 		websocketStore.connect(roomName, displayName, playerId);
 	});
 
-	// $effect(() => {
-	// 	if (kickedPlayerId === user?.auth?.id) {
-	// 		setToastCookie('You have been kicked from the room');
-	// 		goto(resolve('/lobby'));
-	// 	}
-	// });
+	$effect(() => {
+		if (kickedPlayerId && kickedPlayerId === user?.auth?.id) {
+			setToastCookie('You have been kicked from the room');
+			goto(resolve('/lobby'));
+		}
+	});
 
 	onDestroy(() => {
 		// Cleanup websocket connection when leaving page
@@ -46,19 +47,6 @@
 	function handleLeaveRoom() {
 		websocketStore.disconnect();
 		goto(resolve('/lobby'));
-	}
-
-	async function handleKickPlayer(playerId: string, playerName: string) {
-		if (!confirm(`Are you sure you want to kick ${playerName}?`)) {
-			return;
-		}
-
-		const result = await gameServerAPI.kickPlayer(roomName, playerId);
-
-		if (!result.success) {
-			const message = result.error || `Failed to kick player ${playerName}`;
-			setToastCookie(message);
-		}
 	}
 </script>
 
@@ -70,18 +58,12 @@
 		</div>
 	{:else}
 		<div class="mx-auto max-w-4xl space-y-6">
-			<!-- <PlayerList
+			<PlayerList
 				players={websocketStore.state.room.players}
 				currentUser={user?.profile?.name || 'Unknown'}
 				currentUserId={user?.auth?.id || ''}
 				roomLeader={websocketStore.state.room.roomLeader}
-				onKickPlayer={handleKickPlayer}
-			/> -->
-
-			<div class="text-muted-foreground">
-				<p>Game Status: {websocketStore.state.room.status}</p>
-				<p>Connected: {websocketStore.state.connected ? '✓' : '✗'}</p>
-			</div>
+			/>
 		</div>
 	{/if}
 </div>

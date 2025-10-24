@@ -1,7 +1,8 @@
 import { redirect } from '@sveltejs/kit';
 import { createGameServerAPI } from '$lib/api/gameserver.server.js';
 import type { Room } from '@onlyone/shared';
-import type { PageServerLoad } from './$types';
+import type { Actions, PageServerLoad } from './$types';
+import { GAMESERVER_URL } from '$env/static/private';
 
 export const load: PageServerLoad = async ({ params, cookies, locals, request, url }) => {
 	// Server-side auth check - redirect to home with returnTo if not authenticated
@@ -35,6 +36,30 @@ export const load: PageServerLoad = async ({ params, cookies, locals, request, u
 		roomName: params.roomName,
 		alreadyJoined: roomStatus.alreadyJoined || false
 	};
+}
+
+export const actions: Actions = {
+	kick: async ({ request, params }) => {
+		const formData = await request.formData();
+		const playerId = formData.get('playerId') as string;
+		const roomName = params.roomName;
+		
+		const response=  await fetch(`${GAMESERVER_URL}/room/${roomName}/kick/${playerId}`, { 
+			method: 'POST',
+			headers: {
+				'Cookie': request.headers.get('cookie') || '',
+			}
+		});
+		console.log(`Kick response status: ${response.status}`);
+		if (!response.ok) {
+			const errorData = await response.json();
+			console.log(`Kick failed: ${errorData.error}`);
+			console.log(`Kick failed: ${JSON.stringify(errorData)}`);
+			return { success: false, error: errorData.error || 'Failed to kick player' };
+		}
+		return { success: true };
+
+	}
 }
 
 export const prerender = false;
