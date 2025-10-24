@@ -240,7 +240,6 @@ router.get('/players', (req, res) => {
 // Kick a player from room (requires authentication, being in room, and being room owner)
 router.post('/:roomName/kick/:playerId', authMiddleware.requireAuth(), (req, res) => {
   const { roomName, playerId } = req.params;
-  const { reason = 'No reason provided' } = req.body;
 
   if (!req.user || !req.userProfile) {
     return res.status(401).json({ error: 'Authentication required' });
@@ -285,7 +284,6 @@ router.post('/:roomName/kick/:playerId', authMiddleware.requireAuth(), (req, res
     res.json({
       message: `Player ${targetPlayer.name} has been kicked from the room`,
       kickedPlayerId: playerId,
-      reason,
       room: {
         roomName,
         playerCount: updatedRoom.players.length,
