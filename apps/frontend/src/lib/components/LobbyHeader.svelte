@@ -1,10 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Settings, User, LogOut } from 'lucide-svelte';
-	import { gameServerAPI } from '$lib/api/gameserver';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import type { UserData } from '@onlyone/shared';
 
 	type Props = {
@@ -12,14 +8,8 @@
 	};
 
 	const { user }: Props = $props();
-
-	const handleLogout = async () => {
-		await gameServerAPI.logout();
-		// Server clears cookies, redirect to home
-		goto(resolve('/'));
-	};
-
 	let username = $derived(user?.profile?.name);
+	let menuOpen = $state(false);
 </script>
 
 <div
@@ -34,17 +24,47 @@
 		{/if}
 	</div>
 
-	<DropdownMenu.Root>
-		<DropdownMenu.Trigger>
-			<Button variant="ghost" size="icon" class="h-8 w-8">
-				<Settings class="h-4 w-4" />
-			</Button>
-		</DropdownMenu.Trigger>
-		<DropdownMenu.Content align="end">
-			<DropdownMenu.Item onclick={handleLogout}>
-				<LogOut class="mr-2 h-4 w-4" />
-				Logout
-			</DropdownMenu.Item>
-		</DropdownMenu.Content>
-	</DropdownMenu.Root>
+	<div class="relative">
+		<Button
+			variant="ghost"
+			size="icon"
+			class="h-8 w-8"
+			onclick={(e) => {
+				e.stopPropagation();
+				menuOpen = !menuOpen;
+			}}
+		>
+			<Settings class="h-4 w-4" />
+		</Button>
+
+		{#if menuOpen}
+			<div class="bg-popover absolute right-0 z-50 mt-2 w-48 rounded-md border shadow-md">
+				<form method="POST" action="/logout">
+					<button
+						type="submit"
+						class="hover:bg-accent flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm transition-colors"
+						onclick={(e) => confirm(`Are you sure you want to logout?`) || e.preventDefault()}
+					>
+						<LogOut class="h-4 w-4" />
+						Logout
+					</button>
+				</form>
+				<form
+					method="POST"
+					action="/logout"
+					onsubmit={() => console.log('logging out another one')}
+				>
+					<button
+						type="submit"
+						class="hover:bg-accent flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm transition-colors"
+					>
+						<LogOut class="h-4 w-4" />
+						another one
+					</button>
+				</form>
+			</div>
+		{/if}
+	</div>
 </div>
+
+<svelte:window onclick={() => (menuOpen = false)} />
