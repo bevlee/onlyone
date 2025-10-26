@@ -1,4 +1,4 @@
-import { redirect } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import { setHeaders } from '$lib/cookie.server';
 import type { PageServerLoad, Actions } from './$types';
 import { env } from '$env/dynamic/private';
@@ -106,40 +106,19 @@ export const actions: Actions = {
             if (!response.ok) {
                 const error = await response.json();
                 console.error('Registration error:', error);
-                return { error: error.error || 'Registration failed' };
+                let errorMessage = 'Registration failed';
+                if (error.error && error.error.includes('already registered')) {
+                    errorMessage = 'Email is already registered. Please log in instead.';
+                }
+                return fail(400, { name: name, email: email, signUp: true, status: "failure", error: errorMessage });
             }
             
             setHeaders(cookies, response.headers.getSetCookie());
 
         } catch (error) {
             console.error('Registration error:', error);
-            return { error: 'Network error. Please try again.' };
+            return fail(400, { name: name, email: email, signUp: true, status: "failure", error: 'Network error. Please try again.' });
         }
         redirect(303, returnTo || '/lobby');
-    },
-
-        logout: async ({ request, cookies }) => {
-            console.log("logout action called");
-            try {
-                const response = await fetch(`${GAMESERVER_URL}/auth/logout`, {
-                    method: 'POST',
-                    headers: {
-                        'Cookie': request.headers.get('cookie') || '',
-                    },
-                });
-                
-                if (!response.ok) {
-                    const error = await response.json();
-                    console.error('Logout error:', error);
-                }
-            } catch (error) {
-                console.error('Logout error:', error);
-            }
-    
-            // Clear cookies on logout
-            cookies.delete('sb-access-token', { path: '/' });
-            cookies.delete('sb-refresh-token', { path: '/' });
-    
-            redirect(303, '/');
-        }
+    }
 }

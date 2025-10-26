@@ -30,6 +30,20 @@ export class SupabaseAuthService {
     }
   }
 
+  async usernameExists(name: string): Promise<boolean> {
+    const { data: existingUser, error } = await supabase
+      .from('users')
+      .select('id')
+      .eq('name', name)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
+      throw new Error(error.message);
+    }
+
+    return !!existingUser;
+  }
+
   // Register with email and password
   async registerWithPassword(name: string, email: string, password: string): Promise<AuthResult> {
     const { data, error } = await supabaseAuth.auth.signUp({
