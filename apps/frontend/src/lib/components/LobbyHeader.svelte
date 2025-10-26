@@ -29,8 +29,7 @@
 			variant="ghost"
 			size="icon"
 			class="h-8 w-8"
-			onclick={(e) => {
-				e.stopPropagation();
+			onclick={() => {
 				menuOpen = !menuOpen;
 			}}
 		>
@@ -66,5 +65,3 @@
 		{/if}
 	</div>
 </div>
-
-<svelte:window onclick={() => (menuOpen = false)} />
