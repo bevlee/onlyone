@@ -2,7 +2,7 @@
 	import type { SuperForm } from 'sveltekit-superforms';
 	import type { loginSchema } from '$lib/schema';
 	import type { z } from 'zod';
-	import { Field, Control, Label, Description, FieldErrors } from 'formsnap';
+	import { Field, Control, Label, FieldErrors } from 'formsnap';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import Input from '$lib/components/ui/input/input.svelte';
 

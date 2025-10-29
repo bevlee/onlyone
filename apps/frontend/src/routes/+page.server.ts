@@ -1,29 +1,66 @@
-// import { fail, redirect } from '@sveltejs/kit';
-// import { setHeaders } from '$lib/cookie.server';
-// import type { PageServerLoad, Actions } from './$types';
-// import { env } from '$env/dynamic/private';
-// import { superValidate } from 'sveltekit-superforms';
-// import { zod4 } from 'sveltekit-superforms/adapters';
-// import { z } from 'zod'; 
-// import { loginSchema, signupSchema } from '$lib/schema';
-// // Use absolute URL for server-side requests
-// const GAMESERVER_URL = env.GAMESERVER_URL || 'http://localhost:3000/gameserver';
+import { redirect } from '@sveltejs/kit';
+import { setHeaders } from '$lib/cookie.server';
+import type { PageServerLoad, Actions } from './$types';
+import { GAMESERVER_URL } from '$env/static/private';
 
-// export const load: PageServerLoad = async ({ locals, url }) => {
-//     // Extract returnTo from query params
-//     const returnTo = url.searchParams.get('returnTo');
 
-//     // Server-side auth check - redirect to lobby or returnTo if already authenticated
-//     if (locals.user) {
-//         throw redirect(303, returnTo || '/lobby');
-//     }
+import { fail, superValidate, setError } from 'sveltekit-superforms';
+import { zod4 } from 'sveltekit-superforms/adapters';
 
-//     // Pass returnTo to the page so client can use it after auth
-//     return {
-//     form: await superValidate(zod4(formSchema)),
-//         returnTo: returnTo || null  
-//     };
-// }
+// add your own schema path here
+import { loginSchema, signupSchema } from '$lib/schema';
+
+export const load: PageServerLoad = async () => {
+    return { 
+        loginForm: await superValidate(zod4(loginSchema)),
+        signupForm: await superValidate(zod4(signupSchema))
+    };
+};
+
+export const actions: Actions = {
+    login: async ({ request, cookies, url }) => {
+        const form = await superValidate(request, zod4(loginSchema));
+        console.log(form,'login form');
+        if (!form.valid) {
+            return fail(400, { form });
+        }
+        const {email, password} = form.data;
+
+        const returnTo = url.searchParams.get('returnTo');
+
+        try {
+            const response = await fetch(`${GAMESERVER_URL}/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                console.log(error)
+                return setError(form, 'email', `Login error. ${error}`);
+                
+            }
+
+
+            setHeaders(cookies, response.headers.getSetCookie());} catch (error) {
+            console.error('Login error:', error); 
+            return setError(form, 'email', 'Login error.');
+        }
+
+        return redirect(303, returnTo || '/lobby');
+    },
+    signup: async ({ request }) => {
+        const form = await superValidate(request, zod4(signupSchema));
+        console.log(form,'signup form');
+        if (!form.valid) {
+            return fail(400, { form });
+        }
+        const {username, email, password} = form.data;
+    }
+};
 
 
 // export const actions: Actions = {
@@ -50,45 +87,6 @@
 //             return { error: 'Network error. Please try again.' };
 //         }
 //         redirect(303, returnTo || '/lobby');
-//     },
-
-//     login: async ({ request, cookies }) => {
-//         const form = await superValidate(request, zod4(loginSchema));
-//         if (!form.valid) {
-//             return fail(400, { ...form, status: "failure" });
-//         }
-//         const data = await request.formData();
-//         const email = data.get('email')?.toString();
-//         const password = data.get('password')?.toString();
-//         const returnTo = data.get('returnTo')?.toString();
-
-//         if (!email || !password) {
-//             return { error: 'Email and password are required' };
-//         }
-
-//         try {
-//             const response = await fetch(`${GAMESERVER_URL}/auth/login`, {
-//                 method: 'POST',
-//                 headers: {
-//                     'Content-Type': 'application/json',
-//                 },
-//                 body: JSON.stringify({ email, password }),
-//             });
-
-//             if (!response.ok) {
-//                 const error = await response.json();
-//                 console.error('Login error:', error);
-//                 return { error: error.error || 'Login failed' };
-//             }
-
-
-//             setHeaders(cookies, response.headers.getSetCookie());} catch (error) {
-//             console.error('Login error:', error);
-//             return { error: 'Network error. Please try again.' };
-//         }
-        
-//         return redirect(303, returnTo || '/lobby');
-        
 //     },
 
 //     register: async ({ request, cookies }) => {
@@ -131,38 +129,3 @@
 //         redirect(303, returnTo || '/lobby');
 //     }
 // }
-
-import type { Actions } from '@sveltejs/kit';
-import type { PageServerLoad } from './$types';
-
-import { fail, message, superValidate } from 'sveltekit-superforms';
-import { zod4 } from 'sveltekit-superforms/adapters';
-
-// add your own schema path here
-import { loginSchema, signupSchema } from '$lib/schema';
-
-export const load: PageServerLoad = async () => {
-    return { 
-        loginForm: await superValidate(zod4(loginSchema)),
-        signupForm: await superValidate(zod4(signupSchema))
-    };
-};
-
-export const actions: Actions = {
-    login: async ({ request }) => {
-        const form = await superValidate(request, zod4(loginSchema));
-        console.log(form,'login form');
-        if (!form.valid) {
-            return fail(400, { form });
-        }
-        return message(form, 'Login Form Posted Successfully!');
-    },
-    signup: async ({ request }) => {
-        const form = await superValidate(request, zod4(signupSchema));
-        console.log(form,'signup form');
-        if (!form.valid) {
-            return fail(400, { form });
-        }
-        return message(form, 'Signup Form Posted Successfully!');
-    }
-};

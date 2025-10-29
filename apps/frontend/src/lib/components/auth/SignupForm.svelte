@@ -5,18 +5,27 @@
 	import { Field, Control, Label, Description, FieldErrors } from 'formsnap';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import Input from '$lib/components/ui/input/input.svelte';
-
 	let {
 		form
 	}: {
 		form: SuperForm<z.infer<typeof signupSchema>>;
 	} = $props();
 
-	let debounceTimeout: NodeJS.Timeout;
+	let debounceTimeout;
 	let checkingUsername = $state(false);
 	let usernameExists = $state<boolean | null>(null);
 	let { form: formData, errors, enhance, message } = form;
-
+	console.log('errors', $errors);
+	let isFormValid = $derived.by(() => {
+		return (
+			!checkingUsername &&
+			$formData.username &&
+			$formData.email &&
+			$formData.password &&
+			usernameExists === false &&
+			$formData.password.length >= 6
+		);
+	});
 	const checkUsernameAvailability = (username: string): void => {
 		checkingUsername = true;
 		// Simulate an API call to check username availability
@@ -24,7 +33,6 @@
 
 		if (!username) {
 			usernameExists = null;
-			errors.username = 'Username must not be empty';
 			return;
 		}
 
@@ -32,20 +40,18 @@
 			try {
 				const res = await fetch(`http://localhost:3000/gameserver/auth/usernameExists/${username}`);
 				const data = await res.json();
-				console.log('Username exists check:', data);
+
 				if (data.usernameExists) {
 					usernameExists = data.usernameExists;
-					errors.username = 'Username must not be unique';
+					console.log(form);
 				} else {
 					usernameExists = false;
 				}
-				checkingUsername = false;
 			} catch (error) {
 				console.error('Error checking username availability:', error);
-				errors.username = 'Username must not be unique';
-				checkingUsername = false;
 			}
 		}, 500);
+		checkingUsername = false;
 	};
 </script>
 
@@ -79,7 +85,7 @@
 							>{`The username ${$formData.username} is not available`}</span
 						>
 					{:else}
-						<span class="text-sm text-emerald-400"
+						<span class="text-sm text-emerald-700"
 							>{`The username ${$formData.username} is available`}</span
 						>
 					{/if}
@@ -126,6 +132,6 @@
 	</div>
 
 	<div>
-		<Button size="sm" type="submit">Submit</Button>
+		<Button size="sm" type="submit" disabled={!isFormValid}>Submit</Button>
 	</div>
 </form>

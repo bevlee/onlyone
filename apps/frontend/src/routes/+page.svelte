@@ -10,6 +10,12 @@
 	import SuperDebug from 'sveltekit-superforms/SuperDebug.svelte';
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
 
+	const AUTH_TAB = {
+		SIGNUP: 'signup',
+		LOGIN: 'login'
+	};
+	let selectedTab = $state(AUTH_TAB.LOGIN);
+
 	let {
 		data
 	}: {
@@ -41,8 +47,8 @@
 	</p>
 </div>
 <hr />
-<div class="flex flex-col items-center justify-center pt-5">
-	<Tabs.Root value="login" class="w-full">
+<div class="flex flex-col items-center justify-center pb-10 pt-5">
+	<Tabs.Root class="w-full" bind:value={selectedTab}>
 		<Tabs.List class="mb-4">
 			<Tabs.Trigger value="login" class="px-4 py-2">Login</Tabs.Trigger>
 			<Tabs.Trigger value="signup" class="px-4 py-2">Sign Up</Tabs.Trigger>
@@ -55,5 +61,7 @@
 		</Tabs.Content>
 	</Tabs.Root>
 </div>
-<SuperDebug data={loginForm.form} />
-<SuperDebug data={signupForm.form} />
+
+<hr />
+<SuperDebug label="LOGIN" data={loginForm.form} display={selectedTab === AUTH_TAB.LOGIN} />
+<SuperDebug label="SIGNUP" data={signupForm.form} display={selectedTab === AUTH_TAB.SIGNUP} />
