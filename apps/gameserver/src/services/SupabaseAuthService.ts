@@ -1,5 +1,5 @@
 import { supabaseAuth, supabase } from '../config/supabase.js';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+import { User as SupabaseUser, AuthApiError } from '@supabase/supabase-js';
 import { uniqueNamesGenerator, adjectives, animals } from 'unique-names-generator';
 import { decodeJwt } from 'jose';
 import { logger } from '../config/logger.js';
@@ -49,7 +49,7 @@ export class SupabaseAuthService {
     });
 
     if (error) {
-      throw new Error(mapSupabaseErrorToPayload(error.message).message);
+      throw new Error(mapSupabaseErrorToPayload(error as AuthApiError).message);
     }
 
     if (!data.user || !data.session) {
@@ -71,7 +71,7 @@ export class SupabaseAuthService {
     });
 
     if (error) {
-      throw new Error(mapSupabaseErrorToPayload(error.message).message);
+      throw new Error(mapSupabaseErrorToPayload(error as AuthApiError).message);
     }
 
     if (!data.user || !data.session) {
@@ -173,7 +173,7 @@ export class SupabaseAuthService {
     });
 
     if (error) {
-      throw new Error(mapSupabaseErrorToPayload(error.message).message);
+      throw new Error(mapSupabaseErrorToPayload(error as AuthApiError).message);
     }
   }
 
@@ -187,7 +187,7 @@ export class SupabaseAuthService {
     });
 
     if (error) {
-      throw new Error(mapSupabaseErrorToPayload(error.message).message);
+      throw new Error(mapSupabaseErrorToPayload(error as AuthApiError).message);
     }
 
     return { url: data.url };
@@ -236,7 +236,7 @@ export class SupabaseAuthService {
     });
 
     if (error) {
-      throw new Error(mapSupabaseErrorToPayload(error.message).message);
+      throw new Error(mapSupabaseErrorToPayload(error as AuthApiError).message);
     }
 
     if (!data.user || !data.session) {
@@ -262,7 +262,7 @@ export class SupabaseAuthService {
     });
 
     if (updateError) {
-      throw new Error(mapSupabaseErrorToPayload(updateError.message).message);
+      throw new Error(mapSupabaseErrorToPayload(updateError as AuthApiError).message);
     }
 
     if (!updateData.user) {
@@ -285,31 +285,35 @@ export class SupabaseAuthService {
 }
 
 
-function mapSupabaseErrorToPayload(raw: any): SupabaseAuthErrorPayload {
-  const msg = (raw?.message || '').toLowerCase();
-  const status = raw?.status;
+function mapSupabaseErrorToPayload(error: AuthApiError): SupabaseAuthErrorPayload {
+  const code = error.code?.toLowerCase();
+  const status = error.status;
 
-  if (msg.includes('invalid email') || msg.includes('invalid_email')) {
+  logger.error({ code, status, message: error.message }, 'Auth error');
+  if (code === 'invalid_credentials') {
+      return { code: SupabaseAuthErrorCode.InvalidEmail, messageKey: 'auth.invalid_credentials', message: 'Your email address or password is incorrect.', status: 400 };
+    }
+  if (code === 'invalid_email') {
     return { code: SupabaseAuthErrorCode.InvalidEmail, messageKey: 'auth.invalid_email', message: 'Please enter a valid email address.', status: 400, meta: { field: 'email' } };
   }
-  if (msg.includes('password') || msg.includes('invalid_password')) {
+  if (code === 'invalid_password') {
     return { code: SupabaseAuthErrorCode.InvalidPassword, messageKey: 'auth.invalid_password', message: 'Password does not meet requirements.', status: 400, meta: { field: 'password' } };
   }
-  if (msg.includes('already registered') || msg.includes('duplicate') || msg.includes('user_already_registered')) {
+  if (code === 'user_already_registered') {
     return { code: SupabaseAuthErrorCode.EmailAlreadyExists, messageKey: 'auth.email_exists', message: 'This email is already registered. Try signing in or reset your password.', status: 409 };
   }
-  if (msg.includes('email not confirmed') || msg.includes('confirm')) {
+  if (code === 'email_not_confirmed') {
     return { code: SupabaseAuthErrorCode.EmailNotConfirmed, messageKey: 'auth.email_not_confirmed', message: 'Please confirm your email address. Check your inbox.', status: 403 };
   }
-  if (status === 429 || msg.includes('rate')) {
-    return { code: SupabaseAuthErrorCode.RateLimited, messageKey: 'auth.rate_limited', message: 'Too many attempts. Please wait and try again.', status: 429, meta: { retryAfterSecs: raw?.retry_after } };
+  if (status === 429 || code?.includes('rate')) {
+    return { code: SupabaseAuthErrorCode.RateLimited, messageKey: 'auth.rate_limited', message: 'Too many attempts. Please wait and try again.', status: 429, meta: { retryAfterSecs: (error as any)?.retry_after } };
   }
-  if (msg.includes('smtp') || msg.includes('email_send')) {
+  if (code?.includes('email_send')) {
     return { code: SupabaseAuthErrorCode.EmailSendFailed, messageKey: 'auth.email_send_failed', message: 'Failed to send verification email. Try again later.', status: 502 };
   }
-  if (status >= 500) {
+  if (status && status >= 500) {
     return { code: SupabaseAuthErrorCode.ServerError, messageKey: 'auth.server_error', message: 'Something went wrong. Please try again later.', status };
   }
 
-  return { code: SupabaseAuthErrorCode.Unknown, messageKey: 'auth.unknown', message: 'Unable to create account. Please try again.', status: status ?? 400 };
+  return { code: SupabaseAuthErrorCode.Unknown, messageKey: 'auth.unknown', message: 'An error occurred. Please try again later.', status: status ?? 400 };
 }
