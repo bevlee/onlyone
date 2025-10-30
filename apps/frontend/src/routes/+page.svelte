@@ -17,7 +17,8 @@
 	let selectedTab = $state(AUTH_TAB.LOGIN);
 
 	let {
-		data
+		data,
+		form
 	}: {
 		data: PageData;
 	} = $props();
@@ -33,7 +34,7 @@
 
 <div class="space-y-4">
 	<h2 class="text-xl font-semibold">Quick Play</h2>
-	<form method="POST" action="?/anonymous">
+	<form method="POST" action="?/signupAnonymous">
 		<Button
 			type="submit"
 			class="w-full bg-green-700 text-white hover:bg-green-800"
@@ -42,6 +43,9 @@
 			{isLoading ? 'Creating guest session...' : 'Play as Guest'}
 		</Button>
 	</form>
+	{#if form?.error}
+		<div class="error">{form.error}</div>
+	{/if}
 	<p class="text-muted-foreground pb-5 text-center text-sm">
 		We'll assign you a random name. Sign up to choose your own!
 	</p>

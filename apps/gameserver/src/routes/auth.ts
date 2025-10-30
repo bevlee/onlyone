@@ -80,7 +80,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.post('/anonymous', async (req, res) => {
+router.post('/signupAnonymous', async (req, res) => {
   try {
     const result = await authService.signInAnonymously();
 
