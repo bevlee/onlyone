@@ -5,19 +5,13 @@
 
 	interface Props {
 		roomName: string;
-		username?: string;
+		name?: string;
 		currentScene?: 'main' | 'endGame' | string;
 		onChangeName?: () => void;
 		onLeaveRoom?: () => void;
 	}
 
-	let {
-		roomName,
-		username = '',
-		currentScene = 'main',
-		onChangeName,
-		onLeaveRoom
-	}: Props = $props();
+	let { roomName, name = '', currentScene = 'main', onChangeName, onLeaveRoom }: Props = $props();
 
 	// Show change name option during main game or end game scenes
 	let showChangeName = $derived(currentScene === 'main' || currentScene === 'endGame');
@@ -33,12 +27,12 @@
 			</div>
 		</div>
 
-		{#if username}
+		{#if name}
 			<div class="bg-border h-4 w-px"></div>
 
 			<div class="flex items-center gap-2 text-sm">
 				<User class="text-muted-foreground h-4 w-4" />
-				<span class="font-medium">{username}</span>
+				<span class="font-medium">{name}</span>
 			</div>
 		{/if}
 	</div>

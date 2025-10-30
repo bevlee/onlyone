@@ -50,7 +50,7 @@
 	}
 </script>
 
-<RoomHeader {roomName} username={user?.profile?.name || 'Unknown'} onLeaveRoom={handleLeaveRoom} />
+<RoomHeader {roomName} name={user?.profile?.name || 'Unknown'} onLeaveRoom={handleLeaveRoom} />
 <div class="container mx-auto px-4 py-8">
 	{#if !websocketStore.state.room}
 		<div class="text-muted-foreground py-8 text-center">

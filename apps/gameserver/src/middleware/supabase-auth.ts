@@ -95,10 +95,10 @@ export class SupabaseAuthMiddleware {
 
           // Auto-create profile if user has session but no profile
           if (!userProfile) {
-            const userName = user.user_metadata?.name || undefined;
+            const name = user.user_metadata?.name || undefined;
             userProfile = await this.database.createUser(
               user.id,
-              userName || 'User',
+              name || 'User',
               user.email,
               req.isAnonymous
             );
@@ -154,10 +154,10 @@ export class SupabaseAuthMiddleware {
 
         // Auto-create profile if user has session but no profile
         if (!userProfile) {
-          const userName = user.user_metadata?.name || undefined;
+          const name = user.user_metadata?.name || undefined;
           userProfile = await this.database.createUser(
             user.id,
-            userName || 'User',
+            name || 'User',
             user.email,
             req.isAnonymous
           );

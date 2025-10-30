@@ -3,11 +3,9 @@ import { setHeaders } from '$lib/cookie.server';
 import type { PageServerLoad, Actions } from './$types';
 import { GAMESERVER_URL } from '$env/static/private';
 
-
 import { fail, superValidate, setError } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 
-// add your own schema path here
 import { loginSchema, signupSchema } from '$lib/schema';
 
 export const load: PageServerLoad = async () => {
@@ -39,27 +37,52 @@ export const actions: Actions = {
 
             if (!response.ok) {
                 const error = await response.json();
-                console.log(error)
                 setError(form, 'Invalid credentials', `${error.error}`);
                 return fail(400, { form });
             }
 
             setHeaders(cookies, response.headers.getSetCookie());
         } catch (error) {
-            console.error('Login error:', error);
             setError(form, 'Invalid credentials', `${error.error}`);
             return fail(400, { form });
         }
 
         return redirect(303, returnTo || '/lobby');
     },
-    signup: async ({ request }) => {
+    signup: async ({ request, url, cookies }) => {
         const form = await superValidate(request, zod4(signupSchema));
         console.log(form,'signup form');
         if (!form.valid) {
             return fail(400, { form });
         }
-        const {username, email, password} = form.data;
+        const {name, email, password} = form.data;
+
+        const returnTo = url.searchParams.get('returnTo');
+
+        try {
+            const response = await fetch(`${GAMESERVER_URL}/auth/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name, email, password }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                console.log(error)
+                setError(form, 'Error', `${error.error}`);
+                return fail(400, { form });
+            }
+
+            setHeaders(cookies, response.headers.getSetCookie());
+        } catch (error) {
+            console.error('Login error:', error);
+            setError(form, 'Error', `${error.error}`);
+            return fail(400, { form });
+        }
+
+        return redirect(303, returnTo || '/lobby');
     }
 };
 

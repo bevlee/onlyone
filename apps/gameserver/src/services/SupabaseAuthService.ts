@@ -22,7 +22,7 @@ export class SupabaseAuthService {
     }
   }
 
-  async usernameExists(name: string): Promise<boolean> {
+  async nameExists(name: string): Promise<boolean> {
     const { data: existingUser, error } = await supabase
       .from('users')
       .select('id')
@@ -291,7 +291,7 @@ function mapSupabaseErrorToPayload(error: AuthApiError): SupabaseAuthErrorPayloa
 
   logger.error({ code, status, message: error.message }, 'Auth error');
   if (code === 'invalid_credentials') {
-      return { code: SupabaseAuthErrorCode.InvalidEmail, messageKey: 'auth.invalid_credentials', message: 'Your email address or password is incorrect.', status: 400 };
+      return { code: SupabaseAuthErrorCode.InvalidCredentials, messageKey: 'auth.invalid_credentials', message: 'Your email address or password is invalid.', status: 400, meta: { field: 'email' } };
     }
   if (code === 'invalid_email') {
     return { code: SupabaseAuthErrorCode.InvalidEmail, messageKey: 'auth.invalid_email', message: 'Please enter a valid email address.', status: 400, meta: { field: 'email' } };
@@ -299,8 +299,8 @@ function mapSupabaseErrorToPayload(error: AuthApiError): SupabaseAuthErrorPayloa
   if (code === 'invalid_password') {
     return { code: SupabaseAuthErrorCode.InvalidPassword, messageKey: 'auth.invalid_password', message: 'Password does not meet requirements.', status: 400, meta: { field: 'password' } };
   }
-  if (code === 'user_already_registered') {
-    return { code: SupabaseAuthErrorCode.EmailAlreadyExists, messageKey: 'auth.email_exists', message: 'This email is already registered. Try signing in or reset your password.', status: 409 };
+  if (code === 'user_already_exists') {
+    return { code: SupabaseAuthErrorCode.UserAlreadyExists, messageKey: 'auth.user_already_exists', message: 'This email is already registered. Try signing in or reset your password.', status: 409 };
   }
   if (code === 'email_not_confirmed') {
     return { code: SupabaseAuthErrorCode.EmailNotConfirmed, messageKey: 'auth.email_not_confirmed', message: 'Please confirm your email address. Check your inbox.', status: 403 };

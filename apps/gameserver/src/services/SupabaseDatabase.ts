@@ -90,7 +90,7 @@ export class SupabaseDatabase {
 
   async createUser(authUserId: string, name: string, email?: string, isAnonymous: boolean = false): Promise<DbUser> {
     // Auto-generate guest name for anonymous users if no name provided
-    const userName = isAnonymous && !name
+    const displayName = isAnonymous && !name
       ? `Guest-${authUserId.slice(0, 8)}`
       : name;
 
@@ -98,7 +98,7 @@ export class SupabaseDatabase {
       .from('users')
       .insert({
         auth_user_id: authUserId,
-        name: userName,
+        name: displayName,
         email: email || null,
         avatar_url: null,
         games_played: 0,

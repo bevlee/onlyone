@@ -12,7 +12,7 @@ const authMiddleware = new SupabaseAuthMiddleware(authService, database);
 
 const router: IRouter = Router();
 
-router.get('/usernameExists/:name', async (req, res) => {
+router.get('/nameExists/:name', async (req, res) => {
   try {
     const { name } = req.params;
 
@@ -20,12 +20,12 @@ router.get('/usernameExists/:name', async (req, res) => {
       return res.status(400).json({ error: 'Name is required' });
     }
 
-    const result = await authService.usernameExists(name);
-    res.json({ usernameExists: result });
+    const result = await authService.nameExists(name);
+    res.json({ nameExists: result });
 
 
   } catch (error: any) {
-    logger.error('username check error:', error);
+    logger.error('name check error:', error);
     res.status(500).json({ error: error.message });
   }
 });

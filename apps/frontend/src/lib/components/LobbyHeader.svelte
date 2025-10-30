@@ -8,7 +8,7 @@
 	};
 
 	const { user }: Props = $props();
-	let username = $derived(user?.profile?.name);
+	let name = $derived(user?.profile?.name);
 	let menuOpen = $state(false);
 </script>
 
@@ -16,10 +16,10 @@
 	class="bg-background/95 supports-[backdrop-filter]:bg-background/60 flex items-center justify-between border-b p-4 backdrop-blur"
 >
 	<div class="flex items-center gap-4">
-		{#if username}
+		{#if name}
 			<div class="flex items-center gap-2 text-sm">
 				<User class="text-muted-foreground h-4 w-4" />
-				<span class="font-medium">{username}</span>
+				<span class="font-medium">{name}</span>
 			</div>
 		{/if}
 	</div>

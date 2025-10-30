@@ -1,8 +1,10 @@
 // stable, exported enum of error codes the frontend can act on
 export enum SupabaseAuthErrorCode {
+  InvalidCredentials = 'invalid_credentials',
   InvalidEmail = 'invalid_email',
   InvalidPassword = 'invalid_password',
   EmailAlreadyExists = 'email_already_exists',
+  UserAlreadyExists = 'user_already_exists',
   EmailNotConfirmed = 'email_not_confirmed',
   AccountDisabled = 'account_disabled',
   RateLimited = 'rate_limited',
