@@ -2,7 +2,7 @@
 	import type { SuperForm } from 'sveltekit-superforms';
 	import type { loginSchema } from '$lib/schema';
 	import type { z } from 'zod';
-	import { Field, Control, Label, FieldErrors } from 'formsnap';
+	import { Field, Control, Label } from 'formsnap';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import Input from '$lib/components/ui/input/input.svelte';
 
@@ -12,7 +12,8 @@
 		form: SuperForm<z.infer<typeof loginSchema>>;
 	} = $props();
 
-	let { form: formData, enhance, message } = form;
+	let { form: formData, enhance, message, allErrors } = form;
+	let isFormValid = $derived($formData.email && $formData.password);
 </script>
 
 {#if $message}
@@ -35,7 +36,6 @@
 					/>
 				{/snippet}
 			</Control>
-			<FieldErrors class="text-destructive text-sm" />
 		</Field>
 	</div>
 
@@ -52,11 +52,19 @@
 					/>
 				{/snippet}
 			</Control>
-			<FieldErrors class="text-destructive text-sm" />
 		</Field>
 	</div>
-
+	{#if $allErrors.length}
+		<ul class="text-destructive mb-4 text-sm">
+			{#each $allErrors as error (error.messages)}
+				<li>
+					<b>{error.path}:</b>
+					{error.messages.join('. ')}
+				</li>
+			{/each}
+		</ul>
+	{/if}
 	<div>
-		<Button size="sm" type="submit">Submit</Button>
+		<Button size="sm" type="submit" disabled={!isFormValid}>Submit</Button>
 	</div>
 </form>

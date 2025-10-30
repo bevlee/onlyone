@@ -40,14 +40,14 @@ export const actions: Actions = {
             if (!response.ok) {
                 const error = await response.json();
                 console.log(error)
-                setError(form, 'email', `Login error. ${error.error}`);
+                setError(form, 'Invalid credentials', `${error.error}`);
                 return fail(400, { form });
             }
 
             setHeaders(cookies, response.headers.getSetCookie());
         } catch (error) {
             console.error('Login error:', error);
-            setError(form, 'email', `Login error. ${error.error}`);
+            setError(form, 'Invalid credentials', `${error.error}`);
             return fail(400, { form });
         }
 
