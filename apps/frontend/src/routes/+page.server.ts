@@ -40,14 +40,15 @@ export const actions: Actions = {
             if (!response.ok) {
                 const error = await response.json();
                 console.log(error)
-                return setError(form, 'email', `Login error. ${error}`);
-                
+                setError(form, 'email', `Login error. ${error.error}`);
+                return fail(400, { form });
             }
 
-
-            setHeaders(cookies, response.headers.getSetCookie());} catch (error) {
-            console.error('Login error:', error); 
-            return setError(form, 'email', 'Login error.');
+            setHeaders(cookies, response.headers.getSetCookie());
+        } catch (error) {
+            console.error('Login error:', error);
+            setError(form, 'email', `Login error. ${error.error}`);
+            return fail(400, { form });
         }
 
         return redirect(303, returnTo || '/lobby');
