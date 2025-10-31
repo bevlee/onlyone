@@ -32,6 +32,10 @@ export class UserProfile {
     return this.user.email;
   }
 
+  get avatarUrl(): string | null | undefined {
+    return this.user.avatarUrl;
+  }
+
   get createdAt(): Date {
     return this.user.createdAt;
   }
@@ -96,6 +100,7 @@ export class UserProfile {
     return {
       id: this.user.id,
       name: this.user.name,
+      avatarUrl: this.user.avatarUrl,
       createdAt: this.user.createdAt,
       isOnline: this.user.isOnline(),
       stats: this.getStatsJSON(),
@@ -110,6 +115,7 @@ export class UserProfile {
     return {
       id: this.user.id,
       name: this.user.name,
+      avatarUrl: this.user.avatarUrl,
       gamesPlayed: this.gamesPlayed,
       gamesWon: this.gamesWon,
       winRate: this.getWinRate(),

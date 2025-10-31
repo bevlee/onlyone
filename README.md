@@ -12,8 +12,9 @@ Note: This is a multiplayer game - you'll need multiple players to enjoy the ful
 
 ## Architecture
 
-- **Frontend**: Svelte application with Socket.IO client
+- **Frontend**: Svelte application with Socket.IO client and SSR
 - **Backend**: Node.js gameserver with modular architecture
+- **Authentication**: Server-side Supabase auth with httpOnly cookies
 - **Proxy**: Nginx reverse proxy for routing and static files
 - **Deployment**: Docker Compose orchestration
 
@@ -26,6 +27,24 @@ The gameserver has a modular architecture:
 - **GameLoop**: Main game phases (difficulty, clue, voting, guessing)
 - **Handlers**: Socket event handlers for game actions and chat
 - **Utils**: Shared utilities and word operations
+- **Authentication Middleware**: Server-side auth with automatic token refresh
+
+### Authentication
+
+Authentication is handled entirely server-side using Supabase:
+
+- **HttpOnly Cookies**: Access and refresh tokens stored securely
+- **No Client-Side Checks**: Frontend never touches auth tokens
+- **Automatic Refresh**: Gameserver middleware handles token refresh transparently
+- **SSR Integration**: SvelteKit hooks fetch user session from gameserver
+- **Session Persistence**: Refresh tokens valid for 7 days
+
+**Authentication Flow:**
+1. User authenticates via gameserver endpoints (email/password, OAuth, or anonymous)
+2. Gameserver sets httpOnly cookies (`sb-access-token`, `sb-refresh-token`)
+3. Frontend SSR hook calls gameserver `/auth/me` on each page load
+4. Gameserver middleware validates tokens and auto-refreshes if needed
+5. User data attached to SvelteKit `event.locals` for server-side use
 
 ## Services
 

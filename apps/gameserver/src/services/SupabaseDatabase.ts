@@ -88,13 +88,19 @@ export class SupabaseDatabase {
     return data;
   }
 
-  async createUser(authUserId: string, name: string, email?: string): Promise<DbUser> {
+  async createUser(authUserId: string, name: string, email?: string, isAnonymous: boolean = false): Promise<DbUser> {
+    // Auto-generate guest name for anonymous users if no name provided
+    const displayName = isAnonymous && !name
+      ? `Guest-${authUserId.slice(0, 8)}`
+      : name;
+
     const { data, error } = await (supabase as any)
       .from('users')
       .insert({
         auth_user_id: authUserId,
-        name,
+        name: displayName,
         email: email || null,
+        avatar_url: null,
         games_played: 0,
         games_won: 0
       } as any)
@@ -120,6 +126,57 @@ export class SupabaseDatabase {
     if (error) {
       throw new Error(`Failed to update user stats: ${error.message}`);
     }
+  }
+
+  async updateUserEmail(userId: string, email: string): Promise<void> {
+    const { error } = await (supabase as any)
+      .from('users')
+      .update({
+        email
+      } as any)
+      .eq('id', userId);
+
+    if (error) {
+      throw new Error(`Failed to update user email: ${error.message}`);
+    }
+  }
+
+  async uploadAvatar(userId: string, file: Buffer, fileName: string): Promise<string> {
+    const filePath = `${userId}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file, {
+        contentType: 'image/*',
+        upsert: true
+      });
+
+    if (uploadError) {
+      throw new Error(`Failed to upload avatar: ${uploadError.message}`);
+    }
+
+    const { data } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    const avatarUrl = data.publicUrl;
+
+    // Update user record with avatar URL
+    const { error: updateError } = await (supabase as any)
+      .from('users')
+      .update({ avatar_url: avatarUrl } as any)
+      .eq('id', userId);
+
+    if (updateError) {
+      throw new Error(`Failed to update avatar URL: ${updateError.message}`);
+    }
+
+    return avatarUrl;
+  }
+
+  async getAvatarUrl(userId: string): Promise<string | null> {
+    const user = await this.getUserById(userId);
+    return user?.avatar_url || null;
   }
 
   // Auto-calculate and update user stats

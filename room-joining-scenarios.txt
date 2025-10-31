@@ -1,0 +1,107 @@
+# Room Joining Scenarios - OnlyOne Game
+
+## Scenario 1: First-time join from lobby (user clicks "Join" button)
+
+1. User clicks "Join" on a room in lobby
+2. Frontend calls `POST /gameserver/room/:roomName/join` via HTTP
+3. Backend checks if player already in room → **No**
+4. Backend adds player to room, emits `playerJoined` to others
+5. Returns `{ alreadyJoined: false, room: {...} }`
+6. Frontend navigates to `/room/:roomName`
+7. Load function runs:
+   - Auth check → ✓ (has cookie)
+   - Room status check → ✓ (can join, alreadyJoined: true)
+8. Page component mounts:
+   - Sees `data.alreadyJoined === true` → skips HTTP join
+   - Connects WebSocket directly
+9. Backend WebSocket handler:
+   - Finds existing player → ✓
+   - Updates socket ID for real-time updates
+   - Sends current room state
+
+## Scenario 2: Re-join from lobby (user already in room, clicks "Join" again)
+
+1. User clicks "Join" on same room
+2. Frontend calls `POST /gameserver/room/:roomName/join` via HTTP
+3. Backend checks if player already in room → **Yes**
+4. Returns `{ alreadyJoined: true, room: {...} }` immediately (idempotent)
+5. Frontend navigates to `/room/:roomName`
+6-9. Same as Scenario 1 steps 7-9
+
+## Scenario 3: Direct URL navigation (user not in room yet)
+
+1. User types `/room/cool-room` directly in browser or clicks shared link
+2. Load function runs:
+   - Auth check → ✓ (has cookie)
+   - Calls `GET /gameserver/room/:roomName/status`
+   - Backend checks: player not in room, room has space
+   - Returns `{ canJoin: true, alreadyJoined: false }`
+3. Page component mounts:
+   - Sees `data.alreadyJoined === false`
+   - Calls `POST /gameserver/room/:roomName/join` via HTTP
+   - Backend adds player to room
+4. After successful HTTP join:
+   - Connects WebSocket
+   - Backend finds player in room, updates socket ID
+   - Sends current room state
+
+## Scenario 4: Page refresh while in room
+
+1. User hits refresh in browser
+2. Load function runs:
+   - Auth check → ✓ (cookie still valid)
+   - Room status check → `{ canJoin: true, alreadyJoined: true }`
+3. Page component mounts:
+   - Sees `data.alreadyJoined === true` → skips HTTP join
+   - Connects WebSocket
+   - Backend finds player, updates socket ID
+   - Sends current room state
+
+## Scenario 5: Direct URL with no authentication
+
+1. Anonymous user clicks shared link `/room/cool-room`
+2. Load function runs:
+   - Auth check → ✗ (no cookie or invalid)
+   - Throws `redirect(303, '/?returnTo=/room/cool-room')`
+3. User lands on home page with return URL in query params
+4. User clicks "Play as Guest"
+5. Frontend creates anonymous account
+6. Redirects to `/room/cool-room` (from returnTo param)
+7. **Now follows Scenario 3** (direct navigation, not in room yet)
+
+## Scenario 6: Room full or doesn't exist
+
+1. User navigates to `/room/full-room`
+2. Load function runs:
+   - Auth check → ✓
+   - Room status returns `{ canJoin: false, reason: 'Room is full' }`
+   - Throws `redirect(303, '/lobby?error=Room is full')`
+3. User lands on lobby with error message displayed
+
+## Key Implementation Details
+
+### Load Function
+Location: apps/frontend/src/routes/room/[roomName]/+page.ts:4-31
+- Runs server-side before page renders
+- Fast validation and redirects
+- Returns `alreadyJoined` flag to page component
+
+### Idempotent Join
+Location: apps/gameserver/src/routes/room.ts:36-59
+- Safe to call multiple times
+- No duplicate player entries
+- Consistent response format
+
+### WebSocket Handler
+Location: apps/gameserver/src/handlers/socketHandlers.ts:36-46
+- Only accepts connections for players already in room via HTTP
+- Just updates socket ID for real-time sync
+- Rejects if player not in room
+
+## Architecture Decisions
+
+1. **HTTP-first for actions**: All room joining/leaving uses HTTP for immediate validation
+2. **WebSocket for updates**: Real-time state synchronization only
+3. **Idempotent design**: Safe to call join multiple times
+4. **Load function validation**: Pre-render checks for fast feedback and proper redirects
+5. **Return URLs**: Deep linking with auth flow for unauthenticated users

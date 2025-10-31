@@ -1,18 +1,17 @@
 import { browser } from '$app/environment';
 
-type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark';
 
 function createThemeStore() {
-  let theme = $state<Theme>('light');
-  let isDark = $derived(theme === 'dark');
 
-  // Initialize theme from localStorage, default to light
+  let theme = $state<Theme>('light');
+  
+  // Initialize from localStorage
   if (browser) {
     const stored = localStorage.getItem('onlyone-theme') as Theme;
     if (stored) {
       theme = stored;
     }
-    // Apply initial theme
     updateDocument(theme);
   }
 
@@ -32,7 +31,7 @@ function createThemeStore() {
     },
 
     get isDark() {
-      return isDark;
+      return theme === 'dark';
     },
 
     toggle() {
@@ -59,5 +58,5 @@ function createThemeStore() {
   };
 }
 
-export const themeStore = createThemeStore();
+export const theme = createThemeStore();
 export type { Theme };

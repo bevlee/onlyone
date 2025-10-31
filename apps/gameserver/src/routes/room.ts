@@ -1,27 +1,176 @@
 import { Router, type IRouter } from 'express';
+import { Server } from 'socket.io';
+import type {
+  ServerToClientEvents,
+  ClientToServerEvents
+} from '@onlyone/shared';
+import { RoomManager } from '../services/RoomManager.js';
+import { SupabaseAuthMiddleware } from '../middleware/supabase-auth.js';
+import { SupabaseAuthService } from '../services/SupabaseAuthService.js';
+import { SupabaseDatabase } from '../services/SupabaseDatabase.js';
 
-const router: IRouter = Router();
+// Initialize auth services
+const authService = new SupabaseAuthService();
+const database = new SupabaseDatabase();
+const authMiddleware = new SupabaseAuthMiddleware(authService, database);
 
-// Join a room (requires authentication)
-router.post('/join', (req, res) => {
+// Create router factory function that accepts shared RoomManager and Socket.IO server
+export function createRoomRouter(
+  roomManager: RoomManager,
+  io?: Server<ClientToServerEvents, ServerToClientEvents>
+): IRouter {
+  const router: IRouter = Router();
+
+// Create a new room (requires authentication)
+router.post('/', authMiddleware.requireAuth(), (req, res) => {
   const { roomName } = req.body;
 
-  if (!roomName) {
-    return res.status(400).json({ error: 'Room ID is required' });
+  if (!req.user || !req.userProfile) {
+    return res.status(401).json({ error: 'Authentication required' });
   }
 
-  // TODO: Implement authentication check
-  // TODO: Implement actual room joining logic
-  // TODO: Check if room exists and has space
-  // TODO: Update user's current room status
+  if (!roomName || roomName.trim().length === 0) {
+    return res.status(400).json({ error: 'Room name is required' });
+  }
 
-  res.json({
-    message: 'Successfully joined room',
-    roomName,
-    playerId: 'current-user-id', // TODO: Get from auth middleware
-    playerCount: 3,
-    maxPlayers: 12
-  });
+  if (roomName.length > 50) {
+    return res.status(400).json({ error: 'Room name must be 50 characters or less' });
+  }
+
+  try {
+    const room = roomManager.createRoom(roomName.trim());
+    res.status(201).json({
+      message: 'Room created successfully',
+      room: {
+        roomName,
+        playerCount: room.players.length,
+        maxPlayers: room.settings.maxPlayers,
+        roomLeader: room.roomLeader
+      }
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Failed to create room' });
+    }
+  }
+});
+
+// Check room access (requires authentication)
+router.get('/:roomName/status', authMiddleware.requireAuth(), (req, res) => {
+  const { roomName } = req.params;
+
+  if (!req.user || !req.userProfile) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  try {
+    const room = roomManager.getRoom(roomName);
+
+    // Check if player is already in room
+    const alreadyJoined = room.players.some(p => p.id === req.user!.id);
+
+    // Check if room is full
+    const isFull = room.players.length >= room.settings.maxPlayers;
+
+    res.json({
+      canJoin: alreadyJoined || !isFull,
+      alreadyJoined,
+      isFull,
+      reason: isFull && !alreadyJoined ? 'Room is full' : null,
+      room: {
+        roomName,
+        playerCount: room.players.length,
+        maxPlayers: room.settings.maxPlayers,
+        status: room.status
+      }
+    });
+  } catch (error) {
+    // Room doesn't exist
+    res.status(404).json({
+      canJoin: false,
+      alreadyJoined: false,
+      isFull: false,
+      reason: 'Room not found',
+      room: null
+    });
+  }
+});
+
+// Join a room (requires authentication) - idempotent
+router.post('/:roomName/join', authMiddleware.requireAuth(), (req, res) => {
+  const { roomName } = req.params;
+
+  if (!req.user || !req.userProfile) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  try {
+    const room = roomManager.getRoom(roomName);
+
+    // Check if player is already in room
+    const existingPlayer = room.players.find(p => p.id === req.user!.id);
+
+    if (existingPlayer) {
+      // Already joined - return success anyway (idempotent)
+      return res.json({
+        message: 'Already in room',
+        alreadyJoined: true,
+        room: {
+          roomName,
+          playerCount: room.players.length,
+          maxPlayers: room.settings.maxPlayers,
+          roomLeader: room.roomLeader
+        },
+        player: {
+          id: existingPlayer.id,
+          name: existingPlayer.name,
+        }
+      });
+    }
+
+    // Use session-based player identification
+    const player = {
+      id: req.user.id,
+      name: req.userProfile.name,
+      socketId: undefined
+    };
+
+    const updatedRoom = roomManager.joinRoom(roomName, player);
+
+    // Broadcast room state to all connected players via WebSocket
+    if (io) {
+      io.to(roomName).emit('playerJoined', {
+        player: {
+          id: player.id,
+          name: player.name
+        },
+        room: updatedRoom
+      });
+    }
+
+    res.json({
+      message: 'Successfully joined room',
+      alreadyJoined: false,
+      room: {
+        roomName,
+        playerCount: updatedRoom.players.length,
+        maxPlayers: updatedRoom.settings.maxPlayers,
+        roomLeader: updatedRoom.roomLeader
+      },
+      player: {
+        id: player.id,
+        name: player.name,
+      }
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Failed to join room' });
+    }
+  }
 });
 
 // Leave current room (requires authentication)
@@ -89,21 +238,66 @@ router.get('/players', (req, res) => {
 
 
 // Kick a player from room (requires authentication, being in room, and being room owner)
-router.post('/kick/:playerId', (req, res) => {
-  const { playerId } = req.params;
-  const { reason = 'No reason provided' } = req.body;
+router.post('/:roomName/kick/:playerId', authMiddleware.requireAuth(), (req, res) => {
+  const { roomName, playerId } = req.params;
 
-  // TODO: Implement authentication check
-  // TODO: Verify user is room owner
-  // TODO: Verify target player is in same room
-  // TODO: Remove player from room
-  // TODO: Notify kicked player and remaining players
+  if (!req.user || !req.userProfile) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
 
-  res.json({
-    message: `Player ${playerId} has been kicked from the room`,
-    kickedPlayerId: playerId,
-    reason
-  });
+  try {
+    const room = roomManager.getRoom(roomName);
+
+    // Check if current user is the room leader
+    if (room.roomLeader !== req.user.id) {
+      return res.status(403).json({ error: 'Only room leader can kick players' });
+    }
+
+    // Check if target player is in the room
+    const targetPlayer = room.players.find(p => p.id === playerId);
+    if (!targetPlayer) {
+      return res.status(404).json({ error: 'Player not found in room' });
+    }
+
+    // Cannot kick yourself
+    if (playerId === req.user.id) {
+      return res.status(400).json({ error: 'Cannot kick yourself. Use leave instead.' });
+    }
+
+    // Remove player from room
+    roomManager.removePlayerFromRoom(roomName, playerId);
+
+    // Get updated room state
+    const updatedRoom = roomManager.getRoom(roomName);
+
+    if (io) {
+      // Notify all players in the room (including the kicked player)
+      io.to(roomName).emit('playerKicked', {
+        playerId,
+        playerName: targetPlayer.name,
+        kickedBy: req.userProfile.name,
+        message: `Player ${targetPlayer.name} has been kicked from the room`,
+        room: updatedRoom
+      });
+    }
+
+    res.json({
+      message: `Player ${targetPlayer.name} has been kicked from the room`,
+      kickedPlayerId: playerId,
+      room: {
+        roomName,
+        playerCount: updatedRoom.players.length,
+        maxPlayers: updatedRoom.settings.maxPlayers,
+        roomLeader: updatedRoom.roomLeader
+      }
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Failed to kick player' });
+    }
+  }
 });
 
 // Invite player to room (requires authentication and being in a room)
@@ -168,4 +362,9 @@ router.post('/stop', (req, res) => {
   });
 });
 
-export default router;
+  return router;
+}
+
+// Default export for backward compatibility (creates its own instance)
+const defaultRoomManager = new RoomManager();
+export default createRoomRouter(defaultRoomManager);

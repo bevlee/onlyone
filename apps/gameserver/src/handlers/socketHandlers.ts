@@ -1,11 +1,15 @@
 import { Server, Socket } from 'socket.io';
+import type {
+  ServerToClientEvents,
+  ClientToServerEvents
+} from '@onlyone/shared';
 import { RoomManager } from '../services/RoomManager.js';
 import { ConnectionManager } from '../services/ConnectionManager.js';
 import { logger } from '../config/logger.js';
 
 export function setupSocketHandlers(
-  io: Server,
-  socket: Socket,
+  io: Server<ClientToServerEvents, ServerToClientEvents>,
+  socket: Socket<ClientToServerEvents, ServerToClientEvents>,
   roomManager: RoomManager,
   connectionManager: ConnectionManager
 ) {
@@ -21,10 +25,28 @@ export function setupSocketHandlers(
   logger.info({ socketId: socket.id, roomName, playerName }, 'Player connecting via WebSocket');
 
   try {
-    // Get or verify room exists
-    const room = roomManager.getRoom(roomName);
+    // Get room (should already exist - player joined via HTTP)
+    let room;
+    try {
+      room = roomManager.getRoom(roomName);
+    } catch (error) {
+      // Room doesn't exist
+      socket.emit('error', { message: `Room "${roomName}" not found` });
+      socket.disconnect();
+      return;
+    }
 
-    // Update player's socket ID
+    // Check if player is in the room (should be - they joined via HTTP)
+    const existingPlayer = room.players.find(p => p.id === playerId);
+
+    if (!existingPlayer) {
+      // Player not in room - they should have joined via HTTP first
+      socket.emit('error', { message: 'Player not in room. Please join via HTTP first.' });
+      socket.disconnect();
+      return;
+    }
+
+    // Player is in room - update their socket ID for reconnection
     roomManager.updatePlayerSocket(roomName, playerId, socket.id);
 
     // Track connection
@@ -39,12 +61,6 @@ export function setupSocketHandlers(
 
     // Send current room state to connecting player
     socket.emit('roomState', room);
-
-    // Notify others in room
-    socket.to(roomName).emit('playerJoined', {
-      player: { id: playerId, name: playerName },
-      room
-    });
 
     // Chat message handler
     socket.on('chatMessage', (message: string) => {
@@ -65,7 +81,7 @@ export function setupSocketHandlers(
 
       if (connection) {
         // Remove player from room
-        const wasRemoved = roomManager.leaveRoom(roomName, playerId);
+        const wasRemoved = roomManager.removePlayerFromRoom(roomName, playerId);
 
         if (wasRemoved) {
           // Get updated room (might be deleted if empty)

@@ -5,23 +5,28 @@
 	import LobbyHeader from '$lib/components/LobbyHeader.svelte';
 	import CreateRoomForm from '$lib/components/CreateRoomForm.svelte';
 	import { gameServerAPI, type Room } from '$lib/api/gameserver.js';
-	import { userStore } from '$lib/stores/user.svelte.js';
+	import { replaceState } from '$app/navigation';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { toast } from '$lib/utils.js';
 
-	let rooms = $state<Room[]>([]);
-	let isLoading = $state(true);
-	let error = $state('');
+	let { data } = $props();
+
+	const { user, toastMessage, initialRooms } = data;
+
+	let rooms = $state<Room[]>(initialRooms || []);
+	let isLoading = $state(false);
 	let isCreating = $state(false);
 
 	// Load rooms on mount and set up periodic refresh
 	onMount(() => {
-		// Redirect to home if no display name is set
-		if (!userStore.state.displayName) {
-			goto('/');
-			return;
+		// Show toast if there's a message from redirect
+		if (toastMessage) {
+			toast.error(toastMessage);
+			// Clean URL by replacing current history entry
+			replaceState('', {});
 		}
 
-		loadRooms();
 		// Refresh rooms every 5 seconds
 		const interval = setInterval(loadRooms, 5000);
 		return () => clearInterval(interval);
@@ -31,38 +36,43 @@
 		const result = await gameServerAPI.getRooms();
 		if (result.success && result.data) {
 			rooms = result.data.rooms;
-			error = '';
 		} else {
-			error = result.error || 'Failed to load rooms';
+			toast.error(result.error || 'Failed to load rooms');
 		}
 		isLoading = false;
 	}
 
 	async function joinRoom(roomName: string) {
-		const playerName = userStore.state.displayName;
-		const result = await gameServerAPI.joinRoom(roomName, playerName);
+		// Join via HTTP, then navigate
+		const result = await gameServerAPI.joinRoom(roomName);
 
-		console.log(`going to ${roomName}`);
 		if (result.success) {
-			goto(`/room/${roomName}`);
+			goto(resolve(`/room/${roomName}`));
+			console.log('Joined room, navigating to /room/' + roomName);
 		} else {
-			error = result.error || 'Failed to join room';
+			console.error('Failed to join room:', result.error);
+			toast.error(result.error || 'Failed to join room');
 		}
 	}
 
 	async function handleCreateRoom(roomName: string) {
 		isCreating = true;
-		error = '';
 
-		const result = await gameServerAPI.createRoom(roomName);
+		const createResult = await gameServerAPI.createRoom(roomName);
 
-		console.log(`going to ${roomName}`);
-		if (result.success) {
-			// Navigate to the newly created room
-			goto(`/room/${roomName}`);
+		if (!createResult.success) {
+			toast.error(createResult.error || 'Failed to create room');
+			isCreating = false;
+			return;
+		}
+
+		// Automatically join the room we just created
+		const joinResult = await gameServerAPI.joinRoom(roomName);
+
+		if (joinResult.success) {
+			goto(resolve(`/room/${roomName}`));
 		} else {
-			console.log('failed to create room');
-			error = result.error || 'Failed to create room';
+			toast.error(joinResult.error || 'Failed to join room');
 			isCreating = false;
 		}
 	}
@@ -86,18 +96,11 @@
 	}
 </script>
 
-<LobbyHeader />
+<LobbyHeader {user} />
 <div class="container mx-auto px-4 py-8">
 	<div class="mx-auto max-w-2xl space-y-8">
 		<!-- Create New Room -->
 		<CreateRoomForm onCreateRoom={handleCreateRoom} disabled={isCreating} />
-
-		<!-- Error Display -->
-		{#if error}
-			<div class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-				{error}
-			</div>
-		{/if}
 
 		<!-- Active Rooms -->
 		<div class="space-y-4">
@@ -125,14 +128,7 @@
 						>
 							<div class="flex items-center justify-between">
 								<div class="flex-1">
-									<div class="flex items-center gap-2">
-										<span class="font-medium">{room.roomName}</span>
-										<span
-											class="bg-secondary text-secondary-foreground rounded-full px-2 py-1 text-xs"
-										>
-											{room.roomLeader}
-										</span>
-									</div>
+									<span class="font-medium">{room.roomName}</span>
 									<div class="text-sm {getStatusColor(room.status)} mt-1">
 										{getStatusText(room.status)}
 									</div>

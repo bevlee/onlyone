@@ -1,0 +1,346 @@
+═══════════════════════════════════════════════════════════════════════════════
+TOKEN REFRESH FLOW - OnlyOne Authentication
+═══════════════════════════════════════════════════════════════════════════════
+
+OVERVIEW
+--------
+Supabase JWT tokens expire after 1 hour. This document explains how the system
+automatically refreshes tokens before expiry to maintain seamless user sessions.
+
+KEY PRINCIPLE: Frontend schedules, gameserver executes
+- Frontend: Tracks expiry and sets proactive timer
+- Gameserver: Performs actual refresh with Supabase API
+
+
+═══════════════════════════════════════════════════════════════════════════════
+WHO TRACKS WHAT
+═══════════════════════════════════════════════════════════════════════════════
+
+1. SUPABASE JWT (The Source of Truth)
+   Location: Inside the access token itself
+   Contains: exp claim (Unix timestamp)
+   Example: exp: 1731262800 (expires at 11:00 AM)
+   Lifespan: 1 hour from issue
+
+2. GAMESERVER VALIDATION
+   File: apps/gameserver/src/services/SupabaseAuthService.ts:88-94
+
+   async getUserFromToken(token: string) {
+     const payload = decodeJwt(token);
+
+     // Check if expired
+     if (payload.exp && payload.exp * 1000 < Date.now()) {
+       return null;
+     }
+     // ... validate issuer and return user
+   }
+
+   Purpose: Validates token on every request, returns null if expired
+
+3. FRONTEND TRACKING (NEW)
+   File: apps/frontend/src/lib/stores/auth.svelte.ts
+   Stores: expiresAt timestamp from JWT
+   Purpose: Schedule proactive refresh before expiry
+
+
+═══════════════════════════════════════════════════════════════════════════════
+WHO CALLS FOR REFRESH
+═══════════════════════════════════════════════════════════════════════════════
+
+REACTIVE REFRESH (Current - Automatic)
+---------------------------------------
+File: apps/gameserver/src/middleware/supabase-auth.ts:79-93
+
+When: Request arrives with expired access token
+Flow:
+  1. Browser makes request → sends cookies (access + refresh tokens)
+  2. Middleware extracts access token (line 71-77)
+  3. getUserFromToken() validates → returns null if expired (line 76)
+  4. If null, middleware checks for refresh token (line 81)
+  5. Calls getOrRefreshSession() → hits Supabase API (line 84)
+  6. Gets new access + refresh tokens from Supabase
+  7. Sets new cookies in response (line 89)
+  8. Request continues with fresh session
+
+PROACTIVE REFRESH (New - Scheduled)
+------------------------------------
+File: apps/frontend/src/routes/+layout.svelte
+
+When: Timer fires 5 minutes before token expiry
+Flow:
+  1. $effect reads expiresAt from data
+  2. Calculates: timeUntilRefresh = expiresAt - now - 5min
+  3. Sets setTimeout for that duration
+  4. When timer fires:
+     - Calls gameServerAPI.getMe() (triggers middleware refresh)
+     - Calls invalidateAll() (updates SvelteKit data)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+COMPLETE FLOW AFTER IMPLEMENTATION
+═══════════════════════════════════════════════════════════════════════════════
+
+INITIAL LOGIN (10:00 AM)
+------------------------
+┌─────────────┐
+│   Browser   │ 1. User logs in
+│  (Frontend) │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────────┐
+│   Gameserver        │ 2. Creates Supabase session
+│   /auth/login       │    - access_token (expires 11:00 AM)
+└──────┬──────────────┘   - refresh_token (expires 1 year)
+       │                   - Sets httpOnly cookies
+       │
+       ▼
+┌─────────────┐
+│   Browser   │ 3. Navigates to /lobby
+│             │    Calls /auth/me
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────────┐
+│   Gameserver        │ 4. Returns:
+│   /auth/me          │    { user, profile, expiresAt: 1731262800 }
+└──────┬──────────────┘
+       │
+       ▼
+┌─────────────┐
+│ +layout.ts  │ 5. Passes data to Svelte
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────┐
+│ +layout.svelte  │ 6. $effect sees expiresAt: 1731262800 (11:00 AM)
+│                 │    Current time: 10:00 AM
+└──────┬──────────┘   Schedules timer for: 10:55 AM (5min buffer)
+       │
+       │
+       ... user browses around, plays games ...
+       ... 55 minutes pass ...
+       │
+       │
+PROACTIVE REFRESH (10:55 AM)
+----------------------------
+       │
+       │ ⏰ Timer fires at 10:55 AM
+       │
+       ▼
+┌─────────────────┐
+│ gameServerAPI   │ 7. Calls /auth/me
+│ .getMe()        │
+└──────┬──────────┘
+       │
+       ▼
+┌─────────────────────┐
+│   Gameserver        │ 8. Middleware checks token
+│   Middleware        │    - Decodes JWT, sees exp: 1731262800
+└──────┬──────────────┘   - Still valid (11:00 AM > 10:55 AM now)
+       │                   - Returns user data
+       │
+       ▼
+┌─────────────┐
+│   Browser   │ 9. Receives response
+│             │    Sets new timer for next refresh
+└─────────────┘
+
+
+TOKEN EXPIRED SCENARIO (11:05 AM - User Idle)
+----------------------------------------------
+       │
+       │ User was inactive, no proactive refresh happened
+       │ Token expired at 11:00 AM
+       │ User clicks "Join Room" at 11:05 AM
+       │
+       ▼
+┌─────────────────┐
+│ gameServerAPI   │ 1. POST /room/test-room/join
+│ .joinRoom()     │    Sends cookies (expired access token + refresh token)
+└──────┬──────────┘
+       │
+       ▼
+┌─────────────────────┐
+│   Gameserver        │ 2. Middleware extracts access token
+│   Middleware        │    Calls getUserFromToken()
+└──────┬──────────────┘   Returns null (expired)
+       │
+       │ 3. Middleware sees refresh token in cookies
+       │    Calls getOrRefreshSession(refreshToken)
+       │
+       ▼
+┌─────────────────────┐
+│   Supabase API      │ 4. POST /auth/v1/token?grant_type=refresh_token
+│                     │    Returns new tokens:
+└──────┬──────────────┘   - access_token (expires 12:05 PM)
+       │                   - refresh_token (new one-time token)
+       │
+       ▼
+┌─────────────────────┐
+│   Gameserver        │ 5. Sets new cookies in response
+│   Middleware        │    sb-access-token: new_token
+└──────┬──────────────┘   sb-refresh-token: new_refresh_token
+       │
+       │ 6. Request continues with req.user populated
+       │    Joins room successfully
+       │
+       ▼
+┌─────────────┐
+│   Browser   │ 7. Response received with new cookies
+│             │    User joined room
+└──────┬──────┘   (But SvelteKit data still stale!)
+       │
+       │ 8. Next navigation or invalidateAll()
+       │    will update SvelteKit with new user data
+       │
+       ▼
+
+
+═══════════════════════════════════════════════════════════════════════════════
+IMPLEMENTATION COMPONENTS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. GAMESERVER: Return Expiry
+   File: apps/gameserver/src/routes/auth.ts
+   Change: Add expiresAt to /auth/me response
+
+   router.get('/me', authMiddleware.optionalAuth(), async (req, res) => {
+     const token = extractToken(req);
+     const payload = decodeJwt(token);
+
+     res.json({
+       user: req.user,
+       profile: req.userProfile,
+       isAnonymous: req.isAnonymous || false,
+       expiresAt: payload.exp  // <-- ADD THIS
+     });
+   });
+
+2. FRONTEND: Auth Store
+   File: apps/frontend/src/lib/stores/auth.svelte.ts
+   Purpose: Track token expiry
+
+   let expiresAt = $state<number | null>(null);
+
+   function updateExpiry(exp: number) {
+     expiresAt = exp * 1000; // Convert to milliseconds
+   }
+
+3. FRONTEND: Layout Data
+   File: apps/frontend/src/routes/+layout.ts
+   Change: Pass expiresAt to client
+
+   export async function load() {
+     const result = await gameServerAPI.getMe();
+     return {
+       user: result.data,
+       expiresAt: result.data?.expiresAt  // <-- ADD THIS
+     };
+   }
+
+4. FRONTEND: Refresh Timer
+   File: apps/frontend/src/routes/+layout.svelte
+   Purpose: Schedule proactive refresh
+
+   $effect(() => {
+     const exp = data.expiresAt;
+     if (!exp) return;
+
+     const timeUntilRefresh = (exp * 1000) - Date.now() - (5 * 60 * 1000);
+
+     if (timeUntilRefresh > 0) {
+       const timer = setTimeout(async () => {
+         await gameServerAPI.getMe();
+         invalidateAll();
+       }, timeUntilRefresh);
+
+       return () => clearTimeout(timer);
+     }
+   });
+
+
+═══════════════════════════════════════════════════════════════════════════════
+SECURITY NOTES
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ Tokens stored in httpOnly cookies (not accessible to JavaScript)
+✅ Refresh token is one-time use (Supabase issues new one each refresh)
+✅ Token validation happens server-side (JWT signature verified)
+✅ HTTPS required in production (cookies have secure flag)
+✅ Refresh token expiry set to 1 year (configurable in Supabase)
+
+⚠️  Refresh token reuse is prevented by:
+    - Middleware deduplication (supabase-auth.ts:48-65)
+    - Map of in-flight refresh promises
+    - Concurrent requests wait for same refresh
+
+
+═══════════════════════════════════════════════════════════════════════════════
+TESTING SCENARIOS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. NORMAL FLOW
+   - Login at 10:00 AM
+   - Timer should fire at 10:55 AM
+   - Token refreshed automatically
+   - No interruption to user
+
+2. IDLE USER
+   - Login at 10:00 AM
+   - User leaves tab open, no activity
+   - Token expires at 11:00 AM
+   - User returns at 11:30 AM, clicks button
+   - Middleware catches expired token, refreshes transparently
+   - Request succeeds
+
+3. PAGE REFRESH
+   - User manually refreshes page
+   - +layout.ts runs, calls /auth/me
+   - Gets current expiresAt
+   - Timer re-schedules correctly
+
+4. LOGOUT
+   - User logs out
+   - Timer cleared (cleanup function)
+   - No refresh attempts for logged-out user
+
+5. MULTIPLE TABS
+   - User has 2 tabs open
+   - Both tabs refresh independently
+   - Middleware deduplication prevents concurrent Supabase calls
+   - One tab's refresh updates cookies for both tabs
+
+
+═══════════════════════════════════════════════════════════════════════════════
+TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════════════════
+
+Issue: User gets logged out after 1 hour
+Fix: Check that refresh token is being sent in cookies
+     Check middleware is calling getOrRefreshSession()
+
+Issue: Infinite refresh loop
+Fix: The $effect is protected from loops by:
+     1. Only re-runs when data.expiresAt changes (reactive dependency)
+     2. Only calls invalidateAll() if expiresAt actually changed after refresh
+     3. Timer cleanup function clears old timer before $effect re-runs
+     4. Won't schedule timer if less than 1min until refresh time
+
+     If you see a loop, check that:
+     - gameServerAPI.getMe() returns different expiresAt after refresh
+     - invalidateAll() conditional checks: result.data?.expiresAt !== oldExpiry
+     - Timer cleanup is running (check setTimeout is cleared)
+
+Issue: Token refreshes too frequently
+Fix: Verify timer calculation (should be expiresAt - 5min)
+     Check for multiple timers being created
+
+Issue: 401 errors after refresh
+Fix: Check that new cookies are being set in response
+     Verify cookies are being sent with credentials: 'include'
+
+Issue: Refresh fails with "invalid refresh token"
+Fix: Refresh token may have expired (1 year default)
+     User needs to re-login
+     Check Supabase dashboard for refresh token settings

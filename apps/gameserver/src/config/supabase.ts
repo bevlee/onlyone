@@ -10,6 +10,7 @@ export interface Database {
           auth_user_id: string;
           name: string;
           email: string | null;
+          avatar_url: string | null;
           created_at: string;
           games_played: number;
           games_won: number;
@@ -19,6 +20,7 @@ export interface Database {
           auth_user_id: string;
           name: string;
           email?: string | null;
+          avatar_url?: string | null;
           created_at?: string;
           games_played?: number;
           games_won?: number;
@@ -28,6 +30,7 @@ export interface Database {
           auth_user_id?: string;
           name?: string;
           email?: string | null;
+          avatar_url?: string | null;
           created_at?: string;
           games_played?: number;
           games_won?: number;

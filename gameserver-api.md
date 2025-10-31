@@ -2,7 +2,9 @@
 
 ## Base URL
 
-`http://localhost:3000` (default development)
+`http://localhost:3000/gameserver` (default development)
+
+**Note:** All endpoints are prefixed with `/gameserver` to prevent conflicts with frontend routes.
 
 ## Authentication
 
@@ -18,7 +20,7 @@ The API uses Supabase authentication with session cookies. Most endpoints suppor
 
 ## Authentication Endpoints
 
-### POST `/auth/register`
+### POST `/gameserver/auth/register`
 
 Register a new user account.
 
@@ -44,7 +46,7 @@ Register a new user account.
 
 ---
 
-### POST `/auth/login`
+### POST `/gameserver/auth/login`
 
 Login with email and password.
 
@@ -69,7 +71,7 @@ Login with email and password.
 
 ---
 
-### POST `/auth/logout`
+### POST `/gameserver/auth/logout`
 
 🔒 **Requires Authentication**
 
@@ -85,24 +87,77 @@ Logout current user and clear session.
 
 ---
 
-### GET `/auth/me`
+### POST `/gameserver/auth/anonymous`
 
-🔓 **Optional Authentication**
-
-Get current authenticated user info.
+Create an anonymous user account for guest play.
 
 **Response:**
 
 ```json
 {
   "user": "SupabaseUser",
-  "profile": "UserProfile"
+  "session": "SupabaseSession",
+  "isAnonymous": true
 }
 ```
 
 ---
 
-### POST `/auth/reset-password`
+### POST `/gameserver/auth/upgrade`
+
+🔒 **Requires Authentication** (must be anonymous user)
+
+Upgrade an anonymous account to a full account.
+
+**Body:**
+
+```json
+{
+  "name": "string",
+  "email": "string",
+  "password": "string"
+}
+```
+
+**Response:**
+
+```json
+{
+  "user": "SupabaseUser",
+  "profile": "UserProfile",
+  "message": "Account upgraded successfully"
+}
+```
+
+---
+
+### GET `/gameserver/auth/me`
+
+🔓 **Optional Authentication**
+
+Get current authenticated user info.
+
+**Response (authenticated):**
+
+```json
+{
+  "user": "SupabaseUser",
+  "profile": "UserProfile",
+  "isAnonymous": false
+}
+```
+
+**Response (not authenticated):**
+
+```json
+{
+  "error": "Not authenticated"
+}
+```
+
+---
+
+### POST `/gameserver/auth/reset-password`
 
 Send password reset email.
 
@@ -124,9 +179,34 @@ Send password reset email.
 
 ---
 
+### POST `/gameserver/auth/avatar`
+
+🔒 **Requires Authentication**
+
+Upload or update user avatar.
+
+**Body:**
+
+```json
+{
+  "avatar": "base64_encoded_image_or_url"
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "Avatar updated successfully",
+  "avatarUrl": "string"
+}
+```
+
+---
+
 ## Game API Endpoints
 
-### GET `/api/users/me/stats`
+### GET `/gameserver/api/users/me/stats`
 
 🔒 **Requires Authentication**
 
@@ -149,7 +229,7 @@ Get current user's game statistics.
 
 ---
 
-### GET `/api/users/me/games`
+### GET `/gameserver/api/users/me/games`
 
 🔒 **Requires Authentication**
 
@@ -178,7 +258,7 @@ Get current user's game history.
 
 ---
 
-### GET `/api/leaderboard`
+### GET `/gameserver/api/leaderboard`
 
 🔓 **Optional Authentication**
 
@@ -206,7 +286,7 @@ Get top players leaderboard.
 
 ## Lobby Endpoints
 
-### GET `/lobby/rooms`
+### GET `/gameserver/lobby/rooms`
 
 🌐 **Public**
 
@@ -231,9 +311,11 @@ Get list of all active game rooms.
 
 ---
 
-### POST `/lobby/rooms`
+## Room Management Endpoints
 
-🌐 **Public**
+### POST `/gameserver/room`
+
+🔒 **Requires Authentication**
 
 Create a new game room.
 
@@ -241,12 +323,7 @@ Create a new game room.
 
 ```json
 {
-  "roomName": "string",
-  "playerName": "string",
-  "settings": {
-    "maxPlayers": "number (optional, default: 12)",
-    "timeLimit": "number (optional, default: 30)"
-  }
+  "roomName": "string"
 }
 ```
 
@@ -260,39 +337,86 @@ Create a new game room.
     "playerCount": "number",
     "maxPlayers": "number",
     "roomLeader": "string"
-  },
-  "creator": {
-    "id": "string",
-    "name": "string"
   }
 }
 ```
 
 ---
 
-### POST `/lobby/rooms/:roomName`
+### GET `/gameserver/room/:roomName/status`
 
-🔓 **Optional Authentication**
+🔒 **Requires Authentication**
 
-Join a specific room from the lobby. Supports both authenticated and anonymous users.
+Check if the current user can join a specific room.
 
 **Path Parameters:**
 
-- `roomName`: ID of room to join
+- `roomName`: Name of the room to check
 
-**Body (for anonymous users):**
+**Response (can join):**
 
 ```json
 {
-  "playerName": "string"
+  "canJoin": true,
+  "alreadyJoined": false,
+  "isFull": false,
+  "reason": null,
+  "room": {
+    "roomName": "string",
+    "playerCount": "number",
+    "maxPlayers": "number",
+    "status": "waiting|playing|finished"
+  }
 }
 ```
 
-**Response:**
+**Response (room full):**
+
+```json
+{
+  "canJoin": false,
+  "alreadyJoined": false,
+  "isFull": true,
+  "reason": "Room is full",
+  "room": {
+    "roomName": "string",
+    "playerCount": "number",
+    "maxPlayers": "number",
+    "status": "waiting"
+  }
+}
+```
+
+**Response (room not found - 404):**
+
+```json
+{
+  "canJoin": false,
+  "alreadyJoined": false,
+  "isFull": false,
+  "reason": "Room not found",
+  "room": null
+}
+```
+
+---
+
+### POST `/gameserver/room/:roomName/join`
+
+🔒 **Requires Authentication**
+
+Join a specific room. This endpoint is **idempotent** - calling it multiple times has the same effect.
+
+**Path Parameters:**
+
+- `roomName`: Name of the room to join
+
+**Response (first join):**
 
 ```json
 {
   "message": "Successfully joined room",
+  "alreadyJoined": false,
   "room": {
     "roomName": "string",
     "playerCount": "number",
@@ -301,33 +425,41 @@ Join a specific room from the lobby. Supports both authenticated and anonymous u
   },
   "player": {
     "id": "string",
-    "name": "string",
-    "isAnonymous": "boolean"
+    "name": "string"
   }
 }
 ```
 
----
-
-## Room Management Endpoints
-
-### POST `/room/join`
-
-🔧 **TODO - Not Implemented**
-
-Join a room (legacy endpoint).
-
-**Body:**
+**Response (already joined):**
 
 ```json
 {
-  "roomName": "string"
+  "message": "Already in room",
+  "alreadyJoined": true,
+  "room": {
+    "roomName": "string",
+    "playerCount": "number",
+    "maxPlayers": "number",
+    "roomLeader": "string"
+  },
+  "player": {
+    "id": "string",
+    "name": "string"
+  }
+}
+```
+
+**Error Response (room full):**
+
+```json
+{
+  "error": "Room is full"
 }
 ```
 
 ---
 
-### POST `/room/leave`
+### POST `/gameserver/room/leave`
 
 🔧 **TODO - Not Implemented**
 
@@ -344,7 +476,7 @@ Leave current room.
 
 ---
 
-### GET `/room/status`
+### GET `/gameserver/room/status`
 
 🔧 **TODO - Not Implemented**
 
@@ -374,7 +506,7 @@ Get current room status and details.
 
 ---
 
-### GET `/room/players`
+### GET `/gameserver/room/players`
 
 🔧 **TODO - Not Implemented**
 
@@ -402,7 +534,7 @@ Get players in current room.
 
 ---
 
-### POST `/room/kick/:playerId`
+### POST `/gameserver/room/kick/:playerId`
 
 🔧 **TODO - Not Implemented**
 
@@ -432,7 +564,7 @@ Kick a player from room (room owner only).
 
 ---
 
-### POST `/room/invite`
+### POST `/gameserver/room/invite`
 
 🔧 **TODO - Not Implemented**
 
@@ -459,7 +591,7 @@ Invite a player to current room.
 
 ---
 
-### POST `/room/start`
+### POST `/gameserver/room/start`
 
 🔧 **TODO - Not Implemented**
 
@@ -482,7 +614,7 @@ Start game in current room (room owner only).
 
 ---
 
-### POST `/room/stop`
+### POST `/gameserver/room/stop`
 
 🔧 **TODO - Not Implemented**
 
@@ -514,20 +646,72 @@ Stop/end current game (room owner only).
 
 ## Health & Status
 
-### GET `/health`
+### GET `/gameserver/health`
 
 🌐 **Public**
 
-Health check endpoint.
+Health check endpoint for monitoring.
 
 **Response:**
 
 ```json
 {
   "status": "ok",
+  "service": "gameserver",
   "timestamp": "ISO8601"
 }
 ```
+
+---
+
+## WebSocket Connection
+
+### Socket.IO Endpoint
+
+**URL:** `ws://localhost:3000/gameserver/socket.io`
+
+**Authentication:** Pass credentials in handshake
+
+```javascript
+const socket = io('http://localhost:3000', {
+  path: '/gameserver/socket.io',
+  auth: { roomName, playerName, playerId },
+  withCredentials: true
+});
+```
+
+**Events:**
+
+- `connect`: Connection established
+- `disconnect`: Connection lost
+- `error`: Server error (room not found, player not in room, etc.)
+- `roomState`: Current room state sent to new connections
+- `playerJoined`: Broadcast when a player joins
+- `playerLeft`: Broadcast when a player leaves
+- `chatMessage`: Chat message sent/received
+
+**Client Events:**
+
+- `chatMessage`: Send a chat message
+- `startGame`: Request to start the game (room leader only)
+
+---
+
+## Architecture Notes
+
+### Room Joining Flow
+
+1. **HTTP Join First**: Players must join via `POST /gameserver/room/:roomName/join` before connecting WebSocket
+2. **WebSocket for Updates**: WebSocket is used only for real-time state synchronization
+3. **Idempotent Join**: Safe to call join endpoint multiple times
+4. **Load Function Validation**: Frontend uses load functions to check room access before rendering
+
+### Authentication Flow
+
+1. **Anonymous Users**: Can create temporary accounts via `/gameserver/auth/anonymous`
+2. **Account Upgrade**: Anonymous users can upgrade to full accounts
+3. **Session Cookies**: Authentication uses `sb-access-token` and `sb-refresh-token` cookies
+4. **Deep Linking**: Unauthenticated users are redirected with `returnTo` parameter
 
 ---
 
@@ -551,6 +735,14 @@ All endpoints may return these error formats:
 }
 ```
 
+**404 Not Found:**
+
+```json
+{
+  "error": "Resource not found"
+}
+```
+
 **500 Internal Server Error:**
 
 ```json
@@ -568,6 +760,10 @@ All endpoints may return these error formats:
 - **🌐 Public**: Endpoint is publicly accessible
 - **🔧 TODO**: Endpoint exists but implementation is incomplete
 
-Most room management endpoints (`/room/*`) are placeholder implementations and need to be completed. The primary functional endpoints are authentication (`/auth/*`), game API (`/api/*`), and lobby (`/lobby/*`) endpoints.
+The primary functional endpoints are:
+- Authentication (`/gameserver/auth/*`)
+- Game API (`/gameserver/api/*`)
+- Lobby (`/gameserver/lobby/*`)
+- Room Management (`/gameserver/room/*`) - partially implemented
 
-Real-time gameplay features would typically be handled via WebSocket connections, which are not yet implemented in this API.
+Real-time features are handled via WebSocket connections at `/gameserver/socket.io`.

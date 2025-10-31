@@ -3,13 +3,15 @@ import { SupabaseAuthService } from '../services/SupabaseAuthService.js';
 import { SupabaseDatabase } from '../services/SupabaseDatabase.js';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { DbUser } from '../services/SupabaseDatabase.js';
-
+import { logger } from '../config/logger.js';
+import { log } from 'console';
 // Extend Express Request to include user data
 declare global {
   namespace Express {
     interface Request {
       user?: SupabaseUser;
       userProfile?: DbUser;
+      isAnonymous?: boolean;
     }
   }
 }
@@ -17,19 +19,16 @@ declare global {
 export class SupabaseAuthMiddleware {
   private authService: SupabaseAuthService;
   private database: SupabaseDatabase;
+  private refreshPromises: Map<string, Promise<{session: any; user: SupabaseUser} | null>>;
 
   constructor(authService: SupabaseAuthService, database: SupabaseDatabase) {
     this.authService = authService;
     this.database = database;
+    this.refreshPromises = new Map();
   }
 
-  // Extract token from Authorization header or cookies
+  // Extract access token from cookies
   private extractToken(req: Request): string | null {
-    // Try Authorization header first
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      return authHeader.substring(7);
-    }
 
     // Try cookies
     const cookieToken = req.cookies?.['sb-access-token'];
@@ -40,26 +39,78 @@ export class SupabaseAuthMiddleware {
     return null;
   }
 
+  // Deduplicated refresh session - prevents concurrent refresh token reuse
+  private async getOrRefreshSession(refreshToken: string): Promise<{session: any; user: SupabaseUser} | null> {
+    // Check if refresh is already in progress for this token
+    const existingPromise = this.refreshPromises.get(refreshToken);
+    if (existingPromise) {
+      logger.info('Waiting for existing refresh to complete...');
+      return existingPromise;
+    }
+
+    // Start new refresh and store the promise
+    const refreshPromise = this.authService.refreshSession(refreshToken)
+      .finally(() => {
+        // Clean up after refresh completes (success or failure)
+        this.refreshPromises.delete(refreshToken);
+      });
+    this.refreshPromises.set(refreshToken, refreshPromise);
+    return refreshPromise;
+  }
+
   // Middleware for optional authentication
   optionalAuth() {
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
-        const token = this.extractToken(req);
+        let token = this.extractToken(req); //TODO: change to extractAccessToken
+        let user: any = null;
+        // Try to use access token first
         if (token) {
-          const user = await this.authService.getUserFromToken(token);
-          if (user) {
-            req.user = user;
+          user = await this.authService.getUserFromToken(token);
+        }
 
-            // Also get the user profile from our database
-            const userProfile = await this.database.getUserByAuthId(user.id);
-            if (userProfile) {
-              req.userProfile = userProfile;
+        // If no valid access token, try refresh token
+        if (!user) {
+          const refreshToken = req.cookies?.['sb-refresh-token'];
+          if (refreshToken) {
+            logger.info('No valid access token, attempting refresh...');
+            const refreshResult = await this.getOrRefreshSession(refreshToken);
+            logger.info(`Refresh result: ${JSON.stringify(refreshResult)}`);
+            if (refreshResult) {
+              user = refreshResult.user;
+              // Set new auth cookies with refreshed tokens
+              this.setAuthCookies(res, refreshResult.session);
+              logger.info({ userId: user.id }, 'Session refreshed successfully');
             }
           }
         }
+
+        if (user) {
+          logger.info(`User authenticated: ${user.id}`);
+          req.user = user;
+          req.isAnonymous = user.is_anonymous || false;
+
+          // Get or create user profile from our database
+          let userProfile = await this.database.getUserByAuthId(user.id);
+
+          // Auto-create profile if user has session but no profile
+          if (!userProfile) {
+            const name = user.user_metadata?.name || undefined;
+            userProfile = await this.database.createUser(
+              user.id,
+              name || 'User',
+              user.email,
+              req.isAnonymous
+            );
+          }
+
+          req.userProfile = userProfile;
+        } else {
+          logger.info('Continuing without authentication');
+        }
       } catch (error) {
         // Token invalid - continue without user
-        console.warn('Invalid token in optional auth:', error);
+        logger.warn(`Invalid token in optional auth: ${error}`);
       }
       next();
     };
@@ -69,27 +120,47 @@ export class SupabaseAuthMiddleware {
   requireAuth() {
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
-        const token = this.extractToken(req);
-        if (!token) {
-          res.status(401).json({ error: 'No authentication token provided' });
-          return;
+        let token = this.extractToken(req);
+        let user: any = null;
+
+        // Try to use access token first
+        if (token) {
+          user = await this.authService.getUserFromToken(token);
         }
 
-        const user = await this.authService.getUserFromToken(token);
+        // If no valid access token, try refresh token
         if (!user) {
-          res.status(401).json({ error: 'Invalid authentication token' });
+          const refreshToken = req.cookies?.['sb-refresh-token'];
+          if (refreshToken) {
+            const refreshResult = await this.getOrRefreshSession(refreshToken);
+            if (refreshResult) {
+              user = refreshResult.user;
+              // Set new auth cookies with refreshed tokens
+              this.setAuthCookies(res, refreshResult.session);
+            }
+          }
+        }
+
+        if (!user) {
+          res.status(401).json({ error: 'Invalid or expired authentication' });
           return;
         }
 
         req.user = user;
+        req.isAnonymous = user.is_anonymous || false;
 
-        // Get user profile from our database
-        const userProfile = await this.database.getUserByAuthId(user.id);
+        // Get or create user profile from our database
+        let userProfile = await this.database.getUserByAuthId(user.id);
+
+        // Auto-create profile if user has session but no profile
         if (!userProfile) {
-          // User exists in auth but not in our database - this shouldn't happen
-          // but let's handle it gracefully
-          res.status(500).json({ error: 'User profile not found' });
-          return;
+          const name = user.user_metadata?.name || undefined;
+          userProfile = await this.database.createUser(
+            user.id,
+            name || 'User',
+            user.email,
+            req.isAnonymous
+          );
         }
 
         req.userProfile = userProfile;
@@ -101,22 +172,6 @@ export class SupabaseAuthMiddleware {
     };
   }
 
-  // Middleware to handle Supabase session cookies
-  handleSessionCookies() {
-    return (req: Request, res: Response, next: NextFunction): void => {
-      // Set up cookie handling for Supabase auth
-      // This helps with browser-based authentication
-      const accessToken = req.cookies?.['sb-access-token'];
-      const refreshToken = req.cookies?.['sb-refresh-token'];
-
-      if (accessToken) {
-        // Set authorization header from cookie
-        req.headers.authorization = `Bearer ${accessToken}`;
-      }
-
-      next();
-    };
-  }
 
   // Helper method to set auth cookies (for browser clients)
   setAuthCookies(res: Response, session: any): void {
@@ -124,6 +179,7 @@ export class SupabaseAuthMiddleware {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax' as const,
+      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined,
     };
 
     res.cookie('sb-access-token', session.access_token, {

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import favicon from '$lib/assets/favicon.svg';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+	import { Toaster } from 'svelte-sonner';
 	import '../app.css';
 
 	let { children } = $props();
@@ -24,3 +25,5 @@
 
 	{@render children()}
 </div>
+
+<Toaster />

@@ -1,38 +1,59 @@
-# sv
+# OnlyOne Frontend
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+SvelteKit frontend for the OnlyOne multiplayer word-guessing game.
 
-## Creating a project
+## Tech Stack
 
-If you're seeing this, you've probably already done this step. Congrats!
+- SvelteKit with SSR (Server-Side Rendering)
+- TypeScript
+- Socket.IO client for real-time game communication
+- Svelte stores for client-side state management
 
-```sh
-# create a new project in the current directory
-npx sv create
+## Authentication
 
-# create a new project in my-app
-npx sv create my-app
+The frontend uses **server-side rendering** to handle authentication - no client-side auth logic exists.
+
+### SSR Authentication Hook
+
+Authentication is delegated to the gameserver via [hooks.server.ts](src/hooks.server.ts):
+
+**How it works:**
+
+1. SvelteKit `handle` hook runs on every page request
+2. Hook forwards request cookies to gameserver's `/auth/me` endpoint
+3. Gameserver validates auth tokens and returns user data
+4. User data attached to `event.locals.user` for server-side access
+5. Session cache prevents redundant auth checks
+
+**Benefits:**
+
+- **Zero client-side auth code**: Frontend never touches auth tokens
+- **HttpOnly cookie security**: Tokens inaccessible to JavaScript
+- **Automatic token refresh**: Gameserver handles refresh transparently
+- **SSR-ready**: User data available during server-side rendering
+- **Performance**: In-memory cache reduces auth overhead
+
+### User Session Access
+
+**Server-side (in `+page.server.ts` or `+layout.server.ts`):**
+
+```typescript
+export const load = async ({ locals }) => {
+	const user = locals.user; // Available from auth hook
+	return { user };
+};
 ```
 
-## Developing
+**Client-side (in Svelte components):**
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+```typescript
+// User data passed from server load function
+export let data;
+const user = data.user;
 ```
 
-## Building
+### Authentication State
 
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+- User session persists via httpOnly cookies set by gameserver
+- No client-side token storage or management
+- Frontend receives user data as props from server load functions

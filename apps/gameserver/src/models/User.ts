@@ -18,6 +18,7 @@ export class User {
   public readonly id: string;
   public name: string;
   public readonly email?: string;
+  public avatarUrl?: string | null;
   public readonly passwordHash?: string;
   public readonly authProviders: AuthProvider[];
   public readonly createdAt: Date;
@@ -35,11 +36,13 @@ export class User {
     authProviders: AuthProvider[] = [],
     createdAt: Date = new Date(),
     gamesPlayed: number = 0,
-    gamesWon: number = 0
+    gamesWon: number = 0,
+    avatarUrl?: string | null
   ) {
     this.id = id;
     this.name = name;
     this.email = email;
+    this.avatarUrl = avatarUrl;
     this.passwordHash = passwordHash;
     this.authProviders = authProviders;
     this.createdAt = createdAt;
@@ -129,6 +132,7 @@ export class User {
       id: this.id,
       name: this.name,
       email: this.email,
+      avatarUrl: this.avatarUrl,
       authProviders: this.authProviders,
       createdAt: this.createdAt,
       gamesPlayed: this.gamesPlayed,
@@ -145,6 +149,7 @@ export class User {
     return {
       id: this.id,
       name: this.name,
+      avatarUrl: this.avatarUrl,
       createdAt: this.createdAt,
       isOnline: this.session?.isOnline || false
     };
