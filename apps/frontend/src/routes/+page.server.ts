@@ -84,7 +84,7 @@ export const actions: Actions = {
 
         return redirect(303, returnTo || '/lobby');
     },
-    signupAnonymous: async ({ request, url, cookies }) => {
+    signupAnonymous: async ({ url, cookies }) => {
         
 
         const returnTo = url.searchParams.get('returnTo');

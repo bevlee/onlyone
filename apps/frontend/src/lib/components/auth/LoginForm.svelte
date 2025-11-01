@@ -6,14 +6,22 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import Input from '$lib/components/ui/input/input.svelte';
 
+	import { toast as sonnerToast } from 'svelte-sonner';
+
 	let {
 		form
 	}: {
 		form: SuperForm<z.infer<typeof loginSchema>>;
 	} = $props();
 
-	let { form: formData, enhance, message, allErrors } = form;
+	let { form: formData, message, allErrors } = form;
 	let isFormValid = $derived($formData.email && $formData.password);
+	let isLoading = $state(false);
+
+	const handleSubmit = async () => {
+		isLoading = true;
+		sonnerToast.loading('Logging in...');
+	};
 </script>
 
 {#if $message}
@@ -22,7 +30,7 @@
 	</span>
 {/if}
 
-<form method="post" action="?/login" use:enhance class="w-full space-y-2">
+<form method="post" action="?/login" onsubmit={handleSubmit} class="w-full space-y-2">
 	<div>
 		<Field {form} name="email">
 			<Control>
@@ -65,6 +73,8 @@
 		</ul>
 	{/if}
 	<div>
-		<Button size="sm" type="submit" disabled={!isFormValid}>Submit</Button>
+		<Button size="sm" type="submit" disabled={!isFormValid || isLoading}>
+			{isLoading ? 'Logging in...' : 'Submit'}
+		</Button>
 	</div>
 </form>
