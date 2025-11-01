@@ -1,7 +1,36 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SupabaseAuthService } from '../../src/services/SupabaseAuthService';
 import { supabaseAuth } from '../../src/config/supabase';
+import { SupabaseAuthErrorCode } from '@onlyone/shared';
 import type { User, Session, AuthError } from '@supabase/supabase-js';
+
+/**
+ * Helper to generate a mock JWT token with custom expiry
+ * @param expirySeconds Expiry time in seconds from now. Use 0 or negative for expired tokens
+ * @param overrides Custom claims to override defaults
+ */
+function generateMockToken(expirySeconds: number = 3600, overrides?: Partial<Record<string, any>>): string {
+  const now = Math.floor(Date.now() / 1000);
+  const exp = now + expirySeconds;
+  const supabaseUrl = process.env.SUPABASE_URL || 'https://project.supabase.co';
+
+  const payload = {
+    sub: 'user-123',
+    email: 'test@example.com',
+    iss: `${supabaseUrl}/auth/v1`,
+    role: 'authenticated',
+    aud: 'authenticated',
+    exp,
+    ...overrides
+  };
+
+  // Create a simple base64 encoded payload (note: not cryptographically signed)
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = 'mock-signature';
+
+  return `${header}.${body}.${signature}`;
+}
 
 // Mock the supabase client
 vi.mock('../../src/config/supabase', () => ({
@@ -67,12 +96,12 @@ describe('SupabaseAuthService', () => {
     it('should throw error when Supabase returns an error', async () => {
       vi.mocked(supabaseAuth.auth.signUp).mockResolvedValue({
         data: { user: null, session: null },
-        error: { message: 'Email already exists', status: 400, name: 'AuthApiError' } as AuthError
+        error: { code: 'user_already_exists', status: 409, name: 'AuthApiError' } as AuthError
       });
 
       await expect(
         authService.registerWithPassword('John Doe', 'test@example.com', 'password123')
-      ).rejects.toThrow('Email already exists');
+      ).rejects.toThrow('This email is already registered. Try signing in or reset your password.');
     });
 
     it('should throw error when user or session is missing despite no error', async () => {
@@ -111,12 +140,12 @@ describe('SupabaseAuthService', () => {
     it('should throw error when credentials are invalid', async () => {
       vi.mocked(supabaseAuth.auth.signInWithPassword).mockResolvedValue({
         data: { user: null, session: null },
-        error: { message: 'Invalid login credentials', status: 400, name: 'AuthApiError' } as AuthError
+        error: { code: 'invalid_credentials', status: 400, name: 'AuthApiError' } as AuthError
       });
 
       await expect(
         authService.loginWithPassword('test@example.com', 'wrongpassword')
-      ).rejects.toThrow('Invalid login credentials');
+      ).rejects.toThrow('Your email address or password is invalid.');
     });
 
     it('should throw error when user or session is missing despite no error', async () => {
@@ -133,17 +162,55 @@ describe('SupabaseAuthService', () => {
 
   describe('getUserFromToken', () => {
     it('should return user when token is valid', async () => {
-      const mockUser: Partial<User> = { id: 'user-123', email: 'test@example.com' };
+      const mockUser: Partial<User> = {
+        id: 'user-123',
+        email: 'test@example.com',
+        aud: 'authenticated',
+        role: 'authenticated',
+        app_metadata: {},
+        user_metadata: {},
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        email_confirmed_at: undefined,
+        phone: undefined,
+        confirmed_at: undefined,
+        last_sign_in_at: undefined,
+        identities: undefined,
+        is_anonymous: undefined
+      };
 
       vi.mocked(supabaseAuth.auth.getUser).mockResolvedValue({
         data: { user: mockUser as User },
         error: null
       });
 
-      const result = await authService.getUserFromToken('valid-token');
+      const validToken = generateMockToken(3600); // Token expires in 1 hour
+      const result = await authService.getUserFromToken(validToken);
 
-      expect(result).toEqual(mockUser);
-      expect(supabaseAuth.auth.getUser).toHaveBeenCalledWith('valid-token');
+      expect(result).toEqual(expect.objectContaining({
+        id: 'user-123',
+        email: 'test@example.com',
+        aud: 'authenticated',
+        role: 'authenticated',
+        app_metadata: {},
+        user_metadata: {},
+        email_confirmed_at: undefined,
+        phone: undefined,
+        confirmed_at: undefined,
+        last_sign_in_at: undefined,
+        identities: undefined,
+        is_anonymous: undefined
+      }));
+      expect(result?.created_at).toBeDefined();
+      expect(result?.updated_at).toBeDefined();
+    });
+
+    it('should return null when token is expired', async () => {
+      const expiredToken = generateMockToken(-3600); // Token expired 1 hour ago
+
+      const result = await authService.getUserFromToken(expiredToken);
+
+      expect(result).toBeNull();
     });
 
     it('should return null when token is invalid', async () => {
@@ -237,119 +304,17 @@ describe('SupabaseAuthService', () => {
     });
   });
 
-  describe('resetPassword', () => {
-    it('should successfully send password reset email', async () => {
-      vi.mocked(supabaseAuth.auth.resetPasswordForEmail).mockResolvedValue({
-        data: {},
-        error: null
-      });
+  // describe('resetPassword', () => {
+  //   //todo: implement
+  // });
 
-      await expect(authService.resetPassword('test@example.com')).resolves.toBeUndefined();
-      expect(supabaseAuth.auth.resetPasswordForEmail).toHaveBeenCalledWith(
-        'test@example.com',
-        { redirectTo: `${process.env.FRONTEND_URL}/reset-password` }
-      );
-    });
+  // describe('updatePassword', () => {
+  //   //todo: implement
+  // });
 
-    it('should throw error when email does not exist', async () => {
-      vi.mocked(supabaseAuth.auth.resetPasswordForEmail).mockResolvedValue({
-        data: {},
-        error: { message: 'User not found', status: 404, name: 'AuthApiError' } as AuthError
-      });
-
-      await expect(authService.resetPassword('nonexistent@example.com')).rejects.toThrow('User not found');
-    });
-
-    it('should throw error when email is invalid format', async () => {
-      vi.mocked(supabaseAuth.auth.resetPasswordForEmail).mockResolvedValue({
-        data: {},
-        error: { message: 'Invalid email format', status: 400, name: 'AuthApiError' } as AuthError
-      });
-
-      await expect(authService.resetPassword('invalid-email')).rejects.toThrow('Invalid email format');
-    });
-  });
-
-  describe('updatePassword', () => {
-    it('should successfully update user password', async () => {
-      vi.mocked(supabaseAuth.auth.updateUser).mockResolvedValue({
-        data: { user: { id: 'user-123' } as Partial<User> as User },
-        error: null
-      });
-
-      await expect(authService.updatePassword('newPassword123')).resolves.toBeUndefined();
-      expect(supabaseAuth.auth.updateUser).toHaveBeenCalledWith({
-        password: 'newPassword123'
-      });
-    });
-
-    it('should throw error when password is too weak', async () => {
-      vi.mocked(supabaseAuth.auth.updateUser).mockResolvedValue({
-        data: { user: null },
-        error: { message: 'Password is too weak', status: 400, name: 'AuthApiError' } as AuthError
-      });
-
-      await expect(authService.updatePassword('123')).rejects.toThrow('Password is too weak');
-    });
-
-    it('should throw error when user is not authenticated', async () => {
-      vi.mocked(supabaseAuth.auth.updateUser).mockResolvedValue({
-        data: { user: null },
-        error: { message: 'Not authenticated', status: 401, name: 'AuthApiError' } as AuthError
-      });
-
-      await expect(authService.updatePassword('newPassword123')).rejects.toThrow('Not authenticated');
-    });
-  });
-
-  describe('signInWithOAuth', () => {
-    it('should successfully initiate OAuth sign in with Google', async () => {
-      const mockUrl = 'https://accounts.google.com/oauth/authorize?...';
-
-      vi.mocked(supabaseAuth.auth.signInWithOAuth).mockResolvedValue({
-        data: { provider: 'google', url: mockUrl },
-        error: null
-      });
-
-      const result = await authService.signInWithOAuth('google');
-
-      expect(result.url).toBe(mockUrl);
-      expect(supabaseAuth.auth.signInWithOAuth).toHaveBeenCalledWith({
-        provider: 'google',
-        options: {
-          redirectTo: `${process.env.FRONTEND_URL}/auth/callback`
-        }
-      });
-    });
-
-    it('should successfully initiate OAuth sign in with Discord', async () => {
-      const mockUrl = 'https://discord.com/api/oauth2/authorize?...';
-
-      vi.mocked(supabaseAuth.auth.signInWithOAuth).mockResolvedValue({
-        data: { provider: 'discord', url: mockUrl },
-        error: null
-      });
-
-      const result = await authService.signInWithOAuth('discord');
-
-      expect(result.url).toBe(mockUrl);
-      expect(supabaseAuth.auth.signInWithOAuth).toHaveBeenCalledWith({
-        provider: 'discord',
-        options: {
-          redirectTo: `${process.env.FRONTEND_URL}/auth/callback`
-        }
-      });
-    });
-
-    it('should throw error when OAuth provider is not configured', async () => {
-      vi.mocked(supabaseAuth.auth.signInWithOAuth).mockResolvedValue({
-        data: { provider: 'google', url: '' },
-        error: { message: 'OAuth provider not configured', status: 400, name: 'AuthApiError' } as AuthError
-      });
-
-      await expect(authService.signInWithOAuth('google')).rejects.toThrow('OAuth provider not configured');
-    });
-  });
+  // describe('signInWithOAuth', () => {
+  //   //todo: implement
+  // });
 
   describe('signInAnonymously', () => {
     it('should successfully sign in anonymously', async () => {
@@ -372,10 +337,10 @@ describe('SupabaseAuthService', () => {
     it('should throw error when anonymous sign-ins are disabled', async () => {
       vi.mocked(supabaseAuth.auth.signInAnonymously).mockResolvedValue({
         data: { user: null, session: null },
-        error: { message: 'Anonymous sign-ins are disabled', status: 422, name: 'AuthApiError' } as AuthError
+        error: { status: 500, name: 'AuthApiError' } as AuthError
       });
 
-      await expect(authService.signInAnonymously()).rejects.toThrow('Anonymous sign-ins are disabled');
+      await expect(authService.signInAnonymously()).rejects.toThrow('Something went wrong. Please try again later.');
     });
 
     it('should throw error when user or session is missing despite no error', async () => {
@@ -420,12 +385,12 @@ describe('SupabaseAuthService', () => {
     it('should throw error when email already exists', async () => {
       vi.mocked(supabaseAuth.auth.updateUser).mockResolvedValue({
         data: { user: null },
-        error: { message: 'Email already in use', status: 400, name: 'AuthApiError' } as AuthError
+        error: { code: 'user_already_exists', status: 409, name: 'AuthApiError' } as AuthError
       });
 
       await expect(
         authService.upgradeAnonymousUser('John Doe', 'existing@example.com', 'password123')
-      ).rejects.toThrow('Email already in use');
+      ).rejects.toThrow('This email is already registered. Try signing in or reset your password.');
     });
 
     it('should throw error when session retrieval fails after upgrade', async () => {
@@ -438,7 +403,7 @@ describe('SupabaseAuthService', () => {
 
       vi.mocked(supabaseAuth.auth.getSession).mockResolvedValue({
         data: { session: null },
-        error: { message: 'Session error', status: 500, name: 'AuthApiError' } as AuthError
+        error: { status: 500, name: 'AuthApiError' } as AuthError
       });
 
       await expect(

@@ -4,6 +4,9 @@ import { uniqueNamesGenerator, adjectives, animals } from 'unique-names-generato
 import { decodeJwt } from 'jose';
 import { logger } from '../config/logger.js';
 import { SupabaseAuthErrorCode, SupabaseAuthErrorPayload } from '@onlyone/shared';
+import { config } from 'dotenv';
+
+config({ path: '.env', override: true });
 
 
 export interface AuthResult {
