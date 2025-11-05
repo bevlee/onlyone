@@ -6,6 +6,7 @@ import type {
 import { RoomManager } from '../services/RoomManager.js';
 import { ConnectionManager } from '../services/ConnectionManager.js';
 import { logger } from '../config/logger.js';
+import { validateChatMessage, ValidationError } from '../validation/eventValidator.js';
 
 export function setupSocketHandlers(
   io: Server<ClientToServerEvents, ServerToClientEvents>,
@@ -63,14 +64,26 @@ export function setupSocketHandlers(
     socket.emit('roomState', room);
 
     // Chat message handler
-    socket.on('chatMessage', (message: string) => {
-      logger.debug({ roomName, playerName, message }, 'Chat message');
+    socket.on('chatMessage', (message: unknown) => {
+      try {
+        const validatedMessage = validateChatMessage(message);
 
-      io.to(roomName).emit('chatMessage', {
-        playerName,
-        message,
-        timestamp: new Date().toISOString()
-      });
+        logger.debug({ roomName, playerName, message: validatedMessage }, 'Chat message');
+
+        io.to(roomName).emit('chatMessage', {
+          playerName,
+          message: validatedMessage,
+          timestamp: new Date().toISOString()
+        });
+      } catch (error) {
+        if (error instanceof ValidationError) {
+          logger.warn({ roomName, playerId, error: error.message }, 'Invalid chat message rejected');
+          socket.emit('error', { message: 'Invalid message format' });
+        } else {
+          logger.error({ roomName, playerId, error }, 'Unexpected error handling chat message');
+          socket.emit('error', { message: 'Server error processing message' });
+        }
+      }
     });
 
     // Handle disconnection
