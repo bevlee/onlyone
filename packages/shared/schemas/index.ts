@@ -25,3 +25,8 @@ export {
   chatMessageSchema,
   type ChatMessage,
 } from './chat.schemas.js';
+
+export {
+  socketAuthSchema,
+  type SocketAuth,
+} from './auth.schemas.js';

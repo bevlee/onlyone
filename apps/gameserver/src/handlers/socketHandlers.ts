@@ -7,6 +7,7 @@ import { RoomManager } from '../services/RoomManager.js';
 import { ConnectionManager } from '../services/ConnectionManager.js';
 import { logger } from '../config/logger.js';
 import { validateChatMessage, validateClientEvent, ValidationError } from '../validation/eventValidator.js';
+import { socketAuthSchema } from '@onlyone/shared/schemas/auth.schemas';
 
 export function setupSocketHandlers(
   io: Server<ClientToServerEvents, ServerToClientEvents>,
@@ -14,14 +15,10 @@ export function setupSocketHandlers(
   roomManager: RoomManager,
   connectionManager: ConnectionManager
 ) {
-  // Extract auth data
-  const { roomName, playerName, playerId } = socket.handshake.auth;
-
-  if (!roomName || !playerName) {
-    logger.warn({ socketId: socket.id }, 'Socket connection missing auth data');
-    socket.disconnect();
-    return;
-  }
+  // Extract and validate auth data
+  try {
+    const auth = socketAuthSchema.parse(socket.handshake.auth);
+    const { roomName, playerName, playerId } = auth;
 
   logger.info({ socketId: socket.id, roomName, playerName }, 'Player connecting via WebSocket');
 
@@ -149,5 +146,10 @@ export function setupSocketHandlers(
   } catch (error) {
     logger.error({ error, roomName, playerName }, 'Error setting up socket connection');
     socket.disconnect();
+  }
+  } catch (error) {
+    logger.warn({ socketId: socket.id, error }, 'Invalid socket auth data');
+    socket.disconnect();
+    return;
   }
 }
