@@ -1,6 +1,13 @@
 /**
  * Client Events - Action types sent FROM client TO server
  * These represent user requests that trigger game state transitions
+ *
+ * IMPORTANT: Zod schemas in packages/shared/schemas/clientEvents.schemas.ts
+ * are the source of truth for client event validation. These types are for
+ * reference and should match the schemas.
+ *
+ * For new code, use types exported from:
+ * import { ClientEvent } from '@onlyone/shared/schemas';
  */
 
 /**
