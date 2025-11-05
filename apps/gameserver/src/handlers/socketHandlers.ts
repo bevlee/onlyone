@@ -7,7 +7,7 @@ import { RoomManager } from '../services/RoomManager.js';
 import { ConnectionManager } from '../services/ConnectionManager.js';
 import { logger } from '../config/logger.js';
 import { validateChatMessage, validateClientEvent, ValidationError } from '../validation/eventValidator.js';
-import { socketAuthSchema } from '@onlyone/shared/schemas/auth.schemas';
+import { socketAuthSchema } from '@onlyone/shared/schemas';
 
 export function setupSocketHandlers(
   io: Server<ClientToServerEvents, ServerToClientEvents>,
