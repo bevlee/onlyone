@@ -15,6 +15,10 @@
     ".": {
       "import": "./index.ts",
       "types": "./index.ts"
+    },
+    "./schemas": {
+      "import": "./schemas/index.ts",
+      "types": "./schemas/index.ts"
     }
   },
   "dependencies": {
