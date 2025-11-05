@@ -6,7 +6,7 @@ import type {
 import { RoomManager } from '../services/RoomManager.js';
 import { ConnectionManager } from '../services/ConnectionManager.js';
 import { logger } from '../config/logger.js';
-import { validateChatMessage, ValidationError } from '../validation/eventValidator.js';
+import { validateChatMessage, validateClientEvent, ValidationError } from '../validation/eventValidator.js';
 
 export function setupSocketHandlers(
   io: Server<ClientToServerEvents, ServerToClientEvents>,
@@ -118,6 +118,32 @@ export function setupSocketHandlers(
     socket.on('startGame', () => {
       logger.info({ roomName, playerName }, 'Start game requested');
       // TODO: Implement game start logic
+    });
+
+    // Game action handler
+    socket.on('gameAction', (action: unknown) => {
+      try {
+        const validatedAction = validateClientEvent(action);
+
+        logger.debug({ roomName, playerId, actionType: validatedAction.type }, 'Game action received');
+
+        // Get current room and game state
+        const room = roomManager.getRoom(roomName);
+
+        // Create event from action
+        // TODO: Convert ClientEvent to GameEvent format (may require GameService update)
+        // For now, just log successful validation
+        logger.info({ roomName, playerId, actionType: validatedAction.type }, 'Validated game action');
+
+      } catch (error) {
+        if (error instanceof ValidationError) {
+          logger.warn({ roomName, playerId, error: error.message }, 'Invalid game action rejected');
+          socket.emit('error', { message: 'Invalid action format' });
+        } else {
+          logger.error({ roomName, playerId, error }, 'Unexpected error handling game action');
+          socket.emit('error', { message: 'Server error processing action' });
+        }
+      }
     });
 
   } catch (error) {
