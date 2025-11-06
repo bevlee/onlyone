@@ -55,7 +55,6 @@ describe('GameService', () => {
     it('should accept 8 sequential wordSubmission events', () => {
       const MATCH_ID = "123abc"
       const gameState = GameService.createInitialGameState({matchId: MATCH_ID});
-
       // Verify initial state
       expect(gameState.gamePhase.phase).toBe(GamePhaseType.SecretWordWriting);
       const secretWordState = gameState.gamePhase.state as SecretWordWritingState;
@@ -87,6 +86,6 @@ describe('GameService', () => {
       expect(gameState.eventCount).toBe(8);
       expect(gameState.events).toEqual(submitEvents);
     });
-    
+
   });
 });

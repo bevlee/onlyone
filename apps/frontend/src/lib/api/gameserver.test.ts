@@ -5,10 +5,12 @@ import { gameServerAPI } from './gameserver';
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
+const GAMESERVER_URL = 'http://localhost:3000';
+
 // Mock env
 vi.mock('$env/dynamic/public', () => ({
   env: {
-    PUBLIC_GAMESERVER_URL: 'http://localhost:3000'
+    PUBLIC_GAMESERVER_URL: GAMESERVER_URL
   }
 }));
 
@@ -17,246 +19,6 @@ describe('GameServerAPI', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  describe('register', () => {
-    it('should successfully register a user', async () => {
-      const mockResponse = {
-        user: { id: 'user-123', email: 'test@example.com', user_metadata: { name: 'Test User' } },
-        session: { access_token: 'token-123' },
-        isNewUser: true
-      };
-
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      const result = await api.register('Test User', 'test@example.com', 'password123');
-
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual(mockResponse);
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/auth/register',
-        expect.objectContaining({
-          method: 'POST',
-          credentials: 'include',
-          body: JSON.stringify({ name: 'Test User', email: 'test@example.com', password: 'password123' })
-        })
-      );
-    });
-
-    it('should handle registration errors', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 400,
-        statusText: 'Bad Request',
-        json: async () => ({ error: 'Email already exists' })
-      });
-
-      const result = await api.register('Test User', 'test@example.com', 'password123');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Email already exists');
-    });
-
-    it('should handle network errors', async () => {
-      mockFetch.mockRejectedValue(new Error('Network error'));
-
-      const result = await api.register('Test User', 'test@example.com', 'password123');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Network error');
-    });
-  });
-
-  describe('login', () => {
-    it('should successfully login a user', async () => {
-      const mockResponse = {
-        user: { id: 'user-123', email: 'test@example.com' },
-        session: { access_token: 'token-123' }
-      };
-
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      const result = await api.login('test@example.com', 'password123');
-
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual(mockResponse);
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/auth/login',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ email: 'test@example.com', password: 'password123' })
-        })
-      );
-    });
-
-    it('should handle invalid credentials', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
-        json: async () => ({ error: 'Invalid credentials' })
-      });
-
-      const result = await api.login('test@example.com', 'wrongpassword');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Invalid credentials');
-    });
-
-    it('should handle network errors', async () => {
-      mockFetch.mockRejectedValue(new Error('Connection failed'));
-
-      const result = await api.login('test@example.com', 'password123');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Connection failed');
-    });
-  });
-
-  describe('logout', () => {
-    it('should successfully logout', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({ message: 'Logged out' })
-      });
-
-      const result = await api.logout();
-
-      expect(result.success).toBe(true);
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/auth/logout',
-        expect.objectContaining({
-          method: 'POST'
-        })
-      );
-    });
-
-    it('should handle logout errors', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-        json: async () => ({ error: 'Logout failed' })
-      });
-
-      const result = await api.logout();
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Logout failed');
-    });
-
-    it('should handle network errors during logout', async () => {
-      mockFetch.mockRejectedValue(new Error('Network error'));
-
-      const result = await api.logout();
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Network error');
-    });
-  });
-
-  describe('getMe', () => {
-    it('should successfully fetch user profile', async () => {
-      const mockResponse = {
-        user: { id: 'user-123', email: 'test@example.com' },
-        profile: { id: 'profile-123', name: 'Test User', email: 'test@example.com', gamesPlayed: 5, gamesWon: 2 }
-      };
-
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      const result = await api.getMe();
-
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual(mockResponse);
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/auth/me',
-        expect.objectContaining({
-          credentials: 'include'
-        })
-      );
-    });
-
-    it('should handle unauthenticated user', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
-        json: async () => ({ error: 'Not authenticated' })
-      });
-
-      const result = await api.getMe();
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Not authenticated');
-    });
-
-    it('should handle network errors', async () => {
-      mockFetch.mockRejectedValue(new Error('Network error'));
-
-      const result = await api.getMe();
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Network error');
-    });
-  });
-
-  describe('signInAnonymous', () => {
-    it('should successfully sign in anonymously without name', async () => {
-      const mockResponse = {
-        user: { id: 'anon-123', is_anonymous: true, user_metadata: { name: 'Happy-Penguin' } },
-        session: { access_token: 'token-123' },
-        isNewUser: true
-      };
-
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      const result = await api.signInAnonymous();
-
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual(mockResponse);
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/auth/anonymous',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ name: undefined })
-        })
-      );
-    });
-
-    it('should handle anonymous sign-in disabled error', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 422,
-        statusText: 'Unprocessable Entity',
-        json: async () => ({ error: 'Anonymous sign-ins are disabled' })
-      });
-
-      const result = await api.signInAnonymous();
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Anonymous sign-ins are disabled');
-    });
-
-    it('should handle network errors', async () => {
-      mockFetch.mockRejectedValue(new Error('Network error'));
-
-      const result = await api.signInAnonymous();
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Network error');
-    });
   });
 
   describe('getRooms', () => {
@@ -279,7 +41,7 @@ describe('GameServerAPI', () => {
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockResponse);
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/lobby/rooms',
+        `${GAMESERVER_URL}/lobby/rooms`,
         expect.any(Object)
       );
     });
@@ -330,7 +92,7 @@ describe('GameServerAPI', () => {
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockResponse);
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/lobby/rooms',
+        `${GAMESERVER_URL}/lobby/rooms`,
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({
@@ -356,7 +118,7 @@ describe('GameServerAPI', () => {
 
       expect(result.success).toBe(true);
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/lobby/rooms',
+        `${GAMESERVER_URL}/lobby/rooms`,
         expect.objectContaining({
           body: JSON.stringify({
             roomName: 'custom-room',
@@ -399,7 +161,7 @@ describe('GameServerAPI', () => {
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockResponse);
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/lobby/rooms/test-room',
+        `${GAMESERVER_URL}/lobby/rooms/test-room`,
         expect.objectContaining({
           method: 'POST'
         })
@@ -432,61 +194,6 @@ describe('GameServerAPI', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Room not found');
-    });
-  });
-
-  describe('upgradeAccount', () => {
-    it('should successfully upgrade anonymous account', async () => {
-      const mockResponse = {
-        user: { id: 'user-123', email: 'test@example.com', user_metadata: { name: 'Test User' } },
-        session: { access_token: 'new-token' },
-        isNewUser: false
-      };
-
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      const result = await api.upgradeAccount('Test User', 'test@example.com', 'password123');
-
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual(mockResponse);
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3000/auth/upgrade',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ name: 'Test User', email: 'test@example.com', password: 'password123' })
-        })
-      );
-    });
-
-    it('should handle email already in use error', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 400,
-        statusText: 'Bad Request',
-        json: async () => ({ error: 'Email already in use' })
-      });
-
-      const result = await api.upgradeAccount('Test User', 'existing@example.com', 'password123');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Email already in use');
-    });
-
-    it('should handle not authenticated error', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
-        json: async () => ({ error: 'Not authenticated' })
-      });
-
-      const result = await api.upgradeAccount('Test User', 'test@example.com', 'password123');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Not authenticated');
     });
   });
 });

@@ -2,6 +2,12 @@
 
 Real-time multiplayer word-guessing game server built with TypeScript, Express, and Socket.IO.
 
+## Game Flow
+
+**SecretWordWriting Phase** (once per game) - Players are pre-assigned who will guess their word. Each player submits a secret word knowing who will attempt to guess it, but the word remains hidden until that player's guessing round begins.
+
+**Round Loop** (repeats n times for n players) - For each player as guesser: WritingClues phase (others write clues for the guesser's assigned word) → FilteringClues phase (players vote on which clues to keep) → GuessingWord phase (guesser attempts to guess) → EndGame phase (show results and commendations). Then cycle to the next player as guesser.
+
 ## APIs
 
 ### Room Management

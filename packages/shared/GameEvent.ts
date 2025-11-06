@@ -3,7 +3,7 @@
  * Encapsulates both client-initiated actions and server broadcasts
  */
 
-import type { ClientEvent } from './ClientEvents.js';
+import type { ClientEvent } from './schemas/index.js';
 import type { ServerEvent } from './ServerEvents.js';
 
 /**

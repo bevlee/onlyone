@@ -1,4 +1,6 @@
 import type { Room, RoomPlayer } from './Room.js';
+import type { ServerGameEvent } from './ServerEvents.js';
+import type { ClientEvent } from './schemas/index.js';
 
 /**
  * Types of messages that can appear in the room log
@@ -110,6 +112,12 @@ export interface ServerToClientEvents {
    * Built-in Socket.IO connection error event
    */
   connect_error: (error: Error) => void;
+
+  /**
+   * Sent when game state changes (round starts, clue submitted, vote cast, etc.)
+   * Broadcasts game events to all players in the room
+   */
+  gameEvent: (event: ServerGameEvent) => void;
 }
 
 /**
@@ -125,6 +133,12 @@ export interface ClientToServerEvents {
    * Request to start the game (room leader only)
    */
   startGame: () => void;
+
+  /**
+   * Send a game action (clue submission, vote, guess, etc.)
+   * Server validates action against current game state and emits event if valid
+   */
+  gameAction: (action: ClientEvent) => void;
 
   /**
    * Built-in Socket.IO disconnection event

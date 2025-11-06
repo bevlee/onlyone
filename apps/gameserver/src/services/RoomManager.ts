@@ -16,10 +16,16 @@ export class RoomManager {
     const defaultGameState: GameState = {
       gamesWon: 0,
       gamesPlayed: 0,
+      eventCount: 0,
+      currentRoundIndex: 0,
+      wordPool: [],
+      events: [],
       gamePhase: {
         phase: GamePhaseType.Lobby,
         state: {
-          minPlayersToStart: 2
+          minPlayersToStart: 2,
+          words: [],
+          wordCollectionPhase: true
         }
       }
     };
