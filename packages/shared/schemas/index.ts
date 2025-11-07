@@ -4,6 +4,9 @@
  * Re-exports all validation schemas and their inferred types
  */
 
+// Re-export z for consumers
+export { z } from 'zod';
+
 export {
   startGameActionSchema,
   submitWordActionSchema,
@@ -30,3 +33,32 @@ export {
   socketAuthSchema,
   type SocketAuth,
 } from './auth.schemas.js';
+
+export {
+  secretWordWritingStartedEventSchema,
+  secretWordSubmittedEventSchema,
+  writingCluesStartedEventSchema,
+  clueSubmittedEventSchema,
+  filteringCluesStartedEventSchema,
+  clueVotedEventSchema,
+  guessingWordStartedEventSchema,
+  guessSubmittedEventSchema,
+  endRoundEventSchema,
+  clueCommendedEventSchema,
+  gameCompletedEventSchema,
+  gameStateEventSchema,
+  serverEventSchema,
+  type SecretWordWritingStartedEvent,
+  type SecretWordSubmittedEvent,
+  type WritingCluesStartedEvent,
+  type ClueSubmittedEvent,
+  type FilteringCluesStartedEvent,
+  type ClueVotedEvent,
+  type GuessingWordStartedEvent,
+  type GuessSubmittedEvent,
+  type EndRoundEvent,
+  type ClueCommendedEvent,
+  type GameCompletedEvent,
+  type GameStateEvent,
+  type ServerEvent,
+} from './serverEvents.schemas.js';
