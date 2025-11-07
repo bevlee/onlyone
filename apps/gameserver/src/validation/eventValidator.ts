@@ -4,8 +4,8 @@ import {
   chatMessageSchema,
   type ClientEvent,
   type ChatMessage,
+  z,
 } from '@onlyone/shared/schemas';
-import { z } from 'zod';
 
 /**
  * Custom error class for validation failures

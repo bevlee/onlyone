@@ -127,6 +127,11 @@ export interface ClientToServerEvents {
   startGame: () => void;
 
   /**
+   * Send a game action (validated via Zod schemas)
+   */
+  gameAction: (action: unknown) => void;
+
+  /**
    * Built-in Socket.IO disconnection event
    */
   disconnect: () => void;
