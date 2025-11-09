@@ -4,6 +4,9 @@
  * Re-exports all validation schemas and their inferred types
  */
 
+// Re-export z for consumers
+export { z } from 'zod';
+
 export {
   startGameActionSchema,
   submitWordActionSchema,
