@@ -24,11 +24,13 @@ export const createExpressServer = () => {
  * @returns {Server} Configured Socket.IO server
  */
 export const createSocketServer = (server) => {
+  const allowedOrigin = process.env.CORS_ORIGIN || "http://localhost:5173"; // Fallback to dev server
+
   return new Server(server, {
     connectionStateRecovery: {}, // Enable connection state recovery
     cors: {
-      origin: "http://localhost:5173", // Allow frontend origin
-      methods: ["GET"],
+      origin: allowedOrigin,
+      methods: ["GET", "POST"],
     },
   });
 };
