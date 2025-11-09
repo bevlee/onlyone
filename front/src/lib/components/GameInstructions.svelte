@@ -33,14 +33,43 @@
 					<li>Everyone takes turns at guessing and writing clues</li>
 					<li>Guesser picks a difficulty</li>
 					<li>Others see a secret word, give one-word clues</li>
-					<li>No duplicate clues allowed!</li>
+					<li>Hide Duplicate clues from the guesser!</li>
 				</ol>
-				<div class="text-foreground pt-2 text-center font-medium">
+				<div class="text-foreground pt-2 text-center text-lg font-medium">
 					🎯 Goal: Guess as many words as possible together!
 				</div>
+				<hr />
+				<div class="space-y-3">
+					<h2 class="text-lg font-bold">Example Game:</h2>
+					<div class="bg-muted rounded p-3">
+						<p class="mb-2 font-mono text-xs font-semibold">Secret word: KANGAROO</p>
+						<p class="text-xs">Difficulty: Easy</p>
+					</div>
 
-				<div class="text-foreground pt-2 text-center italic">
-					Example: Secret word is “Tiger” → Clues: “Stripe”, “Jungle”, “Fierce"
+					<div class="bg-secondary/20 rounded p-3">
+						<p class="mb-2 text-xs font-semibold">Writers submit:</p>
+						<div class="flex flex-wrap gap-2">
+							<span class="rounded bg-yellow-500/20 px-2 py-1 text-xs">"hop"</span>
+							<span class="rounded bg-yellow-500/20 px-2 py-1 text-xs">"australian"</span>
+							<span class="rounded bg-yellow-500/20 px-2 py-1 text-xs">"animal"</span>
+							<span class="rounded bg-yellow-500/20 px-2 py-1 text-xs">"pouch"</span>
+							<span class="rounded bg-yellow-500/20 px-2 py-1 text-xs">"australian"</span>
+						</div>
+					</div>
+
+					<div class="rounded border border-red-500/30 bg-red-500/10 p-3">
+						<p class="mb-2 text-xs font-semibold">⚠️ Duplicates should be marked for removal:</p>
+						<p class="text-muted-foreground text-xs">"australian" gets filtered out</p>
+					</div>
+
+					<div class="rounded border border-green-500/30 bg-green-500/10 p-3">
+						<p class="mb-2 text-xs font-semibold">✓ Guesser sees:</p>
+						<div class="flex flex-wrap gap-2">
+							<span class="rounded bg-blue-500/20 px-2 py-1 text-xs">"hop"</span>
+							<span class="rounded bg-blue-500/20 px-2 py-1 text-xs">"animal"</span>
+							<span class="rounded bg-blue-500/20 px-2 py-1 text-xs">"pouch"</span>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
