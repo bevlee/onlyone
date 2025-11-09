@@ -18,12 +18,12 @@ export interface GameState {
 export interface WordSubmission {
   word: string;
   submittedBy: string;
-  submittedAt: Date;
+  submittedAt: string;
   used: boolean;
 }
 
 export interface BaseSecretWordWritingState {
-  submissions: Map<string, string>; // playerName -> their submitted word (hidden)
+  submissions: Record<string, string>; // playerId -> their submitted word (hidden)
 }
 
 export interface BaseWritingCluesState {
@@ -45,7 +45,7 @@ export interface BaseFilteringCluesState {
   guessingPlayerName: string;
   wordSubmitterId: string;
   wordSubmitterName: string;
-  votes: Map<string, { keep: number; remove: number; voters: Set<string> }>;
+  votes: Record<string, { keep: number; remove: number; voters: Set<string> }>;
   roundIndex: number;
 }
 
@@ -137,7 +137,7 @@ export interface Clue {
   votes: ClueCommends;
   wasFiltered: boolean;
   nonDuplicate: boolean;
-  submittedAt: Date;
+  submittedAt: string;
 }
 
 export interface CommendEvent {
@@ -153,8 +153,8 @@ export interface GameRecord {
   roomName: string;
   players: Player[];
   success: boolean;
-  startTime: Date;
-  endTime: Date;
+  startTime: string;
+  endTime: string;
   secretWord: string;
   finalGuess: string;
   timeElapsed: number;

@@ -11,8 +11,8 @@ export interface GameData {
   success: boolean;
   secretWord: string;
   finalGuess?: string;
-  startTime: Date;
-  endTime: Date;
+  startTime: string;
+  endTime: string;
   durationSeconds: number;
   guesserId?: string;
 }
@@ -114,30 +114,30 @@ export class SupabaseDatabase {
     return data;
   }
 
-  async updateUserStats(userId: string, gamesPlayed: number, gamesWon: number): Promise<void> {
+  async upstringUserStats(userId: string, gamesPlayed: number, gamesWon: number): Promise<void> {
     const { error } = await (supabase as any)
       .from('users')
-      .update({
+      .upstring({
         games_played: gamesPlayed,
         games_won: gamesWon
       } as any)
       .eq('id', userId);
 
     if (error) {
-      throw new Error(`Failed to update user stats: ${error.message}`);
+      throw new Error(`Failed to upstring user stats: ${error.message}`);
     }
   }
 
-  async updateUserEmail(userId: string, email: string): Promise<void> {
+  async upstringUserEmail(userId: string, email: string): Promise<void> {
     const { error } = await (supabase as any)
       .from('users')
-      .update({
+      .upstring({
         email
       } as any)
       .eq('id', userId);
 
     if (error) {
-      throw new Error(`Failed to update user email: ${error.message}`);
+      throw new Error(`Failed to upstring user email: ${error.message}`);
     }
   }
 
@@ -161,14 +161,14 @@ export class SupabaseDatabase {
 
     const avatarUrl = data.publicUrl;
 
-    // Update user record with avatar URL
-    const { error: updateError } = await (supabase as any)
+    // Upstring user record with avatar URL
+    const { error: upstringError } = await (supabase as any)
       .from('users')
-      .update({ avatar_url: avatarUrl } as any)
+      .upstring({ avatar_url: avatarUrl } as any)
       .eq('id', userId);
 
-    if (updateError) {
-      throw new Error(`Failed to update avatar URL: ${updateError.message}`);
+    if (upstringError) {
+      throw new Error(`Failed to upstring avatar URL: ${upstringError.message}`);
     }
 
     return avatarUrl;
@@ -179,7 +179,7 @@ export class SupabaseDatabase {
     return user?.avatar_url || null;
   }
 
-  // Auto-calculate and update user stats
+  // Auto-calculate and upstring user stats
   async calculateUserStats(userId: string): Promise<void> {
     const { error } = await (supabase as any).rpc('calculate_user_stats', {
       user_uuid: userId
@@ -200,8 +200,8 @@ export class SupabaseDatabase {
         success: gameData.success,
         secret_word: gameData.secretWord,
         final_guess: gameData.finalGuess || null,
-        start_time: gameData.startTime.toISOString(),
-        end_time: gameData.endTime.toISOString(),
+        start_time: gameData.startTime,
+        end_time: gameData.endTime,
         duration_seconds: gameData.durationSeconds,
         guesser_id: gameData.guesserId || null
       } as any)
@@ -310,14 +310,14 @@ export class SupabaseDatabase {
     gamesWon: number;
     winRate: number;
   }> {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const thirtyDaysAgoISO = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
 
     const { data, error } = await (supabase as any)
       .from('game_records')
       .select('success')
       .eq('guesser_id', userId)
-      .gte('created_at', cutoffDate.toISOString());
+      .gte('created_at', thirtyDaysAgoISO);
 
     if (error) {
       throw new Error(`Failed to get user stats: ${error.message}`);
