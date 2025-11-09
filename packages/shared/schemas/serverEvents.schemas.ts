@@ -6,8 +6,8 @@ import type { Room } from '../Room.js';
  * Base schema for all server events
  */
 const baseServerEventSchema = z.object({
-  matchId: z.string().uuid('Invalid matchId format'),
-  timestamp: z.string().datetime('Invalid timestamp format'),
+  matchId: z.uuid('Invalid matchId format'),
+  timestamp: z.iso.datetime('Invalid timestamp format'),
 });
 
 /**
@@ -18,7 +18,7 @@ export const secretWordWritingStartedSchema = baseServerEventSchema.extend({
   gamePhase: z.object({
     phase: z.literal('secret-word-writing'),
     state: z.object({
-      submissions: z.record(z.string()),
+      submissions: z.record(z.string(), z.string()),
     }),
   }) as z.ZodType<GamePhase & { phase: GamePhaseType.SecretWordWriting }>,
 });
@@ -51,7 +51,7 @@ export const writingCluesStartedSchema = baseServerEventSchema.extend({
         }),
         wasFiltered: z.boolean(),
         nonDuplicate: z.boolean(),
-        submittedAt: z.string().datetime(),
+        submittedAt: z.iso.datetime(),
       })),
       guessingPlayerId: z.string(),
       guessingPlayerName: z.string(),
@@ -92,7 +92,7 @@ export const filteringCluesStartedSchema = baseServerEventSchema.extend({
         }),
         wasFiltered: z.boolean(),
         nonDuplicate: z.boolean(),
-        submittedAt: z.string().datetime(),
+        submittedAt: z.iso.datetime(),
       })),
       dedupedClues: z.array(z.object({
         text: z.string(),
@@ -104,13 +104,13 @@ export const filteringCluesStartedSchema = baseServerEventSchema.extend({
         }),
         wasFiltered: z.boolean(),
         nonDuplicate: z.boolean(),
-        submittedAt: z.string().datetime(),
+        submittedAt: z.iso.datetime(),
       })),
       guessingPlayerId: z.string(),
       guessingPlayerName: z.string(),
       wordSubmitterId: z.string(),
       wordSubmitterName: z.string(),
-      votes: z.record(z.object({
+      votes: z.record(z.string(), z.object({
         keep: z.number(),
         remove: z.number(),
         voters: z.set(z.string()),
@@ -152,7 +152,7 @@ export const guessingWordStartedSchema = baseServerEventSchema.extend({
         }),
         wasFiltered: z.boolean(),
         nonDuplicate: z.boolean(),
-        submittedAt: z.string().datetime(),
+        submittedAt: z.iso.datetime(),
       })),
       guess: z.string(),
       guessingPlayerId: z.string(),
