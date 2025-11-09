@@ -52,9 +52,10 @@ export class GameLoop {
       }
       
       const guesser = currentPlayers[currentPlayerIndex];
-      
+
       await this.gameStateManager.createGame(room, playerCount);
       await this.gameStateManager.setGameProgress(room, round, winCount);
+      this.gameStateManager.setCurrentGuesser(room, guesser);
       
       // Clear all players from the rooms
       io.to(writerRoom).socketsLeave(writerRoom);
@@ -140,8 +141,10 @@ export class GameLoop {
    */
   async difficultyPhase(io, room, writerRoom, guesserRoom, difficulties, timeLimit) {
     // Send different states to writers vs guesser
-    io.to(writerRoom).emit("chooseDifficulty", "writer", []);
-    io.to(guesserRoom).emit("chooseDifficulty", "guesser", difficulties);
+    const game = this.gameStateManager.getGame(room);
+    const currentGuesser = game.currentGuesser;
+    io.to(writerRoom).emit("chooseDifficulty", "writer", [], currentGuesser);
+    io.to(guesserRoom).emit("chooseDifficulty", "guesser", difficulties, currentGuesser);
     
     // Wait for guesser to select difficulty or timeout
     await this.waitForCondition(() => {
@@ -180,8 +183,9 @@ export class GameLoop {
     logger.debug({ secretWord, difficulty, room }, 'Selected secret word from database');
     
     // Writers see the secret word, guesser sees nothing
-    io.to(writerRoom).emit("writeClues", "writer", secretWord);
-    io.to(guesserRoom).emit("writeClues", "guesser", "");
+    const currentGuesser = game.currentGuesser;
+    io.to(writerRoom).emit("writeClues", "writer", secretWord, currentGuesser);
+    io.to(guesserRoom).emit("writeClues", "guesser", "", currentGuesser);
 
     // Wait for all writers to submit clues
     await this.waitForCondition(() => {
@@ -256,10 +260,11 @@ export class GameLoop {
     }
 
     logger.debug({ dedupedClues, originalClues: clues }, 'Deduped clues vs original clues');
-    
+
     // Writers see both filtered and original clues, guesser only sees filtered
-    io.to(writerRoom).emit("guessWord", "writer", dedupedClues, clues);
-    io.to(guesserRoom).emit("guessWord", "guesser", dedupedClues, []);
+    const currentGuesser = game.currentGuesser;
+    io.to(writerRoom).emit("guessWord", "writer", dedupedClues, clues, currentGuesser);
+    io.to(guesserRoom).emit("guessWord", "guesser", dedupedClues, [], currentGuesser);
     
     await this.gameStateManager.transitionToStage(room, "guessWord");
     
