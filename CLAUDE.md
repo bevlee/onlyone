@@ -24,10 +24,6 @@
 
 This is a real-time multiplayer word-guessing game with Docker containerization. Always prioritize understanding the codebase before suggesting modifications.
 
-## Commit Policy
-
-After every change, make a commit with one or two sentences explaining the changes.
-
 ## Development Partnership
 
 We build production code together. I handle implementation details while you guide architecture and catch complexity early.

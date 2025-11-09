@@ -7,9 +7,10 @@ import { logger } from '../config/logger.js';
  * Example game state structure:
  * this.activeGames = {
  *   "room123": {
- *     stage: "guessWord",           // Current game phase: "chooseCategory" | "writeClues" | "filterClues" | "guessWord"
- *     category: "Animals",          // Selected category
+ *     stage: "guessWord",           // Current game phase: "chooseDifficulty" | "writeClues" | "filterClues" | "guessWord"
+ *     difficulty: "easy",           // Selected difficulty
  *     secretWord: "cat",           // Secret word to guess
+ *     currentGuesser: "player1",   // Username of current guesser
  *     gamesPlayed: 2,              // Number of rounds completed
  *     gamesWon: 1,                 // Number of successful guesses
  *     playerCount: 3,              // Total players in room
@@ -18,11 +19,12 @@ import { logger } from '../config/logger.js';
  *     finishedVoting: true,        // Whether voting phase is complete
  *     guess: "cat",                // Guesser's submitted guess
  *     success: true,               // Whether guess was correct
- *     dedupedClues: ["furry", "pet", "<redacted>"] // Final filtered clues
+ *     dedupedClues: ["furry", "pet", "meow"] // Final filtered clues
  *   },
  *   "room456": {
- *     stage: "chooseCategory",
- *     category: "",
+ *     stage: "chooseDifficulty",
+ *     difficulty: "",
+ *     currentGuesser: "player2",
  *     gamesPlayed: 0,
  *     gamesWon: 0,
  *     playerCount: 2
@@ -89,8 +91,8 @@ export class GameStateManager {
   async createGame(room, playerCount) {
     return this.queueOperation(room, () => {
       this.activeGames[room] = {
-        stage: "chooseCategory",
-        category: "",
+        stage: "chooseDifficulty",
+        difficulty: "",
         gamesPlayed: 0,
         gamesWon: 0,
         playerCount: playerCount,
@@ -157,18 +159,18 @@ export class GameStateManager {
   }
 
   /**
-   * Set the selected category for the game (direct access - no queue needed)
+   * Set the selected difficulty for the game (direct access - no queue needed)
    * @param {string} room - Room name
-   * @param {string} category - Selected category
+   * @param {string} difficulty - Selected difficulty
    * @returns {Object} Updated game state
    */
-  setCategory(room, category) {
+  setDifficulty(room, difficulty) {
     const game = this.activeGames[room];
-    if (game && game.stage === 'chooseCategory') {
-      game.category = category;
-      return { category, success: true };
+    if (game && game.stage === 'chooseDifficulty') {
+      game.difficulty = difficulty;
+      return { difficulty, success: true };
     }
-    return { success: false, reason: 'Invalid stage for category selection' };
+    return { success: false, reason: 'Invalid stage for difficulty selection' };
   }
 
   /**
@@ -182,6 +184,21 @@ export class GameStateManager {
     if (game) {
       game.secretWord = secretWord;
       return { secretWord, success: true };
+    }
+    return { success: false, reason: 'Game not found' };
+  }
+
+  /**
+   * Set the current guesser for the round (direct access - no queue needed)
+   * @param {string} room - Room name
+   * @param {string} guesser - Username of the current guesser
+   * @returns {Object} Updated game state
+   */
+  setCurrentGuesser(room, guesser) {
+    const game = this.activeGames[room];
+    if (game) {
+      game.currentGuesser = guesser;
+      return { currentGuesser: guesser, success: true };
     }
     return { success: false, reason: 'Game not found' };
   }

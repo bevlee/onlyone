@@ -4,7 +4,7 @@
 	import Timer from '$lib/components/Timer.svelte';
 
 	const {
-		category,
+		difficulty,
 		dedupedClues,
 		clues,
 		guess,
@@ -13,9 +13,9 @@
 		gamesPlayed,
 		gamesWon,
 		totalRounds,
-		playAgain
+		playAgain,
+		currentGuesser
 	} = $props();
-	console.log(`ending game`, dedupedClues, clues, guess, category);
 
 	let displayedClues = $state(dedupedClues);
 	let hidden = false;
@@ -23,33 +23,32 @@
 		hidden = !hidden;
 		displayedClues = hidden ? clues : dedupedClues;
 	};
-	console.log('played:', gamesPlayed, ' total', totalRounds);
 </script>
 
 <div class="space-y-6">
 	<!-- Game Result Header -->
 	<div class="space-y-2 text-center">
 		{#if wordGuessed}
-			<div class="text-2xl">🎉</div>
 			<h2 class="text-xl font-semibold text-green-600 dark:text-green-400">
-				Correct! You guessed it!
+				Correct! You guessed it! 🎉
 			</h2>
 		{:else}
-			<div class="text-2xl">😔</div>
-			<h2 class="text-xl font-semibold text-orange-600 dark:text-orange-400">Incorrect guess!</h2>
+			<h2 class="text-xl font-semibold text-orange-600 dark:text-orange-400">
+				Incorrect guess! 😔
+			</h2>
 		{/if}
 	</div>
 
 	<!-- Game Details -->
 	<div class="space-y-4">
-		<div class="bg-card space-y-3 rounded-lg border p-4">
+		<div class="bg-card space-y-2 rounded-lg border p-4">
 			<div class="space-y-2 text-center">
-				<div class="text-muted-foreground text-sm">Category</div>
-				<div class="font-medium">{category}</div>
+				<div class="text-muted-foreground text-sm">Difficulty</div>
+				<div class="font-medium">{difficulty}</div>
 			</div>
 
 			<div class="space-y-2 border-t pt-3">
-				<div class="text-muted-foreground text-sm">Your guess</div>
+				<div class="text-muted-foreground text-sm">{currentGuesser}'s guess</div>
 				<div class="text-center font-medium">{guess || 'No guess'}</div>
 			</div>
 
@@ -86,14 +85,7 @@
 		</div>
 	</div>
 
-	<!-- Next Action -->
-	{#if gamesPlayed < totalRounds}
-		<div class="text-center">
-			<Timer count={defaultTimer} submitAnswer={() => {}} text="Next round starts in: " />
-		</div>
-	{:else}
-		<div class="text-center">
-			<Button onclick={playAgain} class="px-8">Play Again</Button>
-		</div>
-	{/if}
+	<div class="text-center">
+		<Button onclick={playAgain} class="px-8">Play Again</Button>
+	</div>
 </div>

@@ -1,6 +1,6 @@
 
 // Players will be able to choose the difficulty of the word they need to guess
-export const categories = ["easy", "medium", "hard"];
+export const difficulties = ["easy", "medium", "hard"];
 
 
 // Flattened word lists by difficulty

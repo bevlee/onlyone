@@ -53,8 +53,8 @@ describe('Chat Handlers', () => {
       expect(connections[room][oldName]).to.exist;
       expect(connections[room][newName]).to.exist;
       expect(callback.calledWith({ status: 'nameExists' })).to.be.true;
-      // playerNameChanged event is still emitted even when name exists
-      expect(mockServer.emit.calledWith('playerNameChanged', { oldName, newName })).to.be.true;
+      // playerNameChanged event should NOT be emitted when name change fails
+      expect(mockServer.emit.called).to.be.false;
     });
 
     it('should handle room that does not exist gracefully', () => {

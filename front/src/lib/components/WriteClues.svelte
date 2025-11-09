@@ -4,7 +4,7 @@
 	import { defaultTimer } from '$lib/config';
 	import Timer from '$lib/components/Timer.svelte';
 
-	const { word, role, submitAnswer, leaveGame } = $props();
+	const { word, role, submitAnswer, currentGuesser } = $props();
 	let clue = $state('');
 	let submitted = $state(false);
 
@@ -12,7 +12,8 @@
 	let invalid = $derived(clue.includes(' '));
 
 	const submit = (submitType = 'auto') => {
-		if (clue === word || clue.includes(' ')) {
+		const strippedClue: string = clue.trim();
+		if (strippedClue === word || strippedClue.includes(' ')) {
 			// no point prompting user if it was an auto-submit. Just do not submit it in this case
 			if (!(submitType === 'auto')) {
 				alert('you cannot write the secret as a clue!');
@@ -22,40 +23,40 @@
 			}
 		} else {
 			submitted = true;
-			submitAnswer(clue);
+			submitAnswer(strippedClue);
 		}
 	};
 </script>
 
 <div class="space-y-6">
 	{#if role == 'guesser'}
-		<div class="text-center space-y-4">
+		<div class="space-y-4 text-center">
 			<Timer count={defaultTimer} submitAnswer={() => {}} />
-			<h2 class="text-lg font-medium text-muted-foreground">
-				Everyone is busy writing clues for <span class="text-primary font-semibold">{word}</span>
+			<h2 class="text-muted-foreground text-lg font-medium">
+				Everyone is busy writing clues for the secret word
 			</h2>
 		</div>
 	{:else}
 		<Timer count={defaultTimer} submitAnswer={submit} />
-		
-		<div class="rounded-lg border bg-card p-4 text-center space-y-2">
-			<div class="text-sm text-muted-foreground">The secret word is</div>
-			<div class="font-semibold text-lg text-primary">{word}</div>
+
+		<div class="bg-card space-y-2 rounded-lg border p-4 text-center">
+			<div class="text-muted-foreground text-sm">The secret word is</div>
+			<div class="text-primary text-lg font-semibold">{word}</div>
 		</div>
 
 		<div class="space-y-4 text-center">
 			<div class="space-y-2">
 				<h2 class="text-lg font-medium">Write a one-word clue</h2>
-				<div class="text-sm text-muted-foreground">
+				<div class="text-muted-foreground text-sm">
 					Help others guess the secret word with a single descriptive word
 				</div>
 			</div>
-			
-			<Input 
-				class="max-w-xs mx-auto text-center" 
-				type="text" 
+
+			<Input
+				class="mx-auto max-w-xs text-center"
+				type="text"
 				placeholder="Enter your clue..."
-				bind:value={clue} 
+				bind:value={clue}
 			/>
 
 			{#if invalid}
@@ -64,15 +65,9 @@
 				</div>
 			{/if}
 
-			<Button 
-				disabled={submitted || invalid} 
-				onclick={() => submit('manual')}
-				class="px-8"
-			>
+			<Button disabled={submitted || invalid} onclick={() => submit('manual')} class="px-8">
 				{submitted ? 'Clue submitted' : 'Submit Clue'}
 			</Button>
 		</div>
 	{/if}
 </div>
-
-<!-- <Button onclick={() => leaveGame()}>Leave Game</Button> -->

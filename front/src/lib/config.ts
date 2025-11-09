@@ -1,1 +1,1 @@
-export const defaultTimer: number = 500;
+export const defaultTimer: number = 30;

@@ -9,7 +9,7 @@ import {
 } from "./handlers/chatHandlers.js";
 
 // Game configuration and utilities
-import { categories, secretWords } from "./data/data.js";
+import { difficulties, secretWords } from "./data/data.js";
 import { getStem } from "./wordOperations.js";
 
 // Modular components
@@ -18,6 +18,7 @@ import { ConnectionManager } from "./modules/connectionManager.js";
 import { GameStateManager } from "./modules/gameStateManager.js";
 import { GameLoop } from "./modules/gameLoop.js";
 import { logger } from "./config/logger.js";
+import database from "./modules/database.js";
 
 // Initialize Express app and HTTP server
 const app = createExpressServer();
@@ -60,20 +61,34 @@ io.on("connection", async (socket) => {
   // Setup game event handlers
   // Bind the game loop with required dependencies
   const startGameLoopBound = (io, room, timeLimit) => {
-    return gameLoop.startGameLoop(io, room, timeLimit, categories, secretWords, getStem);
+    return gameLoop.startGameLoop(io, room, timeLimit, difficulties, secretWords, getStem);
   };
 
   // Game flow event handlers
-  socket.on("startGame", () => {
-    if (!(room in gameStateManager.activeGames)) {
-      startGameLoopBound(io, room, 20);
+  socket.on("startGame", (callback) => {
+    try {
+      if (!(room in gameStateManager.activeGames)) {
+        startGameLoopBound(io, room, 30);
+        if (callback && typeof callback === 'function') {
+          callback({ status: 'ok', message: 'Game started successfully' });
+        }
+      } else {
+        if (callback && typeof callback === 'function') {
+          callback({ status: 'error', message: 'Game already in progress' });
+        }
+      }
+    } catch (error) {
+      console.error('Error starting game:', error);
+      if (callback && typeof callback === 'function') {
+        callback({ status: 'error', message: 'Failed to start game' });
+      }
     }
   });
   
   socket.on("stopGame", async (roomName) => await gameStateManager.stopGame(io, roomName, connectionManager));
   
-  socket.on("chooseCategory", (category) => {
-    gameStateManager.setCategory(room, category);
+  socket.on("chooseDifficulty", (difficulty) => {
+    gameStateManager.setDifficulty(room, difficulty);
   });
   
   socket.on("submitClue", async (clue) => {
@@ -110,7 +125,34 @@ io.on("connection", async (socket) => {
   }
 });
 
-// Start the server on configured port
-const port = process.env.GAMESERVER_PORT || 3000;
-startServer(server, port);
+// Initialize database and start server
+async function initializeAndStart() {
+  try {
+    // Initialize database
+    await database.initialize();
+    logger.info('Database initialized successfully');
+    
+    // Start the server on configured port
+    const port = process.env.GAMESERVER_PORT || 3000;
+    startServer(server, port);
+  } catch (error) {
+    logger.error({ error }, 'Failed to initialize server');
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  logger.info('Received SIGINT, shutting down gracefully');
+  await database.close();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  logger.info('Received SIGTERM, shutting down gracefully');
+  await database.close();
+  process.exit(0);
+});
+
+initializeAndStart();
 

@@ -9,7 +9,7 @@
 		role,
 		updateVotes,
 		submitAnswer,
-		leaveGame
+		currentGuesser
 	}: Props = $props();
 
 	type Props = {
@@ -19,13 +19,12 @@
 		role: string;
 		updateVotes: (index: number, value: number) => void;
 		submitAnswer: () => void;
-		leaveGame: () => void;
+		currentGuesser?: string;
 	};
 	let submitted = $state(false);
 	let userVotes = $state(new Array(votes.length).fill(0));
 
 	const voteOnClue = (index: number, value: number) => {
-		console.log(index, value);
 		userVotes[index] += value;
 
 		votes[index] += value;
@@ -50,38 +49,42 @@
 			<div class="text-primary mt-1 text-lg font-semibold">{secretWord}</div>
 		</div>
 
-		<div class="space-y-3">
+		<h2 class="text-lg">Mark the clues as Duplicate or Unique</h2>
+		<div class="space-y-2">
 			{#each clues as clue, index}
-				<div class="bg-card space-y-3 rounded-lg border p-4">
-					<div class="text-center">
-						<div class="font-medium">{clue || '(empty)'}</div>
-						<div class="text-muted-foreground mt-1 text-sm">
-							{#if votes[index] < 0}
-								Duplicate - {Math.abs(votes[index])} votes
-							{:else}
-								Good clue - {votes[index]} votes
-							{/if}
+				<div class="bg-card flex items-center justify-between rounded-lg border px-4 py-3">
+					<div class="flex min-w-0 flex-1 items-center gap-3">
+						<div
+							class="truncate text-base font-medium {votes[index] < 0
+								? 'text-red-600 dark:text-red-400'
+								: 'text-green-600 dark:text-green-400'}"
+						>
+							{clue || '(empty)'}
+						</div>
+						<div class="text-muted-foreground text-sm">
+							({votes[index]} votes)
 						</div>
 					</div>
-
-					<div class="flex justify-center gap-2">
+					<div class="flex flex-shrink-0 gap-2">
 						<Button
 							variant="outline"
 							size="sm"
 							disabled={hasVoted(index, -1)}
 							onclick={() => voteOnClue(index, -1)}
-							class="px-6"
+							class="px-3 py-2"
+							title="Mark as duplicate"
 						>
-							Mark as Duplicate (-1 vote)
+							❌ Duplicate
 						</Button>
 						<Button
 							variant="outline"
 							size="sm"
 							disabled={hasVoted(index, 1)}
 							onclick={() => voteOnClue(index, 1)}
-							class="px-6"
+							class="px-3 py-2"
+							title="Mark as unique"
 						>
-							Keep Clue (+1 vote)
+							✅ Unique
 						</Button>
 					</div>
 				</div>
@@ -90,10 +93,8 @@
 
 		<div class="text-center">
 			<Button disabled={submitted} onclick={() => submitAnswer()} class="px-8">
-				{submitted ? 'Votes submitted' : 'Looks good to me!'}
+				{submitted ? 'Votes submitted' : 'Proceed to guessing'}
 			</Button>
 		</div>
 	{/if}
 </div>
-
-<!-- <Button onclick={() => leaveGame()}>Leave Game</Button> -->

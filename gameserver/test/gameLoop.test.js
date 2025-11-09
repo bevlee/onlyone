@@ -4,7 +4,7 @@ import { GameLoop } from '../modules/gameLoop.js';
 
 describe('GameLoop', () => {
   let gameLoop, mockGameStateManager, mockConnectionManager, mockIo, mockSocket, mockEmit;
-  let room, writerRoom, guesserRoom, categories, secretWords, getStem;
+  let room, writerRoom, guesserRoom, difficulties, secretWords, getStem;
 
   beforeEach(() => {
     // Mock GameStateManager
@@ -13,7 +13,7 @@ describe('GameLoop', () => {
       setGameProgress: sinon.stub().resolves(),
       getGame: sinon.stub(),
       transitionToStage: sinon.stub().resolves(),
-      setCategory: sinon.stub().returns({ success: true }), // Now synchronous
+      setDifficulty: sinon.stub().returns({ success: true }), // Now synchronous
       setSecretWord: sinon.stub().returns({ success: true }), // Now synchronous
       addClue: sinon.stub().resolves(),
       setVotes: sinon.stub().returns({ success: true }), // Now synchronous
@@ -49,7 +49,7 @@ describe('GameLoop', () => {
     room = 'testRoom';
     writerRoom = 'testRoom.writer';
     guesserRoom = 'testRoom.guesser';
-    categories = ['Animals', 'Food', 'Movies'];
+    difficulties = ['Animals', 'Food', 'Movies'];
     secretWords = {
       'Animals': ['cat', 'dog', 'elephant'],
       'Food': ['pizza', 'burger', 'salad']
@@ -141,42 +141,42 @@ describe('GameLoop', () => {
     });
   });
 
-  describe('categoryPhase', () => {
+  describe('difficultyPhase', () => {
     beforeEach(() => {
-      // Mock game state to have no category initially, then category set
+      // Mock game state to have no difficulty initially, then difficulty set
       mockGameStateManager.getGame
-        .onFirstCall().returns({ category: '' })
-        .onSecondCall().returns({ category: 'Animals' });
+        .onFirstCall().returns({ difficulty: '' })
+        .onSecondCall().returns({ difficulty: 'Animals' });
     });
 
-    it('should emit chooseCategory events to both rooms', async () => {
+    it('should emit chooseDifficulty events to both rooms', async () => {
       // Mock waitForCondition to resolve immediately
       sinon.stub(gameLoop, 'waitForCondition').resolves('Condition met!');
 
-      await gameLoop.categoryPhase(mockIo, room, writerRoom, guesserRoom, categories, 20);
+      await gameLoop.difficultyPhase(mockIo, room, writerRoom, guesserRoom, difficulties, 20);
 
       expect(mockIo.to.calledWith(writerRoom)).to.be.true;
-      expect(mockEmit.calledWith('chooseCategory', 'writer', [])).to.be.true;
+      expect(mockEmit.calledWith('chooseDifficulty', 'writer', [])).to.be.true;
       expect(mockIo.to.calledWith(guesserRoom)).to.be.true;
-      expect(mockEmit.calledWith('chooseCategory', 'guesser', categories)).to.be.true;
+      expect(mockEmit.calledWith('chooseDifficulty', 'guesser', difficulties)).to.be.true;
     });
 
-    it('should set random category if none chosen within time limit', async () => {
-      // Mock game state to always have empty category
-      mockGameStateManager.getGame.returns({ category: '' });
+    it('should set random difficulty if none chosen within time limit', async () => {
+      // Mock game state to always have empty difficulty
+      mockGameStateManager.getGame.returns({ difficulty: '' });
       sinon.stub(gameLoop, 'waitForCondition').resolves('Timeout');
       sinon.stub(gameLoop, 'getRandomSelection').returns(0);
 
-      await gameLoop.categoryPhase(mockIo, room, writerRoom, guesserRoom, categories, 20);
+      await gameLoop.difficultyPhase(mockIo, room, writerRoom, guesserRoom, difficulties, 20);
 
-      expect(mockGameStateManager.setCategory.calledWith(room, 'Animals')).to.be.true;
+      expect(mockGameStateManager.setDifficulty.calledWith(room, 'Animals')).to.be.true;
     });
   });
 
   describe('cluePhase', () => {
     beforeEach(() => {
       mockGameStateManager.getGame.returns({
-        category: 'Animals',
+        difficulty: 'Animals',
         clues: ['furry', 'pet']
       });
       sinon.stub(gameLoop, 'getRandomSelection').returns(0);
@@ -204,7 +204,7 @@ describe('GameLoop', () => {
     it('should add default clues if not enough submitted', async () => {
       // Mock game state with fewer clues than writers
       mockGameStateManager.getGame.returns({
-        category: 'Animals',
+        difficulty: 'Animals',
         clues: ['furry'] // Only 1 clue
       });
       const writers = [['player1', mockSocket], ['player2', mockSocket]]; // 2 writers
@@ -484,7 +484,7 @@ describe('GameLoop', () => {
       });
 
       mockGameStateManager.getGame.returns({
-        category: 'Animals',
+        difficulty: 'Animals',
         clues: ['furry', 'pet'],
         votes: [0, 0],
         guess: 'cat',
@@ -493,7 +493,7 @@ describe('GameLoop', () => {
       });
 
       // Stub all async methods including the setTimeout delay
-      sinon.stub(gameLoop, 'categoryPhase').resolves();
+      sinon.stub(gameLoop, 'difficultyPhase').resolves();
       sinon.stub(gameLoop, 'cluePhase').resolves();
       sinon.stub(gameLoop, 'votingPhase').resolves();
       sinon.stub(gameLoop, 'guessingPhase').resolves(true);
@@ -508,7 +508,7 @@ describe('GameLoop', () => {
       global.setTimeout = (fn, delay) => originalSetTimeout(fn, 0);
 
       try {
-        await gameLoop.startGameLoop(mockIo, room, 20, categories, secretWords, getStem);
+        await gameLoop.startGameLoop(mockIo, room, 20, difficulties, secretWords, getStem);
 
         // Should create game for each player as guesser
         expect(mockGameStateManager.createGame.callCount).to.equal(2);
@@ -532,9 +532,9 @@ describe('GameLoop', () => {
       global.setTimeout = (fn, delay) => originalSetTimeout(fn, 0);
 
       try {
-        await gameLoop.startGameLoop(mockIo, room, 20, categories, secretWords, getStem);
+        await gameLoop.startGameLoop(mockIo, room, 20, difficulties, secretWords, getStem);
 
-        expect(gameLoop.categoryPhase.callCount).to.equal(2);
+        expect(gameLoop.difficultyPhase.callCount).to.equal(2);
         expect(gameLoop.cluePhase.callCount).to.equal(2);
         expect(gameLoop.votingPhase.callCount).to.equal(2);
         expect(gameLoop.guessingPhase.callCount).to.equal(2);
