@@ -5,27 +5,28 @@ export const difficulties = ["easy", "medium", "hard"];
 
 // Flattened word lists by difficulty
 const easy = [
-  "giraffe", "kangaroo", "fish", "cow",
+  "giraffe", "kangaroo", "fish", "cow", "spiderman", "mario",
   "trump", "michael jackson", "tiger woods", "britney spears", "lady gaga",
-  "earth", "china", "australia", "north korea",
-  "anu", "kingsleys", "radford", "fyshwick", "questacon",
-  "nemo", "pasta", "rain", "steak"
+  "earth", "china", "australia", "north korea", "japan", "france",
+  "nemo", "pasta", "rain", "steak", "firefox", "penguin", "pizza", "apple", "soccer", "banana"
+
 ];
 
 const medium = [
   "wombat", "sloth", "peacock", "octopus", "phoenix",
   "elon musk", "oprah winfrey", "queen", "emma watson", "steve irwin",
   "antarctica", "egypt", "tokyo", "amazon", "rome", "south korea",
-  "parliament house", "lake burley griffin", "manuka", "national gallery", "belconnen",
-  "vegemite", "volcano", "robot", "circus"
+  "parliament", "lake", "honey", "italy", "venice",
+  "vegemite", "volcano", "robot", "circus", "elephant", "dubai", "chocolate", "magic"
 ];
 
 const hard = [
   "eel", "mole", "wallaby", "tapir", "quokka",
   "greta thunberg", "tyler1", "satoshi nakamoto", "bob ross", "tim cook",
   "luxembourg", "siberia", "vatican", "tasmania", "uluru",
-  "yarralumla", "mount ainslie", "telopea park", "duntroon",
-  "origami", "quantum", "emoji", "zenith", "algorithm"
+  "tashkent", "birmingham", "ohio", "military",
+  "origami", "quantum", "emoji", "zenith", "algorithm",
+  "axolotl", "nairobi", "obsidian", "archipelago"
 ];
 
 // Secret words structure for compatibility
