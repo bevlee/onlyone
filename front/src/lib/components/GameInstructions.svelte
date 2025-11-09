@@ -33,7 +33,7 @@
 					<li>Everyone takes turns at guessing and writing clues</li>
 					<li>Guesser picks a difficulty</li>
 					<li>Others see a secret word, give one-word clues</li>
-					<li>Hide Duplicate clues from the guesser!</li>
+					<li>Hide duplicate clues from the guesser!</li>
 				</ol>
 				<div class="text-foreground pt-2 text-center text-lg font-medium">
 					🎯 Goal: Guess as many words as possible together!
