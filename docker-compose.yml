@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   # Game backend
@@ -10,6 +10,7 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=${GAMESERVER_PORT:-3000}
+      - CORS_ORIGIN=${CORS_ORIGIN}
     ports:
       - "${GAMESERVER_PORT:-3000}:${GAMESERVER_PORT:-3000}"
     user: "1001:1001"
