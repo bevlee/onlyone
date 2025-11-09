@@ -66,7 +66,7 @@
 	}
 
 	// init socket
-	const socket = io(env.PUBLIC_GAMESERVER_URL, {
+	const socket = io(window.location.origin, {
 		auth: {
 			serverOffset: 0,
 			username: username,
