@@ -17,38 +17,6 @@ Note: This is a multiplayer game - you'll need multiple players to enjoy the ful
 - **Proxy**: Nginx reverse proxy for routing and static files
 - **Deployment**: Docker Compose orchestration
 
-### Gameserver Architecture
-
-The gameserver has a modular architecture:
-
-- **ConnectionManager**: Handles player connections and room management
-- **GameStateManager**: Centralized game state and progress tracking
-- **GameLoop**: Main game phases (difficulty, clue, voting, guessing)
-- **Handlers**: Socket event handlers for game actions and chat
-- **Utils**: Shared utilities and word operations
-
-## Services
-
-### Frontend (Port 80 via Nginx)
-
-- Svelte SPA with real-time Socket.IO communication
-- Static file serving with aggressive caching
-- SPA routing with fallback to index.html
-
-### Gameserver (Internal Port 3000)
-
-- Socket.IO server for real-time game events
-- Game state management across multiple rooms
-- Player connection and name change handling
-- Comprehensive test coverage
-
-### Nginx Reverse Proxy (Port 80)
-
-- Routes `/socket.io/*` → gameserver WebSocket
-- Routes `/*` → frontend static files
-- Security headers and rate limiting
-- Health monitoring and error handling
-
 ## Docker Services
 
 - **frontend-builder**: Builds Svelte application assets
@@ -65,8 +33,16 @@ The gameserver has a modular architecture:
 
 ### Local
 
+/front
+
 ```bash
 npm run dev
+```
+
+/gameserver
+
+```bash
+node index.js
 ```
 
 ### Docker Compose
@@ -84,8 +60,6 @@ npm run dev
 Copy `.env.example` to `.env` and configure:
 
 ```bash
-ENVIRONMENT=production
-NODE_ENV=production
 GAMESERVER_PORT=3000
 GAMESERVER_HOST=gameserver
 SERVER_NAME=your-domain.com
@@ -100,15 +74,3 @@ SERVER_NAME=your-domain.com
 - Collaborative clue writing with duplicate elimination
 - Vote on whether clues are duplicates
 - See how many you can guess right as a team
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
-
-## License
-
-[Add your license here]
