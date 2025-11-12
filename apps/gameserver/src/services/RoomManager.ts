@@ -1,4 +1,4 @@
-import { Room, Rooms, RoomPlayer, Settings, GameState, GamePhaseType } from '@onlyone/shared';
+import { Room, Rooms, RoomPlayer, Settings } from '@onlyone/shared';
 
 export class RoomManager {
   private rooms: Rooms = {};
@@ -13,30 +13,12 @@ export class RoomManager {
       timeLimit: 30
     };
 
-    const defaultGameState: GameState = {
-      gamesWon: 0,
-      gamesPlayed: 0,
-      eventCount: 0,
-      currentRoundIndex: 0,
-      wordPool: [],
-      events: [],
-      gamePhase: {
-        phase: GamePhaseType.Lobby,
-        state: {
-          minPlayersToStart: 2,
-          words: [],
-          wordCollectionPhase: true
-        }
-      }
-    };
-
     this.rooms[roomName] = {
       roomName,
       status: 'waiting',
       players: [],
       spectators: [],
       settings: defaultSettings,
-      gameState: defaultGameState,
       roomLeader: null
     };
 
