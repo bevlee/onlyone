@@ -5,8 +5,9 @@ import type {
 } from '@onlyone/shared';
 import { RoomManager } from '../services/RoomManager.js';
 import { ConnectionManager } from '../services/ConnectionManager.js';
+import { GameService } from '../services/GameService.js';
 import { logger } from '../config/logger.js';
-import { validateChatMessage, validateClientEvent, ValidationError } from '../validation/eventValidator.js';
+import { validateGameAction, validateChatMessageInput, ValidationError } from '../validation/eventValidator.js';
 import { socketAuthSchema } from '@onlyone/shared/schemas';
 
 export function setupSocketHandlers(
@@ -63,7 +64,7 @@ export function setupSocketHandlers(
     // Chat message handler
     socket.on('chatMessage', (message: unknown) => {
       try {
-        const validatedMessage = validateChatMessage(message);
+        const validatedMessage = validateChatMessageInput(message);
 
         logger.debug({ roomName, playerName, message: validatedMessage }, 'Chat message');
 
@@ -111,27 +112,78 @@ export function setupSocketHandlers(
       }
     });
 
-    // Game event handlers (to be expanded later)
+    // Start game handler (transitions from waiting to playing)
     socket.on('startGame', () => {
-      logger.info({ roomName, playerName }, 'Start game requested');
-      // TODO: Implement game start logic
+      try {
+        // Only room leader can start the game
+        if (!roomManager.isRoomLeader(roomName, playerId)) {
+          socket.emit('error', { message: 'Only room leader can start the game' });
+          return;
+        }
+
+        // Attempt to start the game
+        const startSuccess = roomManager.startGame(roomName, playerId);
+
+        if (!startSuccess) {
+          // Get the room to check why it failed
+          const room = roomManager.getRoom(roomName);
+          let errorMessage = 'Unable to start game';
+
+          if (room.status !== 'waiting') {
+            errorMessage = 'Game is already in progress';
+          } else if (room.players.length < 2) {
+            errorMessage = `Need at least 2 players to start (currently ${room.players.length})`;
+          }
+
+          socket.emit('error', { message: errorMessage });
+          return;
+        }
+
+        // Get updated room after game start
+        const room = roomManager.getRoom(roomName);
+
+        // Broadcast updated room state to all players
+        io.to(roomName).emit('roomState', room);
+
+        logger.info({ roomName, playerId, playerName }, 'Game started successfully');
+      } catch (error) {
+        logger.error({ roomName, playerId, error }, 'Error starting game');
+        socket.emit('error', { message: 'Server error starting game' });
+      }
     });
 
     // Game action handler
     socket.on('gameAction', (action: unknown) => {
       try {
-        const validatedAction = validateClientEvent(action);
+        const validatedAction = validateGameAction(action);
 
         logger.debug({ roomName, playerId, actionType: validatedAction.type }, 'Game action received');
 
         // Get current room and game state
         const room = roomManager.getRoom(roomName);
 
-        // Create event from action
-        // TODO: Convert ClientEvent to GameEvent format (may require GameService update)
-        // For now, just log successful validation
-        logger.info({ roomName, playerId, actionType: validatedAction.type }, 'Validated game action');
+        // Game must be in progress (status = 'playing') and have active gameState
+        if (room.status !== 'playing' || !room.gameState) {
+          socket.emit('error', { message: 'Game is not in progress' });
+          return;
+        }
 
+        // Apply event to game state (validates phase legality)
+        try {
+          GameService.applyEvent(room.gameState, validatedAction);
+
+          // Broadcast room state update to all players in room
+          io.to(roomName).emit('roomState', room);
+
+          logger.info({ roomName, playerId, actionType: validatedAction.type }, 'Game action applied successfully');
+        } catch (gameError) {
+          // GameService validation error (phase check, business logic, etc)
+          logger.warn(
+            { roomName, playerId, actionType: validatedAction.type, error: gameError instanceof Error ? gameError.message : String(gameError) },
+            'Game action validation failed'
+          );
+          socket.emit('error', { message: `Action not allowed: ${gameError instanceof Error ? gameError.message : 'Unknown error'}` });
+        }
       } catch (error) {
         if (error instanceof ValidationError) {
           logger.warn({ roomName, playerId, error: error.message }, 'Invalid game action rejected');

@@ -1,3 +1,5 @@
+import { GameState } from './GameState.js';
+
 export interface RoomPlayer {
   id: string;
   name: string;
@@ -11,6 +13,7 @@ export interface Room {
   spectators: RoomPlayer[];
   settings: Settings;
   roomLeader: string | null;
+  gameState?: GameState;
 }
 
 export interface Rooms {

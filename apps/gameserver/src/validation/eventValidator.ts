@@ -62,3 +62,19 @@ export function validateChatMessage(data: unknown): ChatMessage {
 
   return result.data;
 }
+
+/**
+ * Validates a game action (ClientEvent)
+ * Throws ValidationError if validation fails
+ */
+export function validateGameAction(data: unknown): ClientEvent {
+  return validateClientEvent(data);
+}
+
+/**
+ * Validates a chat message
+ * Throws ValidationError if validation fails
+ */
+export function validateChatMessageInput(data: unknown): ChatMessage {
+  return validateChatMessage(data);
+}

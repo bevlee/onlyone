@@ -1,4 +1,5 @@
 import { Room, Rooms, RoomPlayer, Settings } from '@onlyone/shared';
+import { GameService } from './GameService.js';
 
 export class RoomManager {
   private rooms: Rooms = {};
@@ -152,6 +153,33 @@ export class RoomManager {
     if (!player) return false;
 
     player.socketId = socketId;
+    return true;
+  }
+
+  startGame(roomName: string, playerId: string): boolean {
+    const room = this.getRoom(roomName);
+
+    // Only room leader can start the game
+    if (!this.isRoomLeader(roomName, playerId)) {
+      return false;
+    }
+
+    // Must have at least 2 players
+    if (room.players.length < 2) {
+      return false;
+    }
+
+    // Must be in waiting status
+    if (room.status !== 'waiting') {
+      return false;
+    }
+
+    // Transition to playing
+    room.status = 'playing';
+
+    // Reset gameState to initial state (starts at SecretWordWriting phase)
+    room.gameState = GameService.createInitialGameState();
+
     return true;
   }
 }
