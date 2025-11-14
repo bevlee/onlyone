@@ -65,8 +65,11 @@
 		username = newUsername;
 	}
 
+	// use the local gameserver url in dev, otherwise use the proper domain name
+	const backendUrl = env.PUBLIC_DEVELOPMENT_GAMESERVER_URL || window.location.origin;
+
 	// init socket
-	const socket = io(window.location.origin, {
+	const socket = io(backendUrl, {
 		auth: {
 			serverOffset: 0,
 			username: username,
@@ -77,8 +80,7 @@
 	socket.on('disconnect', () => {
 		//send the username to the server
 	});
-	socket.on('connect', () => {
-	});
+	socket.on('connect', () => {});
 	socket.on('joinRoom', (roomDetails: Object) => {
 		for (let player of Object.keys(roomDetails)) {
 			players.add(player);
@@ -116,7 +118,12 @@
 	});
 	socket.on(
 		'filterClues',
-		(gameRole: string, votesForDuplicate: Array<number> = [], writerClues: Array<string> = [], guesser = '') => {
+		(
+			gameRole: string,
+			votesForDuplicate: Array<number> = [],
+			writerClues: Array<string> = [],
+			guesser = ''
+		) => {
 			role = gameRole;
 			clues = writerClues;
 			votes = votesForDuplicate;
@@ -131,7 +138,12 @@
 	);
 	socket.on(
 		'guessWord',
-		(gameRole: string, guesserClues: Array<string>, writerClues: Array<string> = [], guesser = '') => {
+		(
+			gameRole: string,
+			guesserClues: Array<string>,
+			writerClues: Array<string> = [],
+			guesser = ''
+		) => {
 			socket.off('updateVotes');
 			role = gameRole;
 			clues = writerClues;
@@ -156,7 +168,7 @@
 			currentGuesser: string;
 		}) => {
 			try {
-					clues = gameState.clues;
+				clues = gameState.clues;
 				dedupedClues = gameState.dedupedClues;
 				guess = gameState.guess;
 				secretWord = gameState.secretWord;
@@ -167,8 +179,7 @@
 				gamesPlayed = gameState.gamesPlayed;
 				totalRounds = gameState.playerCount;
 				currentGuesser = gameState.currentGuesser;
-			} catch (error) {
-				}
+			} catch (error) {}
 		}
 	);
 
@@ -203,16 +214,12 @@
 	const submitAnswer = (input: string) => {
 		if (currentScene === 'chooseDifficulty') {
 			socket.emit('chooseDifficulty', input);
-
 		} else if (currentScene === 'writeClues') {
 			socket.emit('submitClue', input);
-
 		} else if (currentScene === 'filterClues') {
 			socket.emit('finishVoting');
-
 		} else if (currentScene === 'guessWord') {
 			socket.emit('guessWord', input);
-
 		}
 		difficulties = [];
 	};
@@ -233,7 +240,7 @@
 			try {
 				await new Promise<boolean>((resolve) => {
 					socket.emit('startGame', (response: { status: string; message?: string }) => {
-							if (response.status === 'ok') {
+						if (response.status === 'ok') {
 							resolve(true);
 						} else {
 							console.error('Failed to start game:', response.message);
@@ -303,12 +310,12 @@
 					My role is <span class="text-foreground font-medium">{role}</span>
 				</p>
 				{#if currentGuesser}
-					<p class="text-muted-foreground text-xs mt-1">
+					<p class="text-muted-foreground mt-1 text-xs">
 						Current guesser: <span class="text-foreground font-medium">{currentGuesser}</span>
 					</p>
 				{/if}
 			</div>
-			<ChooseDifficulty difficulties={difficulties} {role} {submitAnswer} {currentGuesser} />
+			<ChooseDifficulty {difficulties} {role} {submitAnswer} {currentGuesser} />
 		</div>
 	{:else if currentScene == 'writeClues'}
 		<div class="container mx-auto max-w-4xl p-4">
@@ -317,7 +324,7 @@
 					My role is <span class="text-foreground font-medium">{role}</span>
 				</p>
 				{#if currentGuesser}
-					<p class="text-muted-foreground text-xs mt-1">
+					<p class="text-muted-foreground mt-1 text-xs">
 						Current guesser: <span class="text-foreground font-medium">{currentGuesser}</span>
 					</p>
 				{/if}
@@ -331,7 +338,7 @@
 					My role is <span class="text-foreground font-medium">{role}</span>
 				</p>
 				{#if currentGuesser}
-					<p class="text-muted-foreground text-xs mt-1">
+					<p class="text-muted-foreground mt-1 text-xs">
 						Current guesser: <span class="text-foreground font-medium">{currentGuesser}</span>
 					</p>
 				{/if}
@@ -353,7 +360,7 @@
 					My role is <span class="text-foreground font-medium">{role}</span>
 				</p>
 				{#if currentGuesser}
-					<p class="text-muted-foreground text-xs mt-1">
+					<p class="text-muted-foreground mt-1 text-xs">
 						Current guesser: <span class="text-foreground font-medium">{currentGuesser}</span>
 					</p>
 				{/if}
