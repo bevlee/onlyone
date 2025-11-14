@@ -14,7 +14,9 @@
 	<div class="flex items-center gap-4">
 		<div class="flex items-center gap-2">
 			<div class="text-muted-foreground text-sm">
-				Room: <span class="text-foreground font-medium">{roomName}</span>
+				Room: <span data-testid="roomHeader-roomCode" class="text-foreground font-medium"
+					>{roomName}</span
+				>
 			</div>
 		</div>
 
@@ -22,7 +24,7 @@
 
 		<div class="flex items-center gap-2 text-sm">
 			<UserIcon class="text-muted-foreground h-4 w-4" />
-			<span class="font-medium">{username}</span>
+			<span data-testid="roomHeader-username" class="font-medium">{username}</span>
 		</div>
 	</div>
 

@@ -20,7 +20,8 @@ test.describe('Join Room functionality', () => {
 
         // Type room name
         const roomInput = page.getByRole('textbox');
-        await roomInput.fill('testRoom');
+        expect(await roomInput.inputValue()).toBe("");
+        await roomInput.fill('TESTROOM12');
 
         // Find and click the join button
         const joinButton = await page.getByRole('button', { name: 'Join' });
@@ -29,9 +30,13 @@ test.describe('Join Room functionality', () => {
         console.log('Found join button, clicking...');
         await joinButton.click();
 
-        // Wait for the Room component to be visible
-        const leaveButton = await page.getByRole('button', { name: 'Leave Room' });
-        await expect(leaveButton).toBeVisible({ timeout: 5000 });
+        // Check the room name is correct
+        const roomCode = await page.getByTestId('roomHeader-roomCode').textContent();
+        expect(roomCode).toBe('TESTROOM12');
+
+        // Check the username is correct
+        const roomHeaderUsername = await page.getByTestId('roomHeader-username').textContent();
+        expect(roomHeaderUsername).toBe('testUser');
     });
 
     test('should generate random username if none exists', async ({ page }) => {
@@ -46,19 +51,47 @@ test.describe('Join Room functionality', () => {
 
         // Type room name
         const roomInput = await page.getByRole('textbox');
-        await roomInput.fill('testRoom');
+        expect(await roomInput.inputValue()).toBe("");
+        await roomInput.fill('TESTROOM12');
 
         // Try to click join button
         const joinButton = await page.getByRole('button', { name: 'Join' });
         await expect(joinButton).toBeVisible({ timeout: 10000 });
         await joinButton.click();
 
-        // Check that we joined with an auto-generated username
-        const leaveButton = await page.getByRole('button', { name: 'Leave Room' });
-        await expect(leaveButton).toBeVisible({ timeout: 5000 });
+        // Check the room name is correct
+        const roomCode = await page.getByTestId('roomHeader-roomCode').textContent();
+        expect(roomCode).toBe('TESTROOM12');
 
-        // // Verify that a username was auto-generated (should be in localStorage)
-        // const username = await page.evaluate(() => localStorage.getItem('username'));
-        // expect(username).toMatch(/^user\d{1,4}$/); // Should match pattern like "user1234"
+        // Check the username is correct
+        const roomHeaderUsername = await page.getByTestId('roomHeader-username').textContent();
+        expect(roomHeaderUsername).toContain('user');
+    });
+
+    test('should convert lowercase chars to uppercase', async ({ page }) => {
+        // Type room name
+        const roomInput = await page.getByRole('textbox');
+        expect(await roomInput.inputValue()).toBe("");
+        await roomInput.fill('abc123ef');
+
+        // Try to click join button
+        const joinButton = await page.getByRole('button', { name: 'Join' });
+        await expect(joinButton).toBeVisible({ timeout: 10000 });
+        await joinButton.click();
+
+        // Check the room name is correct
+        const roomCode = await page.getByTestId('roomHeader-roomCode').textContent();
+        expect(roomCode).toBe('ABC123EF');
+    });
+
+    test('should dissallow non alphanumeric chars', async ({ page }) => {
+        // Type room name
+        const roomInput = await page.getByRole('textbox');
+        expect(await roomInput.inputValue()).toBe("");
+        await roomInput.fill('!@#$%^&*()__-+=/.,<>?":;\'[]{}\|\\`~');
+
+        // Join button should be disabled as the input should be null
+        const joinButton = await page.getByRole('button', { name: 'Join' });
+        await expect(joinButton).toBeDisabled();
     });
 }); 
