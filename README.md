@@ -61,7 +61,6 @@ Copy `.env.example` to `.env` and configure:
 
 ```bash
 GAMESERVER_PORT=3000
-GAMESERVER_HOST=gameserver
 SERVER_NAME=your-domain.com
 ```
 

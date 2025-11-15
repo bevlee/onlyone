@@ -14,59 +14,54 @@
 	import ChangeNameModal from '$lib/components/ChangeNameModal.svelte';
 	import LeaveRoomModal from '$lib/components/LeaveRoomModal.svelte';
 
-	let { roomName, leaveRoom } = $props();
+	interface RoomProps {
+		roomName: string;
+		leaveRoom: () => void;
+	}
+
+	let { roomName, leaveRoom }: RoomProps = $props();
 
 	// Initialize username properly
-	const initialUsername =
+	const initialUsername: string =
 		localStorage.getItem('username') || 'user' + Math.floor(Math.random() * 10000);
-	let username = $state<string>(initialUsername);
+
+	let username: string = $state<string>(initialUsername);
 
 	// Modal states
-	let showChangeNameModal = $state(false);
-	let showLeaveRoomModal = $state(false);
-	let isChangingName = $state(false);
+	let showChangeNameModal: boolean = $state(false);
+	let showLeaveRoomModal: boolean = $state(false);
+	let isChangingName: boolean = $state(false);
 
 	// These need $state because they're mutated in callbacks/socket events
 	let role: string = $state('');
 	let votes: Array<number> = $state<Array<number>>([]);
 	let currentGuesser: string = $state('');
 
-	// These don't need $state because they're handled by Svelte's built-in reactivity
-	// svelte-ignore non_reactive_update
-	let difficulties: Array<string> = ['a', 'b', 'c'];
-	// svelte-ignore non_reactive_update
-	let difficulty: string = '';
-	// svelte-ignore non_reactive_update
-	let clues: Array<string> = ['a', 'b', 'a'];
-	// svelte-ignore non_reactive_update
-	let dedupedClues: Array<string> = [];
-	// svelte-ignore non_reactive_update
-	let secretWord: string = 'hehexd';
-	// svelte-ignore non_reactive_update
-	let guess: string = '';
-	// svelte-ignore non_reactive_update
-	let wordGuessed: boolean = false;
-	// svelte-ignore non_reactive_update
-	let gamesWon: number = 0;
-	// svelte-ignore non_reactive_update
-	let gamesPlayed: number = 0;
-	// svelte-ignore non_reactive_update
-	let totalRounds: number = 0;
+	let difficulties: Array<string> = $state(['a', 'b', 'c']);
+	let difficulty: string = $state('');
+	let clues: Array<string> = $state(['a', 'b', 'a']);
+	let dedupedClues: Array<string> = $state([]);
+	let secretWord: string = $state('secretWord');
+	let guess: string = $state('');
+	let wordGuessed: boolean = $state(false);
+	let gamesWon: number = $state(0);
+	let gamesPlayed: number = $state(0);
+	let totalRounds: number = $state(0);
 
 	// Set initial username if not already saved
 	if (initialUsername.startsWith('user')) {
 		setUsername(initialUsername);
 	}
 	let currentScene = $state<string>('main');
-	let players = $state(new SvelteSet([username]));
+	let players = $derived(new SvelteSet([username]));
 
-	function setUsername(newUsername: string) {
+	function setUsername(newUsername: string): void {
 		localStorage.setItem('username', newUsername);
 		username = newUsername;
 	}
 
 	// use the local gameserver url in dev, otherwise use the proper domain name
-	const backendUrl = env.PUBLIC_DEVELOPMENT_GAMESERVER_URL || window.location.origin;
+	const backendUrl = window.location.origin;
 
 	// init socket
 	const socket = io(backendUrl, {
@@ -269,10 +264,6 @@
 		console.warn(`Submission rejected for ${data.phase}: ${data.reason}`);
 		alert(`Submission rejected: ${data.reason}`);
 	});
-
-	export const add = (first: number) => {
-		return first + 10;
-	};
 </script>
 
 <div class="bg-background min-h-screen">
@@ -378,7 +369,6 @@
 				{wordGuessed}
 				{gamesPlayed}
 				{gamesWon}
-				{totalRounds}
 				playAgain={nextRound}
 				{currentGuesser}
 			/>

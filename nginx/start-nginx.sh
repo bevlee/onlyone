@@ -2,12 +2,11 @@
 
 echo "🎮 Starting OnlyOne Party Game..."
 echo "Environment: ${ENVIRONMENT:-dev}"
-echo "Server: ${GAMESERVER_HOST:-gameserver}:${GAMESERVER_PORT:-3000}"
+echo "Server: gameserver:${GAMESERVER_PORT:-3000}"
 
 # Set defaults for environment variables
 export ENVIRONMENT=${ENVIRONMENT:-dev}
 export SERVER_NAME=${SERVER_NAME:-localhost}
-export GAMESERVER_HOST=${GAMESERVER_HOST:-gameserver}
 export GAMESERVER_PORT=${GAMESERVER_PORT:-3000}
 export STATIC_ROOT=${STATIC_ROOT:-/usr/share/nginx/html}
 
@@ -15,7 +14,7 @@ export STATIC_ROOT=${STATIC_ROOT:-/usr/share/nginx/html}
 envsubst '
 $ENVIRONMENT
 $SERVER_NAME
-$GAMESERVER_HOST
+$
 $GAMESERVER_PORT
 $STATIC_ROOT
 ' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf

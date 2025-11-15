@@ -9,8 +9,8 @@ services:
     restart: always
     environment:
       - NODE_ENV=${NODE_ENV:-development}
-      - PORT=${GAMESERVER_PORT:-3000}
-      - CORS_ORIGIN=${CORS_ORIGIN}
+      - CLIENT_PORT=${CLIENT_PORT:-80}
+      - SERVER_NAME=${SERVER_NAME:-localhost}
     ports:
       - "${GAMESERVER_PORT:-3000}:${GAMESERVER_PORT:-3000}"
     user: "1001:1001"
@@ -26,9 +26,7 @@ services:
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - SERVER_NAME=${SERVER_NAME:-localhost}
-      - GAMESERVER_HOST=gameserver
       - GAMESERVER_PORT=${GAMESERVER_PORT:-3000}
-      - PUBLIC_DEVELOPMENT_GAMESERVER_URL=${PUBLIC_DEVELOPMENT_GAMESERVER_URL:-http://localhost:3000}
       - STATIC_ROOT=${STATIC_ROOT:-/usr/share/nginx/html}
     depends_on:
       - gameserver

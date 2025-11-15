@@ -41,7 +41,6 @@ sudo nginx -t && sudo systemctl reload nginx
 | ----------------- | ------------- | ---------------- | ---------------------- |
 | `ENVIRONMENT`     | `development` | `production`     | Environment identifier |
 | `SERVER_NAME`     | `localhost`   | `yourdomain.com` | Primary server name    |
-| `GAMESERVER_HOST` | `gameserver`  | `gameserver`     | Backend container name |
 | `GAMESERVER_PORT` | `3000`        | `3000`           | Backend port           |
 
 ## 🔧 Configuration Files

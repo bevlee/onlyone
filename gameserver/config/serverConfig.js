@@ -24,7 +24,8 @@ export const createExpressServer = () => {
  * @returns {Server} Configured Socket.IO server
  */
 export const createSocketServer = (server) => {
-  const allowedOrigin = process.env.CORS_ORIGIN || "http://localhost:5173"; // Fallback to dev server
+  // account for port 80 being omitted as default
+  const allowedOrigin = process.env.CLIENT_PORT === "80" ? process.env.SERVER_NAME : `${process.env.SERVER_NAME}:${process.env.CLIENT_PORT}`;
 
   return new Server(server, {
     connectionStateRecovery: {}, // Enable connection state recovery
