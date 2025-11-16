@@ -61,7 +61,9 @@
 	}
 
 	// use the local gameserver url in dev, otherwise use the proper domain name
-	const backendUrl = window.location.origin;
+	const backendUrl = env.PUBLIC_DEV_GAMESERVER_PORT
+		? 'http://localhost:3000'
+		: window.location.origin;
 
 	// init socket
 	const socket = io(backendUrl, {
@@ -294,85 +296,71 @@
 				</Button>
 			</div>
 		</div>
-	{:else if currentScene == 'chooseDifficulty'}
-		<div class="container mx-auto max-w-4xl p-4">
-			<div class="mb-6 text-center">
-				<p class="text-muted-foreground text-sm">
-					My role is <span class="text-foreground font-medium">{role}</span>
-				</p>
-				{#if currentGuesser}
-					<p class="text-muted-foreground mt-1 text-xs">
-						Current guesser: <span class="text-foreground font-medium">{currentGuesser}</span>
+	{:else}
+		{#if currentGuesser && currentScene != 'endGame'}
+			<p class="text-muted-foreground mt-1 text-xs">
+				Current guesser: <span class="text-foreground font-medium">{currentGuesser}</span>
+			</p>
+		{/if}
+		{#if currentScene == 'chooseDifficulty'}
+			<div class="container mx-auto max-w-4xl p-4">
+				<div class="mb-6 text-center">
+					<p class="text-muted-foreground text-sm">
+						My role is <span class="text-foreground font-medium">{role}</span>
 					</p>
-				{/if}
+				</div>
+				<ChooseDifficulty {difficulties} {role} {submitAnswer} />
 			</div>
-			<ChooseDifficulty {difficulties} {role} {submitAnswer} {currentGuesser} />
-		</div>
-	{:else if currentScene == 'writeClues'}
-		<div class="container mx-auto max-w-4xl p-4">
-			<div class="mb-6 text-center">
-				<p class="text-muted-foreground text-sm">
-					My role is <span class="text-foreground font-medium">{role}</span>
-				</p>
-				{#if currentGuesser}
-					<p class="text-muted-foreground mt-1 text-xs">
-						Current guesser: <span class="text-foreground font-medium">{currentGuesser}</span>
+		{:else if currentScene == 'writeClues'}
+			<div class="container mx-auto max-w-4xl p-4">
+				<div class="mb-6 text-center">
+					<p class="text-muted-foreground text-sm">
+						My role is <span class="text-foreground font-medium">{role}</span>
 					</p>
-				{/if}
+				</div>
+				<WriteClues word={secretWord} {role} {submitAnswer} {currentGuesser} />
 			</div>
-			<WriteClues word={secretWord} {role} {submitAnswer} {currentGuesser} />
-		</div>
-	{:else if currentScene == 'filterClues'}
-		<div class="container mx-auto max-w-4xl p-4">
-			<div class="mb-6 text-center">
-				<p class="text-muted-foreground text-sm">
-					My role is <span class="text-foreground font-medium">{role}</span>
-				</p>
-				{#if currentGuesser}
-					<p class="text-muted-foreground mt-1 text-xs">
-						Current guesser: <span class="text-foreground font-medium">{currentGuesser}</span>
+		{:else if currentScene == 'filterClues'}
+			<div class="container mx-auto max-w-4xl p-4">
+				<div class="mb-6 text-center">
+					<p class="text-muted-foreground text-sm">
+						My role is <span class="text-foreground font-medium">{role}</span>
 					</p>
-				{/if}
+				</div>
+				<FilterClues
+					bind:votes
+					{clues}
+					{secretWord}
+					{role}
+					{updateVotes}
+					submitAnswer={() => submitAnswer('')}
+				/>
 			</div>
-			<FilterClues
-				bind:votes
-				{clues}
-				{secretWord}
-				{role}
-				{updateVotes}
-				submitAnswer={() => submitAnswer('')}
-				{currentGuesser}
-			/>
-		</div>
-	{:else if currentScene == 'guessWord'}
-		<div class="container mx-auto max-w-4xl p-4">
-			<div class="mb-6 text-center">
-				<p class="text-muted-foreground text-sm">
-					My role is <span class="text-foreground font-medium">{role}</span>
-				</p>
-				{#if currentGuesser}
-					<p class="text-muted-foreground mt-1 text-xs">
-						Current guesser: <span class="text-foreground font-medium">{currentGuesser}</span>
+		{:else if currentScene == 'guessWord'}
+			<div class="container mx-auto max-w-4xl p-4">
+				<div class="mb-6 text-center">
+					<p class="text-muted-foreground text-sm">
+						My role is <span class="text-foreground font-medium">{role}</span>
 					</p>
-				{/if}
+				</div>
+				<GuessWord {dedupedClues} {clues} {role} {submitAnswer} {currentGuesser} />
 			</div>
-			<GuessWord {dedupedClues} {clues} {role} {submitAnswer} {currentGuesser} />
-		</div>
-	{:else if currentScene == 'endGame'}
-		<div class="container mx-auto max-w-4xl p-4">
-			<EndGame
-				{difficulty}
-				{dedupedClues}
-				{clues}
-				{guess}
-				{secretWord}
-				{wordGuessed}
-				{gamesPlayed}
-				{gamesWon}
-				playAgain={nextRound}
-				{currentGuesser}
-			/>
-		</div>
+		{:else if currentScene == 'endGame'}
+			<div class="container mx-auto max-w-4xl p-4">
+				<EndGame
+					{difficulty}
+					{dedupedClues}
+					{clues}
+					{guess}
+					{secretWord}
+					{wordGuessed}
+					{gamesPlayed}
+					{gamesWon}
+					playAgain={nextRound}
+					{currentGuesser}
+				/>
+			</div>
+		{/if}
 	{/if}
 </div>
 

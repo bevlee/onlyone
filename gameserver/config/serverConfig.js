@@ -8,6 +8,11 @@ import { logger } from './logger.js';
  * Separates Express and Socket.IO setup from business logic
  */
 
+
+// account for port 80 being omitted as default
+const CLIENT_PORT = process.env.CLIENT_PORT || "5173";
+const SERVER_NAME = process.env.SERVER_NAME || "localhost";
+
 /**
  * Create and configure Express application
  * @returns {Express} Configured Express app
@@ -24,13 +29,13 @@ export const createExpressServer = () => {
  * @returns {Server} Configured Socket.IO server
  */
 export const createSocketServer = (server) => {
-  // account for port 80 being omitted as default
-  const allowedOrigin = process.env.CLIENT_PORT === "80" ? process.env.SERVER_NAME : `${process.env.SERVER_NAME}:${process.env.CLIENT_PORT}`;
+  const clientOrigin = CLIENT_PORT === "80" ? `http://${SERVER_NAME}` : `http://${SERVER_NAME}:${CLIENT_PORT}`;
+  const allowedOrigins = [clientOrigin]
 
   return new Server(server, {
     connectionStateRecovery: {}, // Enable connection state recovery
     cors: {
-      origin: allowedOrigin,
+      origin: allowedOrigins,
       methods: ["GET", "POST"],
     },
   });
