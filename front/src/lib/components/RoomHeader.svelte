@@ -5,7 +5,15 @@
 	import UserIcon from '@lucide/svelte/icons/user';
 	import LogOutIcon from '@lucide/svelte/icons/log-out';
 
-	let { roomName, username, currentScene, onChangeName, onLeaveRoom } = $props();
+	interface RoomHeaderProps {
+		roomName: string;
+		username: string;
+		currentScene: string;
+		onChangeName: () => void;
+		onLeaveRoom: () => void;
+	}
+
+	let { roomName, username, currentScene, onChangeName, onLeaveRoom }: RoomHeaderProps = $props();
 </script>
 
 <div

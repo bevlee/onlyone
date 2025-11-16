@@ -8,8 +8,7 @@
 		secretWord,
 		role,
 		updateVotes,
-		submitAnswer,
-		currentGuesser
+		submitAnswer
 	}: Props = $props();
 
 	type Props = {
@@ -19,7 +18,6 @@
 		role: string;
 		updateVotes: (index: number, value: number) => void;
 		submitAnswer: () => void;
-		currentGuesser?: string;
 	};
 	let submitted = $state(false);
 	let userVotes = $state(new Array(votes.length).fill(0));

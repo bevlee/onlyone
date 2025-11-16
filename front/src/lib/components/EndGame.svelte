@@ -1,7 +1,18 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { defaultTimer } from '$lib/config';
-	import Timer from '$lib/components/Timer.svelte';
+
+	interface EndGameProps {
+		difficulty: string;
+		dedupedClues: Array<string>;
+		clues: Array<string>;
+		guess: string;
+		secretWord: string;
+		wordGuessed: boolean;
+		gamesPlayed: number;
+		gamesWon: number;
+		playAgain: () => void;
+		currentGuesser: string;
+	}
 
 	const {
 		difficulty,
@@ -12,14 +23,13 @@
 		wordGuessed,
 		gamesPlayed,
 		gamesWon,
-		totalRounds,
 		playAgain,
 		currentGuesser
-	} = $props();
+	}: EndGameProps = $props();
 
 	let displayedClues = $state(dedupedClues);
-	let hidden = false;
-	const hide = () => {
+	let hidden: boolean = $state(false);
+	const hide = (): void => {
 		hidden = !hidden;
 		displayedClues = hidden ? clues : dedupedClues;
 	};
@@ -48,8 +58,10 @@
 			</div>
 
 			<div class="space-y-2 border-t pt-3">
-				<div class="text-muted-foreground text-sm">{currentGuesser}'s guess</div>
-				<div class="text-center font-medium">{guess || 'No guess'}</div>
+				<div class="text-muted-foreground text-sm">
+					<span class="text-foreground font-medium">{currentGuesser}'s</span> guess
+				</div>
+				<div class="text-center font-medium">{guess || '<no guess>'}</div>
 			</div>
 
 			<div class="space-y-2 border-t pt-3">

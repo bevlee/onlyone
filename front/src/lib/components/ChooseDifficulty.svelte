@@ -3,7 +3,14 @@
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import { defaultTimer } from '$lib/config';
 	import Timer from '$lib/components/Timer.svelte';
-	const { difficulties, role, submitAnswer, currentGuesser } = $props();
+
+	interface ChooseDifficultyProps {
+		difficulties: Array<string>;
+		role: string;
+		submitAnswer: (difficulty: string) => void;
+	}
+
+	const { difficulties, role, submitAnswer }: ChooseDifficultyProps = $props();
 	let selectedOption = $state(difficulties[0]);
 
 	const submit = (): void => {
@@ -14,11 +21,6 @@
 <div class="space-y-6">
 	<Timer count={defaultTimer} submitAnswer={role === 'guesser' ? () => submit() : () => {}} />
 
-	<div class="mb-6 text-center">
-		<p class="text-muted-foreground text-sm">
-			My role is <span class="text-foreground font-medium">{role}</span>
-		</p>
-	</div>
 	{#if role == 'guesser'}
 		<div class="space-y-4 text-center">
 			<h2 class="text-lg font-medium">Choose a difficulty for your secret word</h2>
@@ -40,10 +42,7 @@
 		</div>
 	{:else}
 		<div class="space-y-4 text-center">
-			<h2 class="text-muted-foreground text-lg font-medium">
-				Waiting for guesser to choose difficulty...
-			</h2>
-			<div class="text-muted-foreground text-sm">
+			<div class="text-muted-foreground text-lg font-medium">
 				The guesser is selecting the difficulty for this round.
 			</div>
 		</div>

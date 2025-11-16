@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
 	let timer: ReturnType<typeof setInterval> | undefined = undefined;
-	let { count, submitAnswer, timerText = 'Time left:' } = $props();
+	interface TimerProps {
+		count: number;
+		submitAnswer: () => void;
+		timerText?: string;
+	}
+
+	let { count, submitAnswer, timerText = 'Time left:' }: TimerProps = $props();
 	$effect(() => {
 		timer = setInterval(() => {
 			if (count > 0) {

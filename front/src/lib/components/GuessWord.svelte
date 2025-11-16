@@ -3,7 +3,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { defaultTimer } from '$lib/config';
 	import Timer from '$lib/components/Timer.svelte';
-	const { dedupedClues, clues, role, submitAnswer, currentGuesser }: Props = $props();
+	const { dedupedClues, clues, role, submitAnswer }: Props = $props();
 
 	type Props = {
 		dedupedClues: string[];
@@ -50,7 +50,7 @@
 
 	{#if role == 'guesser'}
 		<div class="space-y-4 text-center">
-			<div class="text-muted-foreground text-sm">What's the secret word?</div>
+			<div class="text-muted-foreground text-lg">What's the secret word?</div>
 			<Input
 				class="mx-auto max-w-xs text-center"
 				type="text"

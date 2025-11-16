@@ -4,7 +4,14 @@
 	import { defaultTimer } from '$lib/config';
 	import Timer from '$lib/components/Timer.svelte';
 
-	const { word, role, submitAnswer, currentGuesser } = $props();
+	interface WriteCluesProps {
+		word: string;
+		role: string;
+		submitAnswer: (clue: string) => void;
+		currentGuesser: string;
+	}
+
+	const { word, role, submitAnswer, currentGuesser }: WriteCluesProps = $props();
 	let clue = $state('');
 	let submitted = $state(false);
 
@@ -29,7 +36,7 @@
 </script>
 
 <div class="space-y-6">
-	{#if role == 'guesser'}
+	{#if role && role == 'guesser'}
 		<div class="space-y-4 text-center">
 			<Timer count={defaultTimer} submitAnswer={() => {}} />
 			<h2 class="text-muted-foreground text-lg font-medium">
@@ -48,14 +55,15 @@
 			<div class="space-y-2">
 				<h2 class="text-lg font-medium">Write a one-word clue</h2>
 				<div class="text-muted-foreground text-sm">
-					Help others guess the secret word with a single descriptive word
+					Help <span class="text-foreground font-medium">{currentGuesser}</span> guess the secret word
+					with a single descriptive word
 				</div>
 			</div>
 
 			<Input
 				class="mx-auto max-w-xs text-center"
 				type="text"
-				placeholder="Enter your clue..."
+				placeholder="Enter a one word clue..."
 				bind:value={clue}
 			/>
 
