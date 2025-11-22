@@ -73,11 +73,6 @@ Startup script that:
 - **Purpose**: Supports the OnlyOne frontend
 - **Applications**: OnlyOne (`/onlyone`)
 
-### 3. Static File Server
-
-- **Ports**: 8080
-- **Purpose**: Serve static files for different applications
-
 ## 🐛 Troubleshooting
 
 ### Check Configuration

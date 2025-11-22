@@ -1,13 +1,10 @@
-name: Playwright Tests
+name: Frontend Tests
 on:
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - "front/**"
-  push:
-    branches:
-      - main
 jobs:
   test:
     timeout-minutes: 60
