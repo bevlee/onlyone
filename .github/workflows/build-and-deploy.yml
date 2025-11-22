@@ -6,10 +6,6 @@ on:
       - "v*" # Triggers only on version tags like v1.2.3
   workflow_dispatch: # Manual trigger
     inputs:
-      tag_suffix:
-        description: 'Tag suffix (e.g., "dev", "qa")'
-        required: false
-        default: "manual"
       environment:
         description: "Target environment"
         required: true
@@ -19,7 +15,7 @@ on:
           - production
 
 env:
-  AWS_REGION: ap_southeast-2 # set this to your preferred AWS region, e.g. us-west-1
+  AWS_REGION: ap-southeast-2 # set this to your preferred AWS region, e.g. us-west-1
   ECS_SERVICE: onlyone # set this to your Amazon ECS service name
   ECS_CLUSTER: onlyone-service-2d70yetx # set this to your Amazon ECS cluster name
   ECS_TASK_DEFINITION: .aws/onlyone-task-definition.json
@@ -27,8 +23,44 @@ env:
 
   GAMESERVER_IMAGE: bevdev1/onlyone-gameserver:${{ github.ref_name }}
   NGINX_IMAGE: bevdev1/onlyone-nginx:${{ github.ref_name }}
+
 jobs:
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install dependencies
+        run: npm ci
+        working-directory: front
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+        working-directory: front
+      - name: Run unit tests
+        run: npm run test:unit
+        working-directory: front
+      - name: Run Playwright tests
+        run: npm run test:e2e
+        working-directory: front
+
+  test-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install dependencies
+        run: npm ci
+        working-directory: gameserver
+      - name: Run unit tests
+        run: npm run test
+        working-directory: gameserver
+
   build-frontend-nginx:
+    needs: [test-frontend, test-server] # Wait for tests to pass
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -54,6 +86,7 @@ jobs:
             ${{ env.NGINX_IMAGE }}
 
   build-gameserver:
+    needs: [test-frontend, test-server]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -77,6 +110,7 @@ jobs:
           tags: |
             ${{ env.GAMESERVER_IMAGE }}
   deploy:
+    needs: [build-frontend-nginx, build-gameserver]
     runs-on: ubuntu-latest
     environment: production
 
