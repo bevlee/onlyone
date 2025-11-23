@@ -13,7 +13,7 @@
 		currentGuesser?: string;
 	};
 
-	let text = $state('');
+	let guess = $state('');
 
 	let displayedClues = $state(dedupedClues);
 	let hidden = $state(false);
@@ -22,7 +22,7 @@
 		displayedClues = hidden ? clues : dedupedClues;
 	};
 	const submit = () => {
-		submitAnswer(text);
+		submitAnswer(guess);
 	};
 </script>
 
@@ -55,9 +55,11 @@
 				class="mx-auto max-w-xs text-center"
 				type="text"
 				placeholder="Enter your guess..."
-				bind:value={text}
+				bind:value={guess}
 			/>
-			<Button onclick={() => submitAnswer(text)} class="px-8">Submit Guess</Button>
+			<Button disabled={guess === ''} onclick={() => submitAnswer(guess)} class="px-8"
+				>Submit Guess</Button
+			>
 		</div>
 	{/if}
 </div>
