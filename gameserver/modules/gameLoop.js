@@ -25,10 +25,9 @@ export class GameLoop {
    * @param {string} room - Room name
    * @param {number} timeLimit - Time limit per phase in seconds
    * @param {Array<string>} difficulties - Available game difficulty levels
-   * @param {Object} secretWords - Secret words organized by difficulty
    * @param {Function} getStem - Function to get word stem for comparison
    */
-  async startGameLoop(io, room, timeLimit, difficulties, secretWords, getStem) {
+  async startGameLoop(io, room, timeLimit, difficulties, getStem) {
     let round = 0;
     let winCount = 0;
     const writerRoom = room + ".writer";   // Room for clue writers
@@ -68,7 +67,7 @@ export class GameLoop {
       
       // Run through all game phases
       await this.difficultyPhase(io, room, writerRoom, guesserRoom, difficulties, timeLimit);
-      await this.cluePhase(io, room, writerRoom, guesserRoom, secretWords, timeLimit, writers, getStem);
+      await this.cluePhase(io, room, writerRoom, guesserRoom, timeLimit, writers, getStem);
       await this.votingPhase(io, room, writerRoom, guesserRoom, timeLimit);
       const success = await this.guessingPhase(io, room, writerRoom, guesserRoom, timeLimit, getStem);
       
@@ -166,18 +165,17 @@ export class GameLoop {
    * @param {string} room - Room name
    * @param {string} writerRoom - Writer room name
    * @param {string} guesserRoom - Guesser room name
-   * @param {Object} secretWords - Secret words by difficulty
    * @param {number} timeLimit - Time limit in seconds
    * @param {Array} writers - Array of writer connections
    */
-  async cluePhase(io, room, writerRoom, guesserRoom, secretWords, timeLimit, writers) {
+  async cluePhase(io, room, writerRoom, guesserRoom, timeLimit, writers) {
     const game = this.gameStateManager.getGame(room);
     const difficulty = game.difficulty;
     
     await this.gameStateManager.transitionToStage(room, "writeClues");
     
     // Select secret word using database tracking to avoid repeats
-    const secretWord = database.getNextWord(room, difficulty, secretWords[difficulty]);
+    const secretWord = database.getNextWord(room, difficulty);
     this.gameStateManager.setSecretWord(room, secretWord);
     
     logger.debug({ secretWord, difficulty, room }, 'Selected secret word from database');
