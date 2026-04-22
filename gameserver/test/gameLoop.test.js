@@ -1,10 +1,11 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
 import { GameLoop } from '../modules/gameLoop.js';
+import database from '../modules/database.js';
 
 describe('GameLoop', () => {
   let gameLoop, mockGameStateManager, mockConnectionManager, mockIo, mockSocket, mockEmit;
-  let room, writerRoom, guesserRoom, difficulties, secretWords, getStem;
+  let room, writerRoom, guesserRoom, difficulties, getStem;
 
   beforeEach(() => {
     // Mock GameStateManager
@@ -50,10 +51,6 @@ describe('GameLoop', () => {
     writerRoom = 'testRoom.writer';
     guesserRoom = 'testRoom.guesser';
     difficulties = ['Animals', 'Food', 'Movies'];
-    secretWords = {
-      'Animals': ['cat', 'dog', 'elephant'],
-      'Food': ['pizza', 'burger', 'salad']
-    };
     getStem = sinon.stub().returns('cat');
 
     // Create GameLoop instance
@@ -181,12 +178,17 @@ describe('GameLoop', () => {
       });
       sinon.stub(gameLoop, 'getRandomSelection').returns(0);
       sinon.stub(gameLoop, 'waitForCondition').resolves('Condition met!');
+      sinon.stub(database, 'getNextWord').returns('cat');
+    });
+
+    afterEach(() => {
+      sinon.restore();
     });
 
     it('should initialize clues and set secret word', async () => {
       const writers = [['player1', mockSocket], ['player2', mockSocket]];
 
-      await gameLoop.cluePhase(mockIo, room, writerRoom, guesserRoom, secretWords, 20, writers);
+      await gameLoop.cluePhase(mockIo, room, writerRoom, guesserRoom, 20, writers);
 
       expect(mockGameStateManager.transitionToStage.calledWith(room, 'writeClues')).to.be.true;
       expect(mockGameStateManager.setSecretWord.calledWith(room, 'cat')).to.be.true;
@@ -195,7 +197,7 @@ describe('GameLoop', () => {
     it('should emit writeClues events to both rooms', async () => {
       const writers = [['player1', mockSocket]];
 
-      await gameLoop.cluePhase(mockIo, room, writerRoom, guesserRoom, secretWords, 20, writers);
+      await gameLoop.cluePhase(mockIo, room, writerRoom, guesserRoom, 20, writers);
 
       expect(mockEmit.calledWith('writeClues', 'writer', 'cat')).to.be.true;
       expect(mockEmit.calledWith('writeClues', 'guesser', '')).to.be.true;
@@ -209,7 +211,7 @@ describe('GameLoop', () => {
       });
       const writers = [['player1', mockSocket], ['player2', mockSocket]]; // 2 writers
 
-      await gameLoop.cluePhase(mockIo, room, writerRoom, guesserRoom, secretWords, 20, writers);
+      await gameLoop.cluePhase(mockIo, room, writerRoom, guesserRoom, 20, writers);
 
       expect(mockGameStateManager.addClue.calledWith(room, '<no answer>')).to.be.true;
     });
@@ -508,7 +510,7 @@ describe('GameLoop', () => {
       global.setTimeout = (fn, delay) => originalSetTimeout(fn, 0);
 
       try {
-        await gameLoop.startGameLoop(mockIo, room, 20, difficulties, secretWords, getStem);
+        await gameLoop.startGameLoop(mockIo, room, 20, difficulties, getStem);
 
         // Should create game for each player as guesser
         expect(mockGameStateManager.createGame.callCount).to.equal(2);
@@ -532,7 +534,7 @@ describe('GameLoop', () => {
       global.setTimeout = (fn, delay) => originalSetTimeout(fn, 0);
 
       try {
-        await gameLoop.startGameLoop(mockIo, room, 20, difficulties, secretWords, getStem);
+        await gameLoop.startGameLoop(mockIo, room, 20, difficulties, getStem);
 
         expect(gameLoop.difficultyPhase.callCount).to.equal(2);
         expect(gameLoop.cluePhase.callCount).to.equal(2);
