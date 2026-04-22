@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { logger } from '../config/logger.js';
+import { secretWords } from '../data/data.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -34,7 +35,9 @@ class WordDatabase {
       
       // Prepare frequently used statements
       this.prepareStatements();
-      
+
+      this.seedWords();
+
       logger.info({ dbPath }, 'Database initialized successfully with better-sqlite3');
     } catch (error) {
       logger.error({ error }, 'Failed to initialize database');
@@ -81,8 +84,20 @@ class WordDatabase {
       `);
 
       this.db.exec(`
-        CREATE INDEX IF NOT EXISTS idx_rooms_last_active 
+        CREATE INDEX IF NOT EXISTS idx_rooms_last_active
         ON rooms(last_active);
+      `);
+
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS words (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          word TEXT NOT NULL UNIQUE,
+          category TEXT DEFAULT 'general',
+          difficulty TEXT DEFAULT 'medium' CHECK(difficulty IN ('easy', 'medium', 'hard')),
+          enabled INTEGER DEFAULT 1,
+          added_at TEXT DEFAULT (datetime('now')),
+          added_by TEXT DEFAULT 'system'
+        );
       `);
 
       logger.debug('Database schema created successfully');
@@ -134,9 +149,13 @@ class WordDatabase {
         `),
         
         cleanupInactiveRooms: this.db.prepare(`
-          DELETE FROM rooms 
+          DELETE FROM rooms
           WHERE last_active < datetime('now', '-' || ? || ' days')
-        `)
+        `),
+
+        getEnabledWordsByDifficulty: this.db.prepare(
+          'SELECT word FROM words WHERE enabled = 1 AND difficulty = ?'
+        )
       };
 
       logger.debug('Prepared statements created successfully');
@@ -144,6 +163,33 @@ class WordDatabase {
       logger.error({ error }, 'Failed to prepare statements');
       throw error;
     }
+  }
+
+  /**
+   * Seed the words table from static data if it is empty
+   */
+  seedWords() {
+    const count = this.db.prepare('SELECT COUNT(*) as n FROM words').get().n;
+    if (count > 0) {
+      logger.debug('Words table already seeded, skipping');
+      return;
+    }
+
+    const insert = this.db.prepare(
+      `INSERT OR IGNORE INTO words (word, category, difficulty, added_by) VALUES (?, 'general', ?, 'system')`
+    );
+
+    const seedAll = this.db.transaction(() => {
+      for (const [difficulty, words] of Object.entries(secretWords)) {
+        for (const word of words) {
+          insert.run(word, difficulty);
+        }
+      }
+    });
+
+    seedAll();
+    const seededCount = this.db.prepare('SELECT COUNT(*) as n FROM words').get().n;
+    logger.info({ seededCount }, 'Words table seeded from static data');
   }
 
   /**
@@ -164,25 +210,28 @@ class WordDatabase {
    * Get an unused word for a room and difficulty
    * @param {string} roomId - Room identifier
    * @param {string} difficulty - Word difficulty (easy/medium/hard)
-   * @param {Array<string>} availableWords - Array of all words for this difficulty
    * @returns {string|null} Random unused word or null if all used
    */
-  getUnusedWord(roomId, difficulty, availableWords) {
+  getUnusedWord(roomId, difficulty) {
     try {
       this.ensureRoom(roomId);
 
-      // Get all words already used in this room for this difficulty
-      const usedWordsResult = this.preparedStatements.getUsedWords.all(roomId, difficulty);
-      const usedWords = new Set(usedWordsResult.map(row => row.word));
-      
-      // Filter to get unused words
-      const unusedWords = availableWords.filter(word => !usedWords.has(word));
-      
-      if (unusedWords.length === 0) {
-        return null; // All words have been used
+      const availableWords = this.preparedStatements.getEnabledWordsByDifficulty
+        .all(difficulty)
+        .map(row => row.word);
+
+      if (availableWords.length === 0) {
+        throw new Error(`No enabled words for difficulty: ${difficulty}`);
       }
 
-      // Return a random unused word
+      const usedWordsResult = this.preparedStatements.getUsedWords.all(roomId, difficulty);
+      const usedWords = new Set(usedWordsResult.map(row => row.word));
+      const unusedWords = availableWords.filter(word => !usedWords.has(word));
+
+      if (unusedWords.length === 0) {
+        return null;
+      }
+
       const randomIndex = Math.floor(Math.random() * unusedWords.length);
       return unusedWords[randomIndex];
     } catch (error) {
@@ -229,32 +278,26 @@ class WordDatabase {
    * Get next available word for a room, resetting if all words used
    * @param {string} roomId - Room identifier
    * @param {string} difficulty - Word difficulty
-   * @param {Array<string>} availableWords - Array of all words for this difficulty
    * @returns {string} Next available word
    */
-  getNextWord(roomId, difficulty, availableWords) {
+  getNextWord(roomId, difficulty) {
     try {
-      // Use transaction for consistency
       return this.db.transaction(() => {
-        // Try to get an unused word
-        let word = this.getUnusedWord(roomId, difficulty, availableWords);
-        
+        let word = this.getUnusedWord(roomId, difficulty);
+
         if (!word) {
-          // All words exhausted - clear used words and try again
           logger.info({ roomId, difficulty }, 'All words exhausted, resetting word pool');
           this.clearUsedWords(roomId, difficulty);
-          word = this.getUnusedWord(roomId, difficulty, availableWords);
+          word = this.getUnusedWord(roomId, difficulty);
         }
 
         if (!word) {
-          // Fallback - should never happen if availableWords is not empty
-          word = availableWords[Math.floor(Math.random() * availableWords.length)];
+          const allWords = this.preparedStatements.getEnabledWordsByDifficulty.all(difficulty);
+          word = allWords[Math.floor(Math.random() * allWords.length)].word;
           logger.warn({ roomId, difficulty }, 'Using fallback random word selection');
         }
 
-        // Mark the selected word as used
         this.markWordAsUsed(roomId, word, difficulty);
-        
         return word;
       })();
     } catch (error) {
