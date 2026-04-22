@@ -15,17 +15,18 @@ export interface Word {
  * Does NOT track per-room usage — use database.getNextWord() for game rounds.
  */
 export function getRandomWord(db: Database.Database, difficulty?: string): string {
+  const d = difficulty?.trim() || undefined;
   let row: { word: string } | undefined;
-  if (difficulty) {
+  if (d) {
     row = db.prepare(
       'SELECT word FROM words WHERE enabled = 1 AND difficulty = ? ORDER BY RANDOM() LIMIT 1'
-    ).get(difficulty) as { word: string } | undefined;
+    ).get(d) as { word: string } | undefined;
   } else {
     row = db.prepare(
       'SELECT word FROM words WHERE enabled = 1 ORDER BY RANDOM() LIMIT 1'
     ).get() as { word: string } | undefined;
   }
-  if (!row) throw new Error(`No enabled words found${difficulty ? ` for difficulty: ${difficulty}` : ''}`);
+  if (!row) throw new Error(`No enabled words found${d ? ` for difficulty: ${d}` : ''}`);
   return row.word;
 }
 
@@ -46,7 +47,9 @@ export function addWord(
   const stmt = db.prepare(
     `INSERT INTO words (word, category, difficulty) VALUES (?, ?, ?) RETURNING *`
   );
-  return stmt.get(word.trim().toLowerCase(), category, difficulty) as Word;
+  const result = stmt.get(word.trim().toLowerCase(), category, difficulty) as Word | undefined;
+  if (!result) throw new Error('Insert returned no row');
+  return result;
 }
 
 /**
