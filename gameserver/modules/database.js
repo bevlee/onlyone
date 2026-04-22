@@ -293,6 +293,9 @@ class WordDatabase {
 
         if (!word) {
           const allWords = this.preparedStatements.getEnabledWordsByDifficulty.all(difficulty);
+          if (allWords.length === 0) {
+            throw new Error(`No enabled words available for difficulty: ${difficulty}`);
+          }
           word = allWords[Math.floor(Math.random() * allWords.length)].word;
           logger.warn({ roomId, difficulty }, 'Using fallback random word selection');
         }
