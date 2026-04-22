@@ -19,6 +19,8 @@ import { GameStateManager } from "./modules/gameStateManager.js";
 import { GameLoop } from "./modules/gameLoop.js";
 import { logger } from "./config/logger.js";
 import database from "./modules/database.js";
+import express from 'express';
+import { createWordRouter } from './dist/wordRouter.js';
 
 // Initialize Express app and HTTP server
 const app = createExpressServer();
@@ -131,7 +133,10 @@ async function initializeAndStart() {
     // Initialize database
     await database.initialize();
     logger.info('Database initialized successfully');
-    
+
+    app.use(express.json());
+    app.use('/api/words', createWordRouter(database.db));
+
     // Start the server on configured port
     const port = process.env.GAMESERVER_PORT || 3000;
     startServer(server, port);
