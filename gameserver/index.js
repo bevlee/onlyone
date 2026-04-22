@@ -24,6 +24,7 @@ import { createWordRouter } from './dist/wordRouter.js';
 
 // Initialize Express app and HTTP server
 const app = createExpressServer();
+app.use(express.json());
 const server = createServer(app);
 const io = createSocketServer(server);
 
@@ -134,7 +135,6 @@ async function initializeAndStart() {
     await database.initialize();
     logger.info('Database initialized successfully');
 
-    app.use(express.json());
     app.use('/api/words', createWordRouter(database.db));
 
     // Start the server on configured port

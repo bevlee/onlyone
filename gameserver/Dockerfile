@@ -58,6 +58,7 @@ COPY --from=builder /app/modules ./modules
 COPY --from=builder /app/index.js ./index.js
 COPY --from=builder /app/config ./config
 COPY --from=builder /app/wordOperations.js ./wordOperations.js
+COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
 
 # Create logs directory and change ownership to non-root user  
