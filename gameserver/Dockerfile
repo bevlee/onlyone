@@ -1,7 +1,7 @@
 # ================================
 # BUILD STAGE
 # ================================
-FROM node:20-alpine AS builder
+FROM node:24.22.3-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -26,7 +26,7 @@ RUN npm test
 # ================================
 # PRODUCTION DEPENDENCIES STAGE
 # ================================
-FROM node:20-alpine AS deps
+FROM node:24.22.3-alpine AS deps
 
 WORKDIR /app
 
@@ -39,7 +39,7 @@ RUN npm ci --only=production && npm cache clean --force
 # ================================
 # PRODUCTION STAGE
 # ================================
-FROM node:20-alpine AS production
+FROM node:24.22.3-alpine AS production
 
 # Set working directory
 WORKDIR /app

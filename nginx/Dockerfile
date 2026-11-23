@@ -1,6 +1,6 @@
 # Combined nginx+frontend build
 # Note that this will run from the root of the project, not from the nginx directory
-FROM node:20-alpine AS frontend-builder
+FROM node:24.22.3-alpine AS frontend-builder
 
 WORKDIR /app
 

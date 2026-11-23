@@ -54,7 +54,7 @@ gameserver/
 - **p-queue** (8.1.0): Promise-based queue for concurrency control
 - **pino** (8.17.2): High-performance JSON logging
 - **rotating-file-stream** (3.2.1): Log rotation
-- **sqlite3** (5.1.7): Database (currently unused but available)
+- **better-sqlite3** (12.2.0): SQLite database for room word tracking
 
 ### Dev Dependencies
 

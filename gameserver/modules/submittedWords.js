@@ -29,7 +29,7 @@ export class SubmittedWords {
     ) {
       return {
         success: false,
-        reason: 'Submit 1–3 answers, each between 1 and 60 characters.',
+        reason: 'Submit 1–3 secret words, each between 1 and 60 characters.',
       };
     }
     const cleaned = answers.map((word) => word.trim().replace(/\s+/g, ' '));

@@ -67,10 +67,10 @@ test('Your words: private submissions, duplicate ownership, complete pool and re
 			).toBeDisabled();
 		}
 		await capture(host, info, '02-empty-submission');
-		await host.getByLabel('Answer 1').fill('Loki');
+		await host.getByLabel('Secret word 1').fill('Loki');
 		await host.getByRole('button', { name: 'Submit words', exact: true }).click();
 		await expect(host.getByRole('button', { name: 'Words submitted', exact: true })).toBeDisabled();
-		await expect(players[1].page.getByLabel('Answer 1')).toHaveValue('');
+		await expect(players[1].page.getByLabel('Secret word 1')).toHaveValue('');
 		await expect(players[1].page.getByText('1 / 3 players ready', { exact: true })).toBeVisible();
 		await expect(players[1].page.getByText('Loki', { exact: true })).toHaveCount(0);
 		await capture(host, info, '03-waiting');
@@ -78,7 +78,7 @@ test('Your words: private submissions, duplicate ownership, complete pool and re
 			[1, 'LOKI'],
 			[2, 'Shrek']
 		] satisfies [number, string][]) {
-			await players[index].page.getByLabel('Answer 1').fill(word);
+			await players[index].page.getByLabel('Secret word 1').fill(word);
 			await players[index].page.getByRole('button', { name: 'Submit words', exact: true }).click();
 		}
 		const seen = new Set<string>();
@@ -175,7 +175,7 @@ test('Your words: unanimous answers return to the lobby with an explanation', as
 		await capture(host, info, '01-lobby');
 		await host.getByRole('button', { name: 'Start Game', exact: true }).click();
 		for (const player of players) {
-			await player.page.getByLabel('Answer 1').fill('Shrek');
+			await player.page.getByLabel('Secret word 1').fill('Shrek');
 			await player.page.getByRole('button', { name: 'Submit words', exact: true }).click();
 		}
 		for (const player of players) {
@@ -207,7 +207,7 @@ test('unfinished clues and guess survive real server timeouts', async ({ browser
 			[1, 'LOKI'],
 			[2, 'Shrek']
 		] satisfies [number, string][]) {
-			await players[index].page.getByLabel('Answer 1').fill(word);
+			await players[index].page.getByLabel('Secret word 1').fill(word);
 			await players[index].page.getByRole('button', { name: 'Submit words', exact: true }).click();
 		}
 		for (const player of players)

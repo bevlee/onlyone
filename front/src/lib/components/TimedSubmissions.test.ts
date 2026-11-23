@@ -93,7 +93,7 @@ describe('timed submissions', () => {
 	it('submits draft pool words at the collection deadline', async () => {
 		const onSubmit = vi.fn().mockResolvedValue({ success: true });
 		render(SubmitWords, { submitted: 0, total: 3, deadlineAt: Date.now() + 1000, onSubmit });
-		await fireEvent.input(screen.getByLabelText('Answer 1'), { target: { value: 'Loki' } });
+		await fireEvent.input(screen.getByLabelText('Secret word 1'), { target: { value: 'Loki' } });
 		await act(() => vi.advanceTimersByTime(3000));
 		expect(onSubmit.mock.calls).toEqual([[['Loki']]]);
 	});
