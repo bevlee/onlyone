@@ -13,11 +13,21 @@ export default defineConfig({
         video: 'retain-on-failure',
         screenshot: 'only-on-failure'
     },
-    webServer: {
-        command: 'npm run build && npm run dev',
-        port: 5173,
-        reuseExistingServer: true,
-        stdout: 'pipe',
-        stderr: 'pipe',
-    },
+    webServer: [
+        {
+            command: 'npm start',
+            cwd: '../../gameserver',
+            port: 3000,
+            reuseExistingServer: true,
+            stdout: 'pipe',
+            stderr: 'pipe',
+        },
+        {
+            command: 'npm run build && npm run dev',
+            port: 5173,
+            reuseExistingServer: true,
+            stdout: 'pipe',
+            stderr: 'pipe',
+        },
+    ],
 }); 

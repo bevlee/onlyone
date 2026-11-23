@@ -1,6 +1,9 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
 import { GameLoop } from '../modules/gameLoop.js';
+import database from '../modules/database.js';
+
+const removedVotes = (removed) => ({ removed: () => removed });
 
 describe('GameLoop', () => {
   let gameLoop, mockGameStateManager, mockConnectionManager, mockIo, mockSocket, mockEmit;
@@ -11,13 +14,12 @@ describe('GameLoop', () => {
     mockGameStateManager = {
       createGame: sinon.stub().resolves(),
       setGameProgress: sinon.stub().resolves(),
+      setCurrentGuesser: sinon.stub(),
       getGame: sinon.stub(),
       transitionToStage: sinon.stub().resolves(),
       setDifficulty: sinon.stub().returns({ success: true }), // Now synchronous
       setSecretWord: sinon.stub().returns({ success: true }), // Now synchronous
       addClue: sinon.stub().resolves(),
-      setVotes: sinon.stub().returns({ success: true }), // Now synchronous
-      setFinishedVoting: sinon.stub().returns({ success: true }), // Now synchronous
       setGuess: sinon.stub().returns({ success: true }), // Now synchronous
       setGameResult: sinon.stub().resolves(),
       deleteGame: sinon.stub().resolves()
@@ -59,6 +61,8 @@ describe('GameLoop', () => {
     // Create GameLoop instance
     gameLoop = new GameLoop(mockGameStateManager, mockConnectionManager);
   });
+
+  afterEach(() => sinon.restore());
 
   describe('constructor', () => {
     it('should initialize with gameStateManager and connectionManager', () => {
@@ -163,6 +167,7 @@ describe('GameLoop', () => {
 
     it('should set random difficulty if none chosen within time limit', async () => {
       // Mock game state to always have empty difficulty
+      mockGameStateManager.getGame.resetBehavior();
       mockGameStateManager.getGame.returns({ difficulty: '' });
       sinon.stub(gameLoop, 'waitForCondition').resolves('Timeout');
       sinon.stub(gameLoop, 'getRandomSelection').returns(0);
@@ -175,6 +180,7 @@ describe('GameLoop', () => {
 
   describe('cluePhase', () => {
     beforeEach(() => {
+      sinon.stub(database, 'getNextWord').returns('cat');
       mockGameStateManager.getGame.returns({
         difficulty: 'Animals',
         clues: ['furry', 'pet']
@@ -216,91 +222,48 @@ describe('GameLoop', () => {
   });
 
   describe('votingPhase', () => {
+    const writers = [['p1', mockSocketStub()], ['p2', mockSocketStub()], ['p3', mockSocketStub()]];
+    function mockSocketStub() { return { joinRoom() {}, leaveRoom() {} }; }
+
     beforeEach(() => {
       sinon.stub(gameLoop, 'waitForCondition').resolves('Condition met!');
     });
 
-    it('should process clues and initialize voting', async () => {
-      mockGameStateManager.getGame.returns({
-        clues: ['furry', 'pet', 'animal'],
-        finishedVoting: true
-      });
-      await gameLoop.votingPhase(mockIo, room, writerRoom, guesserRoom, 20);
+    it('should transition to filterClues and create repeat votes for the writers', async () => {
+      const game = { clues: ['furry', 'pet', 'animal'] };
+      mockGameStateManager.getGame.returns(game);
+      await gameLoop.votingPhase(mockIo, room, writerRoom, guesserRoom, 20, writers);
 
-      expect(mockGameStateManager.setVotes.called).to.be.true;
-      expect(mockGameStateManager.setFinishedVoting.calledWith(room, false)).to.be.true;
       expect(mockGameStateManager.transitionToStage.calledWith(room, 'filterClues')).to.be.true;
+      expect(game.repeatVotes.required).to.equal(2);
+      expect(game.repeatVotes.voterIds).to.deep.equal(new Set(['p1', 'p2', 'p3']));
     });
 
-    it('should emit filterClues events to both rooms', async () => {
-      mockGameStateManager.getGame.returns({
-        clues: ['furry', 'pet', 'animal'],
-        finishedVoting: true
-      });
-      await gameLoop.votingPhase(mockIo, room, writerRoom, guesserRoom, 20);
+    it('should send public vote state to writers and nothing to the guesser', async () => {
+      mockGameStateManager.getGame.returns({ clues: ['furry', 'pet', 'Furry'] });
+      await gameLoop.votingPhase(mockIo, room, writerRoom, guesserRoom, 20, writers);
 
-      expect(mockIo.to.calledWith(writerRoom)).to.be.true;
-      expect(mockEmit.calledWith('filterClues', 'writer')).to.be.true;
-      expect(mockIo.to.calledWith(guesserRoom)).to.be.true;
-      expect(mockEmit.calledWith('filterClues', 'guesser')).to.be.true;
+      const writerCall = mockEmit.getCalls().find((c) => c.args[0] === 'filterClues' && c.args[1] === 'writer');
+      const guesserCall = mockEmit.getCalls().find((c) => c.args[0] === 'filterClues' && c.args[1] === 'guesser');
+      expect(writerCall.args[2]).to.deep.include({ counts: [0, 0, 0], autoRemoved: [true, false, true], required: 2 });
+      expect(guesserCall.args[2]).to.equal(null);
+      expect(guesserCall.args[3]).to.deep.equal([]);
     });
 
-    it('should initialize votes with 0 for all clues (no <redacted> clues)', async () => {
-      mockGameStateManager.getGame.returns({
-        clues: ['furry', 'pet', 'furry', 'animal'], // 'furry' is duplicated but becomes "<redacted>" after dedupeClues
-        finishedVoting: true
-      });
+    it('should finish when every connected writer is done', async () => {
+      gameLoop.waitForCondition.restore();
+      const game = { clues: ['a', 'b'] };
+      mockGameStateManager.getGame.returns(game);
+      mockConnectionManager.getConnections.returns({ x: { playerId: 'p1' }, y: { playerId: 'p2' } });
+      const check = sinon.stub(gameLoop, 'waitForCondition').resolves();
+      await gameLoop.votingPhase(mockIo, room, writerRoom, guesserRoom, 20, writers);
 
-      await gameLoop.votingPhase(mockIo, room, writerRoom, guesserRoom, 20);
-
-      // Check that setVotes was called with correct initial vote array
-      const setVotesCall = mockGameStateManager.setVotes.getCall(0);
-      const votes = setVotesCall.args[1];
-      
-      expect(votes).to.deep.equal([-1, 0, -1, 0]);
-    });
-
-    it('should handle duplicate clues correctly after deduplication', async () => {
-      mockGameStateManager.getGame.returns({
-        clues: ['same', 'valid', 'same', 'another'], // 'same' will become '<redacted>'
-        finishedVoting: true
-      });
-
-      await gameLoop.votingPhase(mockIo, room, writerRoom, guesserRoom, 20);
-
-      const setVotesCall = mockGameStateManager.setVotes.getCall(0);
-      const votes = setVotesCall.args[1];
-      
-      expect(votes).to.deep.equal([-1, 0, -1, 0]);
-    });
-
-    it('should only set -1 for literal "<redacted>" strings in input', async () => {
-      mockGameStateManager.getGame.returns({
-        clues: ['<redacted>', 'valid', 'duplicate', 'duplicate'], // literal "<redacted>" plus duplicates
-        finishedVoting: true
-      });
-
-      await gameLoop.votingPhase(mockIo, room, writerRoom, guesserRoom, 20);
-
-      const setVotesCall = mockGameStateManager.setVotes.getCall(0);
-      const votes = setVotesCall.args[1];
-      
-      // The literal "<redacted>" gets -1, duplicates become "<redacted>" after dedupeClues and also get -1
-      expect(votes).to.deep.equal([-1, 0, -1, -1]);
-    });
-
-    it('should handle all normal clues correctly', async () => {
-      mockGameStateManager.getGame.returns({
-        clues: ['furry', 'pet', 'mammal', 'cute'],
-        finishedVoting: true
-      });
-
-      await gameLoop.votingPhase(mockIo, room, writerRoom, guesserRoom, 20);
-
-      const setVotesCall = mockGameStateManager.setVotes.getCall(0);
-      const votes = setVotesCall.args[1];
-      
-      expect(votes).to.deep.equal([0, 0, 0, 0]); // All should be 0
+      const condition = check.firstCall.args[0];
+      expect(condition()).to.be.false;
+      game.repeatVotes.finish('p1');
+      expect(condition()).to.be.false;
+      game.repeatVotes.finish('p2'); // p3 disconnected, so not required
+      expect(condition()).to.be.true;
     });
   });
 
@@ -308,7 +271,7 @@ describe('GameLoop', () => {
     beforeEach(() => {
       mockGameStateManager.getGame.returns({
         clues: ['furry', 'pet', 'animal'],
-        votes: [0, 0, -1], // Third clue eliminated
+        repeatVotes: removedVotes([false, false, true]), // Third clue eliminated
         guess: 'cat',
         secretWord: 'cat'
       });
@@ -331,7 +294,9 @@ describe('GameLoop', () => {
     });
 
     it('should return false when guess is incorrect', async () => {
-      getStem.returns('dog'); // Different from secret word
+      getStem.withArgs('cat').returns('cat');
+      mockGameStateManager.getGame().guess = 'dog';
+      getStem.withArgs('dog').returns('dog');
 
       const success = await gameLoop.guessingPhase(mockIo, room, writerRoom, guesserRoom, 20, getStem);
 
@@ -341,7 +306,7 @@ describe('GameLoop', () => {
     it('should handle no guess submitted', async () => {
       mockGameStateManager.getGame.returns({
         clues: ['furry', 'pet'],
-        votes: [0, 0],
+        repeatVotes: removedVotes([false, false]),
         guess: '', // No guess submitted
         secretWord: 'cat'
       });
@@ -354,7 +319,7 @@ describe('GameLoop', () => {
     it('should hide clues with negative votes and show clues with non-negative votes', async () => {
       mockGameStateManager.getGame.returns({
         clues: ['furry', 'pet', 'mammal', 'cute'],
-        votes: [0, -1, 1, -2], // Keep, hide, keep, hide
+        repeatVotes: removedVotes([false, true, false, true]), // Keep, hide, keep, hide
         guess: 'cat',
         secretWord: 'cat'
       });
@@ -374,7 +339,7 @@ describe('GameLoop', () => {
     it('should show all clues when all votes are non-negative', async () => {
       mockGameStateManager.getGame.returns({
         clues: ['furry', 'pet', 'mammal'],
-        votes: [0, 1, 2], // All positive or zero
+        repeatVotes: removedVotes([false, false, false]), // All positive or zero
         guess: 'cat',
         secretWord: 'cat'
       });
@@ -393,7 +358,7 @@ describe('GameLoop', () => {
     it('should hide all clues when all votes are negative', async () => {
       mockGameStateManager.getGame.returns({
         clues: ['furry', 'pet', 'mammal'],
-        votes: [-1, -2, -3], // All negative
+        repeatVotes: removedVotes([true, true, true]), // All negative
         guess: 'cat',
         secretWord: 'cat'
       });
@@ -412,7 +377,7 @@ describe('GameLoop', () => {
     it('should provide original clues to writers and filtered clues to guesser', async () => {
       mockGameStateManager.getGame.returns({
         clues: ['furry', 'pet', 'mammal'],
-        votes: [0, -1, 0], // Keep, hide, keep
+        repeatVotes: removedVotes([false, true, false]), // Keep, hide, keep
         guess: 'cat',
         secretWord: 'cat'
       });
@@ -486,7 +451,7 @@ describe('GameLoop', () => {
       mockGameStateManager.getGame.returns({
         difficulty: 'Animals',
         clues: ['furry', 'pet'],
-        votes: [0, 0],
+        repeatVotes: removedVotes([false, false]),
         guess: 'cat',
         secretWord: 'cat',
         dedupedClues: ['furry', 'pet']
@@ -500,6 +465,11 @@ describe('GameLoop', () => {
       sinon.stub(gameLoop, 'setupGuesserRoom');
       sinon.stub(gameLoop, 'getWriters').returns([['player2', mockSocket]]);
       sinon.stub(gameLoop, 'setupWriterRooms');
+      sinon.stub(gameLoop, 'waitForNextRound').callsFake(async () => {
+        if (mockGameStateManager.setGameResult.callCount === 2) {
+          gameLoop.cancel(room);
+        }
+      });
     });
 
     it('should run complete game loop for all players', async () => {
@@ -542,5 +512,25 @@ describe('GameLoop', () => {
         global.setTimeout = originalSetTimeout;
       }
     });
+  });
+});
+describe('phase deadline delivery window', () => {
+  let clock;
+  afterEach(() => clock.restore());
+
+  it('accepts input sent at zero, rejects expired input and rejects previous phase IDs', () => {
+    clock = sinon.useFakeTimers({ now: 100000 });
+    const game = {};
+    const loop = new GameLoop({ getGame: () => game }, {});
+    const timing = loop.startPhaseTimer('room', 30);
+    expect(timing.deadlineAt).to.equal(130000);
+    clock.tick(30000);
+    expect(loop.acceptsSubmission('room', timing.phaseId)).to.equal(true);
+    clock.tick(1000);
+    expect(loop.acceptsSubmission('room', timing.phaseId)).to.equal(true);
+    clock.tick(1001);
+    expect(loop.acceptsSubmission('room', timing.phaseId)).to.equal(false);
+    loop.startPhaseTimer('room', 30);
+    expect(loop.acceptsSubmission('room', timing.phaseId)).to.equal(false);
   });
 });

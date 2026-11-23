@@ -171,3 +171,5 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+# Local game verification evidence
+.audit/game-verify/

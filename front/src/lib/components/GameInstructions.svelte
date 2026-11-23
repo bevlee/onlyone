@@ -31,9 +31,12 @@
 			<div class="text-muted-foreground space-y-3 text-sm">
 				<ol class="list-inside list-decimal space-y-2">
 					<li>Everyone takes turns at guessing and writing clues</li>
-					<li>Guesser picks a difficulty</li>
+					<li>
+						In Classic, the guesser picks a difficulty. In Your words, everyone submits secret
+						answers first.
+					</li>
 					<li>Others see a secret word, give one-word clues</li>
-					<li>Hide duplicate clues from the guesser!</li>
+					<li>Mark repeated clues — the guesser won't see them</li>
 				</ol>
 				<div class="text-foreground pt-2 text-center text-lg font-medium">
 					🎯 Goal: Guess as many words as possible together!
@@ -58,8 +61,10 @@
 					</div>
 
 					<div class="rounded border border-red-500/30 bg-red-500/10 p-3">
-						<p class="mb-2 text-xs font-semibold">⚠️ Duplicates should be marked for removal:</p>
-						<p class="text-muted-foreground text-xs">"australian" gets filtered out</p>
+						<p class="mb-2 text-xs font-semibold">
+							⚠️ Writers mark repeated clues. A majority vote removes them:
+						</p>
+						<p class="text-muted-foreground text-xs">both "australian" clues are removed</p>
 					</div>
 
 					<div class="rounded border border-green-500/30 bg-green-500/10 p-3">

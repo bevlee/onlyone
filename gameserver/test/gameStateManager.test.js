@@ -86,7 +86,7 @@ describe('GameStateManager', () => {
       expect(game.clues).to.have.length(0);
     });
 
-    it('should initialize votes for filterClues stage', async () => {
+    it('should keep clues when entering filterClues stage', async () => {
       // First transition to writeClues and add some clues
       await gameStateManager.transitionToStage(testRoom, 'writeClues');
       await gameStateManager.addClue(testRoom, 'clue1');
@@ -97,10 +97,7 @@ describe('GameStateManager', () => {
       
       const game = gameStateManager.getGame(testRoom);
       expect(game.stage).to.equal('filterClues');
-      expect(game.votes).to.be.an('array');
-      expect(game.votes).to.have.length(2);
-      expect(game.votes).to.deep.equal([0, 0]);
-      expect(game.finishedVoting).to.be.false;
+      expect(game.clues).to.deep.equal(['clue1', 'clue2']);
     });
 
     it('should initialize guess for guessWord stage', async () => {
@@ -252,90 +249,6 @@ describe('GameStateManager', () => {
 
     it('should not add clue for non-existent room', async () => {
       const result = await gameStateManager.addValidatedClue('nonExistentRoom', 'big', mockGetStem);
-      
-      expect(result.success).to.be.false;
-      expect(result.reason).to.equal('Game not found');
-    });
-  });
-
-  describe('setVotes', () => {
-    beforeEach(async () => {
-      await gameStateManager.createGame(testRoom, testPlayerCount);
-    });
-
-    it('should set votes array', () => {
-      const votes = [1, -1, 0, 2];
-      const result = gameStateManager.setVotes(testRoom, votes);
-      
-      expect(result.success).to.be.true;
-      expect(result.votes).to.deep.equal(votes);
-      
-      const game = gameStateManager.getGame(testRoom);
-      expect(game.votes).to.deep.equal(votes);
-    });
-
-    it('should not set votes for non-existent room', () => {
-      const result = gameStateManager.setVotes('nonExistentRoom', [1, -1, 0]);
-      
-      expect(result.success).to.be.false;
-      expect(result.reason).to.equal('Game not found');
-    });
-  });
-
-  describe('updateVote', () => {
-    beforeEach(async () => {
-      await gameStateManager.createGame(testRoom, testPlayerCount);
-      await gameStateManager.transitionToStage(testRoom, 'writeClues');
-      await gameStateManager.addClue(testRoom, 'clue1');
-      await gameStateManager.addClue(testRoom, 'clue2');
-      await gameStateManager.transitionToStage(testRoom, 'filterClues');
-    });
-
-    it('should update single vote when in filterClues stage', async () => {
-      const result = await gameStateManager.updateVote(testRoom, 1, 5);
-      
-      expect(result.success).to.be.true;
-      expect(result.index).to.equal(1);
-      expect(result.value).to.equal(5);
-      
-      const game = gameStateManager.getGame(testRoom);
-      expect(game.votes[1]).to.equal(5);
-      expect(game.votes[0]).to.equal(0); // Other votes unchanged
-    });
-
-    it('should not update vote when not in filterClues stage', async () => {
-      await gameStateManager.transitionToStage(testRoom, 'guessWord');
-      const result = await gameStateManager.updateVote(testRoom, 1, 5);
-      
-      expect(result.success).to.be.false;
-      expect(result.reason).to.equal('Invalid stage or index for voting');
-    });
-
-    it('should not update vote with invalid index', async () => {
-      const result = await gameStateManager.updateVote(testRoom, 10, 5);
-      
-      expect(result.success).to.be.false;
-      expect(result.reason).to.equal('Invalid stage or index for voting');
-    });
-  });
-
-  describe('setFinishedVoting', () => {
-    beforeEach(async () => {
-      await gameStateManager.createGame(testRoom, testPlayerCount);
-    });
-
-    it('should set finished voting flag', () => {
-      const result = gameStateManager.setFinishedVoting(testRoom, true);
-      
-      expect(result.success).to.be.true;
-      expect(result.finishedVoting).to.be.true;
-      
-      const game = gameStateManager.getGame(testRoom);
-      expect(game.finishedVoting).to.be.true;
-    });
-
-    it('should not set finished voting for non-existent room', () => {
-      const result = gameStateManager.setFinishedVoting('nonExistentRoom', true);
       
       expect(result.success).to.be.false;
       expect(result.reason).to.equal('Game not found');
@@ -578,9 +491,8 @@ describe('GameStateManager', () => {
       expect(mockConnectionManager.getConnections.calledWith(testRoom)).to.be.true;
       expect(gameStateManager.gameExists(testRoom)).to.be.false; // Should be deleted
       
-      // Check that changeScene is emitted to both writer and guesser rooms
-      expect(mockIo.to.calledWith(testRoom + '.writer')).to.be.true;
-      expect(mockIo.to.calledWith(testRoom + '.guesser')).to.be.true;
+      // Submission-stage players have no roles yet, so notify the whole room.
+      expect(mockIo.to.calledWith(testRoom)).to.be.true;
       expect(mockIo.emit.calledWith('changeScene', 'main', '')).to.be.true;
       
       // Check that players are removed from game rooms

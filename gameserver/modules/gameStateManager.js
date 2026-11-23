@@ -15,8 +15,7 @@ import { logger } from '../config/logger.js';
  *     gamesWon: 1,                 // Number of successful guesses
  *     playerCount: 3,              // Total players in room
  *     clues: ["furry", "pet", "meow"], // Submitted clues
- *     votes: [0, 0, -1],           // Vote results (non-negative means keep, negative means eliminate)
- *     finishedVoting: true,        // Whether voting phase is complete
+ *     repeatVotes: RepeatVotes,    // Writers' repeated-clue marks for the voting phase
  *     guess: "cat",                // Guesser's submitted guess
  *     success: true,               // Whether guess was correct
  *     dedupedClues: ["furry", "pet", "meow"] // Final filtered clues
@@ -141,12 +140,6 @@ export class GameStateManager {
           case 'writeClues':
             game.clues = [];
             break;
-          case 'filterClues':
-            if (game.clues) {
-              game.votes = new Array(game.clues.length).fill(0);
-              game.finishedVoting = false;
-            }
-            break;
           case 'guessWord':
             game.guess = "";
             break;
@@ -191,14 +184,14 @@ export class GameStateManager {
   /**
    * Set the current guesser for the round (direct access - no queue needed)
    * @param {string} room - Room name
-   * @param {string} guesser - Username of the current guesser
+   * @param {string} guesser - Stable ID of the current guesser
    * @returns {Object} Updated game state
    */
   setCurrentGuesser(room, guesser) {
     const game = this.activeGames[room];
     if (game) {
-      game.currentGuesser = guesser;
-      return { currentGuesser: guesser, success: true };
+      game.currentGuesserId = guesser;
+      return { currentGuesserId: guesser, success: true };
     }
     return { success: false, reason: 'Game not found' };
   }
@@ -271,61 +264,6 @@ export class GameStateManager {
         reason: game ? 'Invalid stage for clue submission' : 'Game not found' 
       };
     });
-  }
-
-  /**
-   * Set voting results for clue filtering (direct access - replaces entire array)
-   * @param {string} room - Room name
-   * @param {Array<number>} votes - Array of vote values (0=keep, negative=eliminate)
-   * @returns {Object} Updated game state
-   */
-  setVotes(room, votes) {
-    const game = this.activeGames[room];
-    if (game) {
-      game.votes = votes;
-      return { votes, success: true };
-    }
-    return { success: false, reason: 'Game not found' };
-  }
-
-  /**
-   * Update a single vote (thread-safe)
-   * @param {string} room - Room name
-   * @param {number} index - Index of the clue to vote on
-   * @param {number} value - Vote value (-1, +1)
-   * @returns {Promise<Object>} Result of the operation
-   */
-  async updateVote(room, index, value) {
-    return this.queueOperation(room, (game) => {
-      if (game && game.stage === 'filterClues' && game.votes && index >= 0 && index < game.votes.length) {
-        game.votes[index] = value;
-        return { 
-          index, 
-          value, 
-          votes: game.votes, 
-          success: true 
-        };
-      }
-      return { 
-        success: false, 
-        reason: game ? 'Invalid stage or index for voting' : 'Game not found' 
-      };
-    });
-  }
-
-  /**
-   * Mark voting phase as complete or in progress (direct access - simple boolean)
-   * @param {string} room - Room name
-   * @param {boolean} finished - Whether voting is complete
-   * @returns {Object} Updated game state
-   */
-  setFinishedVoting(room, finished) {
-    const game = this.activeGames[room];
-    if (game) {
-      game.finishedVoting = finished;
-      return { finishedVoting: finished, success: true };
-    }
-    return { success: false, reason: 'Game not found' };
   }
 
   /**
@@ -466,8 +404,7 @@ export class GameStateManager {
       const guesserRoom = roomName + ".guesser";
 
       // Notify all players to return to main scene
-      io.to(writerRoom).emit("changeScene", "main", "");
-      io.to(guesserRoom).emit("changeScene", "main", "");
+      io.to(roomName).emit("changeScene", "main", "");
       
       // Remove all players from game-specific rooms
       const connections = connectionManager.getConnections(roomName);

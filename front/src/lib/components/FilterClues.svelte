@@ -2,96 +2,174 @@
 	import { Button } from '$lib/components/ui/button';
 	import { defaultTimer } from '$lib/config';
 	import Timer from '$lib/components/Timer.svelte';
-	const {
-		votes = $bindable(),
-		clues = [],
-		secretWord,
-		role,
-		updateVotes,
-		submitAnswer
-	}: Props = $props();
+	import type { RepeatVoteState } from '$lib/repeatVotes';
 
 	type Props = {
-		votes: number[];
+		repeatVotes: RepeatVoteState;
 		clues: string[];
 		secretWord: string;
 		role: string;
-		updateVotes: (index: number, value: number) => void;
+		currentGuesser: string;
+		deadlineAt: number;
+		markRepeated: (index: number, marked: boolean) => void;
 		submitAnswer: () => void;
 	};
+
+	const {
+		repeatVotes,
+		clues = [],
+		secretWord,
+		role,
+		currentGuesser,
+		deadlineAt,
+		markRepeated,
+		submitAnswer
+	}: Props = $props();
+
+	const NO_ANSWER = '<no answer>';
+
 	let submitted = $state(false);
-	let userVotes = $state(new Array(votes.length).fill(0));
+	let myMarks = $state<boolean[]>([]);
 
-	const voteOnClue = (index: number, value: number) => {
-		userVotes[index] += value;
+	const isRepeated = (index: number): boolean =>
+		repeatVotes.autoRemoved[index] || (repeatVotes.counts[index] ?? 0) >= repeatVotes.required;
 
-		votes[index] += value;
-		updateVotes(index, value);
+	const shownCount = $derived(clues.filter((_, index) => !isRepeated(index)).length);
+
+	const toggleMark = (index: number): void => {
+		if (submitted || repeatVotes.autoRemoved[index]) return;
+		myMarks[index] = !myMarks[index];
+		markRepeated(index, myMarks[index]);
 	};
-	const hasVoted = (index: number, value: number) => {
-		return userVotes[index] === value;
+
+	const submit = (): void => {
+		if (submitted || role === 'guesser') return;
+		submitted = true;
+		submitAnswer();
 	};
+
+	const voteNote = (index: number): string => {
+		const votes = repeatVotes.counts[index] ?? 0;
+		if (votes === 0) return 'No votes';
+		return `${votes} ${votes === 1 ? 'vote' : 'votes'}`;
+	};
+
+	const isOneShort = (index: number): boolean =>
+		!isRepeated(index) && repeatVotes.required - (repeatVotes.counts[index] ?? 0) === 1;
+
+	const autoReason = (clue: string): string =>
+		clue === NO_ANSWER || !clue.trim() ? 'No clue given' : 'Identical to another clue';
+
+	const displayClue = (clue: string): string =>
+		clue === NO_ANSWER || !clue.trim() ? '(no clue)' : clue;
+
+	const pluralClues = (count: number): string => `${count} ${count === 1 ? 'clue' : 'clues'}`;
 </script>
 
 <div class="space-y-6">
 	{#if role == 'guesser'}
 		<div class="space-y-4 text-center">
-			<Timer count={defaultTimer} submitAnswer={() => {}} />
-			<h2 class="text-muted-foreground text-lg font-medium">Removing duplicate clues...</h2>
+			<Timer {deadlineAt} count={defaultTimer} submitAnswer={() => {}} />
+			<h2 class="text-muted-foreground text-lg font-medium">
+				The writers are checking for repeated clues…
+			</h2>
 		</div>
 	{:else}
-		<Timer count={defaultTimer} {submitAnswer} />
+		<Timer {deadlineAt} count={defaultTimer} submitAnswer={submit} />
 
-		<div class="bg-card rounded-lg border p-4 text-center">
-			<div class="text-muted-foreground text-sm">The secret word is</div>
-			<div class="text-primary mt-1 text-lg font-semibold">{secretWord}</div>
-		</div>
-
-		<h2 class="text-lg">Mark the clues as Duplicate or Unique</h2>
-		<div class="space-y-2">
-			{#each clues as clue, index}
-				<div class="bg-card flex items-center justify-between rounded-lg border px-4 py-3">
-					<div class="flex min-w-0 flex-1 items-center gap-3">
-						<div
-							class="truncate text-base font-medium {votes[index] < 0
-								? 'text-red-600 dark:text-red-400'
-								: 'text-green-600 dark:text-green-400'}"
-						>
-							{clue || '(empty)'}
-						</div>
-						<div class="text-muted-foreground text-sm">
-							({votes[index]} votes)
-						</div>
-					</div>
-					<div class="flex flex-shrink-0 gap-2">
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={hasVoted(index, -1)}
-							onclick={() => voteOnClue(index, -1)}
-							class="px-3 py-2"
-							title="Mark as duplicate"
-						>
-							❌ Duplicate
-						</Button>
-						<Button
-							variant="outline"
-							size="sm"
-							disabled={hasVoted(index, 1)}
-							onclick={() => voteOnClue(index, 1)}
-							class="px-3 py-2"
-							title="Mark as unique"
-						>
-							✅ Unique
-						</Button>
-					</div>
+		<div class="mx-auto max-w-md space-y-3">
+			<div>
+				<h2 class="text-xl font-semibold">Mark repeated clues</h2>
+				<div class="text-muted-foreground text-sm">
+					Secret word <span class="text-foreground font-semibold">{secretWord}</span>
 				</div>
-			{/each}
-		</div>
+			</div>
 
-		<div class="text-center">
-			<Button disabled={submitted} onclick={() => submitAnswer()} class="px-8">
-				{submitted ? 'Votes submitted' : 'Proceed to guessing'}
+			<div class="bg-secondary text-secondary-foreground rounded-md px-3 py-2 text-sm">
+				<p>
+					If two clues are the same, mark them as <strong>repeated</strong>. The guesser won't see
+					repeated clues.
+				</p>
+				<p class="text-muted-foreground mt-1">Decided by majority vote.</p>
+			</div>
+
+			<ul class="space-y-2">
+				{#each clues as clue, index}
+					{@const repeated = isRepeated(index)}
+					{@const auto = repeatVotes.autoRemoved[index]}
+					{@const marked = Boolean(myMarks[index])}
+					<li>
+						<button
+							type="button"
+							class="focus-visible:ring-ring flex w-full items-center gap-3 rounded-md border p-3 text-left focus-visible:ring-2 focus-visible:outline-none disabled:cursor-default {marked
+								? 'border-destructive'
+								: ''}"
+							aria-pressed={auto ? undefined : marked}
+							disabled={auto || submitted}
+							onclick={() => toggleMark(index)}
+						>
+							<div class="min-w-0 flex-1">
+								<div class="flex items-center gap-2">
+									<span
+										class="truncate text-lg font-semibold {repeated
+											? 'text-muted-foreground line-through'
+											: ''}"
+									>
+										{displayClue(clue)}
+									</span>
+									{#if repeated}
+										<span
+											class="bg-destructive/10 text-destructive rounded px-1.5 py-0.5 text-[11px] font-bold tracking-wide uppercase"
+										>
+											Repeated
+										</span>
+									{/if}
+								</div>
+								<div class="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
+									{#if auto}
+										<span>{autoReason(clue)}</span>
+									{:else}
+										<span class="flex gap-0.5" aria-hidden="true">
+											{#each { length: repeatVotes.voters } as _, dot}
+												<span
+													class="h-2 w-2 rounded-full {dot < (repeatVotes.counts[index] ?? 0)
+														? 'bg-destructive'
+														: 'bg-muted-foreground/30'}"
+												></span>
+											{/each}
+										</span>
+										<span>{voteNote(index)}</span>
+										{#if isOneShort(index)}
+											<span class="text-amber-600 dark:text-amber-400"
+												>· 1 vote short of majority</span
+											>
+										{/if}
+									{/if}
+								</div>
+							</div>
+							{#if !auto}
+								<span
+									class="flex-none rounded-full border px-3 py-1.5 text-sm font-semibold {marked
+										? 'border-destructive bg-destructive text-white'
+										: 'text-muted-foreground'}"
+								>
+									{marked ? '✓ Marked' : 'Mark'}
+								</span>
+							{/if}
+						</button>
+					</li>
+				{/each}
+			</ul>
+
+			<p class="text-muted-foreground text-center text-sm">
+				{currentGuesser} will see
+				<span class="text-foreground font-semibold">{pluralClues(shownCount)}</span>
+			</p>
+
+			<Button class="w-full" disabled={submitted} onclick={submit}>
+				{submitted
+					? `Waiting for the other writers · ${repeatVotes.done} of ${repeatVotes.voters} done`
+					: 'Done'}
 			</Button>
 		</div>
 	{/if}

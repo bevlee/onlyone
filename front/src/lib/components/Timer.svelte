@@ -1,46 +1,48 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
-	let timer: ReturnType<typeof setInterval> | undefined = undefined;
+	import { untrack } from 'svelte';
+
 	interface TimerProps {
 		count: number;
+		deadlineAt?: number;
 		submitAnswer: () => void;
 		timerText?: string;
 	}
 
-	let { count, submitAnswer, timerText = 'Time left:' }: TimerProps = $props();
-	$effect(() => {
-		timer = setInterval(() => {
-			if (count > 0) {
-				timerFinished = false;
-				count -= 1;
-			} else {
-				timerFinished = true;
-				stopTimer();
-			}
-		}, 1000);
-	});
-	let timerFinished = $state(false);
+	let { count, deadlineAt, submitAnswer, timerText = 'Time left:' }: TimerProps = $props();
+	let remaining = $state(0);
+	let finished = $state(false);
 
-	onDestroy(() => {
-		clearInterval(timer);
+	$effect(() => {
+		const deadline = deadlineAt ?? Date.now() + Math.max(0, count) * 1000;
+		let submitted = false;
+		let timer: ReturnType<typeof setInterval> | undefined;
+		const update = () => {
+			const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+			remaining = left;
+			finished = left === 0;
+			if (left === 0 && !submitted) {
+				submitted = true;
+				clearInterval(timer);
+				untrack(() => submitAnswer());
+			}
+		};
+		update();
+		if (!submitted) timer = setInterval(update, 100);
+		return () => clearInterval(timer);
 	});
-	const stopTimer = () => {
-		clearInterval(timer);
-		timer = undefined;
-		submitAnswer();
-	};
 </script>
 
 <div class="space-y-1 text-center">
-	{#if timerFinished}
-		{stopTimer()}
+	{#if finished}
 		<div class="text-lg font-medium text-red-600 dark:text-red-400">Time's up!</div>
 	{:else}
 		<div class="text-muted-foreground text-sm">{timerText}</div>
 		<div
-			class="text-2xl font-bold {count < 10 ? 'text-red-600 dark:text-red-400' : 'text-foreground'}"
+			class="text-2xl font-bold {remaining < 10
+				? 'text-red-600 dark:text-red-400'
+				: 'text-foreground'}"
 		>
-			{count}
+			{remaining}
 		</div>
 	{/if}
 </div>

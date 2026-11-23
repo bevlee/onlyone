@@ -1,118 +1,69 @@
-import { logger } from '../config/logger.js';
-
-/**
- * Manages player connections across different game rooms
- * 
- * Example connection state structure:
- * this.connections = {
- *   "room123": {
- *     "alice": {
- *       role: "writer",              // Current role: "writer" | "guesser" | ""
- *       playerId: "socket_abc123",   // Socket.IO socket ID
- *       joinRoom: function(roomName) { socket.join(roomName) },  // Socket room join method
- *       leaveRoom: function(roomName) { socket.leave(roomName) } // Socket room leave method
- *     },
- *     "bob": {
- *       role: "guesser",
- *       playerId: "socket_def456",
- *       joinRoom: function(roomName) { socket.join(roomName) },
- *       leaveRoom: function(roomName) { socket.leave(roomName) }
- *     },
- *     "charlie": {
- *       role: "writer",
- *       playerId: "socket_ghi789",
- *       joinRoom: function(roomName) { socket.join(roomName) },
- *       leaveRoom: function(roomName) { socket.leave(roomName) }
- *     }
- *   },
- *   "room456": {
- *     "diana": {
- *       role: "",
- *       playerId: "socket_jkl012",
- *       joinRoom: function(roomName) { socket.join(roomName) },
- *       leaveRoom: function(roomName) { socket.leave(roomName) }
- *     }
- *   }
- * }
- * 
- * Socket room organization:
- * - "room123" - All players in the room
- * - "room123.writer" - Only writers (alice, charlie)
- * - "room123.guesser" - Only current guesser (bob)
- */
+/** Room membership is keyed by stable player ID; names are display labels only. */
 export class ConnectionManager {
   constructor() {
-    // Store connections organized by room: { roomName: { username: connectionData } }
-    this.connections = {};
+    this.connections = Object.create(null);
   }
 
-  /**
-   * Add a new player connection to a room
-   * @param {Socket} socket - Socket.IO socket instance
-   */
+  /** Bind a player's current socket, returning any connection it replaces. */
   addConnection(socket) {
-    logger.debug({ connections: this.connections }, 'Adding connection');
-    const auth = socket.handshake.auth;
-    // Example structure of socket.handshake.auth:
-    // {
-    //   username: "alice",
-    //   room: "room1",
-    //   // ...any other custom authentication fields
-    // }
-    const room = auth.room;
-    
-    // Create room if it doesn't exist
-    if (!this.connections[room]) {
-      this.connections[room] = {};
-    }
-    
-    // Add socket methods to connection object so they can individually join and leave rooms
-    this.connections[room][auth.username] = {
-      role: "",
-      playerId: socket.id,
-      // Bind socket room methods to connection object
-      joinRoom: function (roomName) {
-        socket.join(roomName);
-      },
-      leaveRoom: function (roomName) {
-        socket.leave(roomName);
-      },
+    const { room, username } = socket.handshake.auth;
+    const { playerId } = socket.data;
+    this.connections[room] ??= Object.create(null);
+    const previous = this.connections[room][playerId];
+    this.connections[room][playerId] = {
+      playerId,
+      username,
+      socketId: socket.id,
+      joinRoom: (roomName) => socket.join(roomName),
+      leaveRoom: (roomName) => socket.leave(roomName),
     };
+    return previous;
   }
 
-  /**
-   * Remove a player connection from a room
-   * @param {Socket} socket - Socket.IO socket instance
-   */
+  /** Remove only the current socket, never a replacement that reconnected first. */
   removeConnection(socket) {
-    logger.debug({ connections: this.connections }, 'Removing connection');
-    const auth = socket.handshake.auth;
-    const username = socket.handshake.auth.username;
-    const room = auth.room;
-
-    if (this.connections[room]) {
-      delete this.connections[room][username];
-      // Clean up empty rooms
-      if (Object.keys(this.connections[room]).length === 0) {
-        delete this.connections[room];
-      }
-    }
+    const { room } = socket.handshake.auth;
+    const { playerId } = socket.data;
+    if (this.connections[room]?.[playerId]?.socketId !== socket.id)
+      return false;
+    delete this.connections[room][playerId];
+    if (!Object.keys(this.connections[room]).length)
+      delete this.connections[room];
+    return true;
   }
 
-  /**
-   * Get all connections for a specific room
-   * @param {string} room - Room name
-   * @returns {Object} Connection data for the room
-   */
+  /** Rename the authenticated caller without moving their membership or game state. */
+  renamePlayer(socket, username) {
+    const player = this.getConnections(socket.handshake.auth.room)[
+      socket.data.playerId
+    ];
+    if (
+      !player ||
+      player.socketId !== socket.id ||
+      typeof username !== "string" ||
+      !username.trim() ||
+      username.trim().length > 40 ||
+      /[\x00-\x1f]/.test(username)
+    ) {
+      return {
+        status: "error",
+        message: "Enter a name between 1 and 40 characters.",
+      };
+    }
+    player.username = username.trim();
+    socket.handshake.auth.username = player.username;
+    return { status: "ok", username: player.username };
+  }
+
+  /** Get connected players keyed by stable ID, including server-only socket operations. */
   getConnections(room) {
     return this.connections[room] || {};
   }
 
-  /**
-   * Get all connections across all rooms
-   * @returns {Object} All connection data
-   */
-  getAllConnections() {
-    return this.connections;
+  /** Public roster: never expose socket operations or the private reconnect token. */
+  getRoster(room) {
+    return Object.values(this.getConnections(room)).map(
+      ({ playerId, username }) => ({ playerId, username }),
+    );
   }
 }

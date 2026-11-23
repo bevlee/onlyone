@@ -2,21 +2,20 @@
 	import UserIcon from '@lucide/svelte/icons/user';
 	import UsersIcon from '@lucide/svelte/icons/users';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
-	import { SvelteSet } from 'svelte/reactivity';
+	import type { Player } from '$lib/player';
 	import { slide } from 'svelte/transition';
 
 	let {
 		players,
-		currentUser,
+		currentPlayerId,
 		minPlayers = 3
 	}: {
-		players: SvelteSet<string>;
-		currentUser: string;
+		players: Player[];
+		currentPlayerId: string;
 		minPlayers?: number;
 	} = $props();
 
-	const playersArray = $derived(Array.from(players.keys()));
-	const playerCount = $derived(playersArray.length);
+	const playerCount = $derived(players.length);
 	const hasEnoughPlayers = $derived(playerCount >= minPlayers);
 
 	// Initialize state
@@ -54,15 +53,15 @@
 	{#if expanded}
 		<div transition:slide={{ duration: 200 }} class="px-4 pb-4">
 			<div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-				{#each playersArray as player}
+				{#each players as player (player.playerId)}
 					<div class="bg-card text-card-foreground flex items-center gap-3 rounded-lg border p-3">
 						<div class="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-full">
 							<UserIcon class="text-primary h-4 w-4" />
 						</div>
 						<div class="min-w-0 flex-1">
 							<div class="text-sm font-medium">
-								{player}
-								{#if player === currentUser}
+								{player.username}
+								{#if player.playerId === currentPlayerId}
 									<span class="text-muted-foreground ml-1 text-xs">(you)</span>
 								{/if}
 							</div>

@@ -1,126 +1,71 @@
-import { expect } from 'chai';
-import sinon from 'sinon';
-import { handleChangeName, handleDisconnect } from '../handlers/chatHandlers.js';
+import { expect } from "chai";
+import sinon from "sinon";
+import { ConnectionManager } from "../modules/connectionManager.js";
+import {
+  handleChangeName,
+  handleDisconnect,
+} from "../handlers/chatHandlers.js";
 
-describe('Chat Handlers', () => {
-  let mockServer, mockSocket, connections, room, username, removeConnection;
+function client(id = "socket-1") {
+  return {
+    id,
+    data: { playerId: "player-1" },
+    handshake: { auth: { room: "ROOM", username: "Alice" } },
+    join() {},
+    leave() {},
+    to: sinon.stub().returnsThis(),
+    emit: sinon.spy(),
+  };
+}
 
-  beforeEach(() => {
-    mockServer = {
-      to: sinon.stub().returnsThis(),
-      emit: sinon.stub()
-    };
-    mockSocket = {
-      to: sinon.stub().returnsThis(),
-      emit: sinon.stub()
-    };
-    connections = {
-      testRoom: {
-        'player1': { socket: mockSocket },
-        'player2': { socket: mockSocket }
-      }
-    };
-    room = 'testRoom';
-    username = 'player1';
-    removeConnection = sinon.stub();
+describe("player event handlers", () => {
+  it("publishes an ID-based roster after renaming the caller", () => {
+    const manager = new ConnectionManager();
+    const socket = client();
+    const io = { to: sinon.stub().returnsThis(), emit: sinon.spy() };
+    manager.addConnection(socket);
+    const reply = sinon.spy();
+    handleChangeName(manager, io, socket)("Alicia", reply);
+    expect(reply.firstCall.args[0].status).to.equal("ok");
+    expect(
+      io.emit.calledWith("roomPlayers", [
+        { playerId: "player-1", username: "Alicia" },
+      ]),
+    ).to.equal(true);
+    expect(manager.getConnections("ROOM")["player-1"].username).to.equal(
+      "Alicia",
+    );
   });
 
-  describe('handleChangeName', () => {
-    it('should change name when new name does not exist', () => {
-      const handler = handleChangeName(connections, mockServer);
-      const callback = sinon.stub();
-      const oldName = 'player1';
-      const newName = 'player1Updated';
-      const originalPlayerData = connections[room][oldName];
-      
-      handler(oldName, newName, room, callback);
-      
-      expect(connections[room][newName]).to.equal(originalPlayerData);
-      expect(connections[room][oldName]).to.be.undefined;
-      expect(callback.calledWith({ status: 'ok' })).to.be.true;
-      expect(mockServer.to.calledWith(room)).to.be.true;
-      expect(mockServer.emit.calledWith('playerNameChanged', { oldName, newName })).to.be.true;
-    });
-
-    it('should reject name change when new name already exists', () => {
-      const handler = handleChangeName(connections, mockServer);
-      const callback = sinon.stub();
-      const oldName = 'player1';
-      const newName = 'player2'; // Already exists
-      
-      handler(oldName, newName, room, callback);
-      
-      expect(connections[room][oldName]).to.exist;
-      expect(connections[room][newName]).to.exist;
-      expect(callback.calledWith({ status: 'nameExists' })).to.be.true;
-      // playerNameChanged event should NOT be emitted when name change fails
-      expect(mockServer.emit.called).to.be.false;
-    });
-
-    it('should handle room that does not exist gracefully', () => {
-      const handler = handleChangeName(connections, mockServer);
-      const callback = sinon.stub();
-      const oldName = 'player1';
-      const newName = 'player1Updated';
-      const nonExistentRoom = 'nonExistentRoom';
-      
-      // This will throw because the function doesn't handle missing rooms
-      expect(() => {
-        handler(oldName, newName, nonExistentRoom, callback);
-      }).to.throw();
-    });
-
-    it('should emit playerNameChanged event with correct parameters', () => {
-      const handler = handleChangeName(connections, mockServer);
-      const callback = sinon.stub();
-      const oldName = 'player1';
-      const newName = 'newPlayer1';
-      
-      handler(oldName, newName, room, callback);
-      
-      expect(mockServer.to.calledWith(room)).to.be.true;
-      expect(mockServer.emit.calledOnce).to.be.true;
-      expect(mockServer.emit.calledWith('playerNameChanged', { oldName, newName })).to.be.true;
-    });
-
-    it('should not modify connections when name already exists', () => {
-      const handler = handleChangeName(connections, mockServer);
-      const callback = sinon.stub();
-      const oldName = 'player1';
-      const newName = 'player2';
-      const originalPlayer1 = connections[room][oldName];
-      const originalPlayer2 = connections[room][newName];
-      
-      handler(oldName, newName, room, callback);
-      
-      // Connections should remain unchanged when name exists
-      expect(connections[room][oldName]).to.equal(originalPlayer1);
-      expect(connections[room][newName]).to.equal(originalPlayer2);
-    });
+  it("does not publish a roster when a name is invalid", () => {
+    const manager = new ConnectionManager();
+    const socket = client();
+    const io = { to: sinon.stub().returnsThis(), emit: sinon.spy() };
+    manager.addConnection(socket);
+    const reply = sinon.spy();
+    handleChangeName(manager, io, socket)("", reply);
+    expect(reply.firstCall.args[0].status).to.equal("error");
+    expect(io.emit.called).to.equal(false);
   });
 
-  describe('handleDisconnect', () => {
-    it('should remove connection and emit playerLeft event', () => {
-      const handler = handleDisconnect(removeConnection, mockSocket, room, username, mockServer);
-      const reason = 'transport close';
-      
-      handler(reason);
-      
-      expect(removeConnection.calledOnce).to.be.true;
-      expect(removeConnection.calledWith(mockSocket)).to.be.true;
-      expect(mockSocket.to.calledWith(room)).to.be.true;
-      expect(mockSocket.emit.calledWith('playerLeft', username)).to.be.true;
-    });
+  it("removes a renamed player and publishes the remaining roster", () => {
+    const manager = new ConnectionManager();
+    const socket = client();
+    manager.addConnection(socket);
+    manager.renamePlayer(socket, "Alicia");
+    handleDisconnect(manager, socket)();
+    expect(socket.emit.calledWith("roomPlayers", [])).to.equal(true);
+    expect(manager.getRoster("ROOM")).to.deep.equal([]);
+  });
 
-    it('should handle disconnect with different reasons', () => {
-      const handler = handleDisconnect(removeConnection, mockSocket, room, username, mockServer);
-      const reason = 'client namespace disconnect';
-      
-      handler(reason);
-      
-      expect(removeConnection.calledOnce).to.be.true;
-      expect(mockSocket.to.calledWith(room)).to.be.true;
-      expect(mockSocket.emit.calledWith('playerLeft', username)).to.be.true;
-    });
+  it("does not announce a player leaving when only their old socket disconnects", () => {
+    const manager = new ConnectionManager();
+    const oldSocket = client("old");
+    const newSocket = client("new");
+    manager.addConnection(oldSocket);
+    manager.addConnection(newSocket);
+    handleDisconnect(manager, oldSocket)();
+    expect(oldSocket.emit.called).to.equal(false);
+    expect(manager.getRoster("ROOM")).to.have.length(1);
   });
 });

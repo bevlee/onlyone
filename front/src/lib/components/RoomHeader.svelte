@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import UserIcon from '@lucide/svelte/icons/user';
@@ -37,10 +36,11 @@
 	</div>
 
 	<DropdownMenu.Root>
-		<DropdownMenu.Trigger class="">
-			<Button variant="ghost" size="icon" class="h-8 w-8">
-				<SettingsIcon class="h-4 w-4" />
-			</Button>
+		<DropdownMenu.Trigger
+			aria-label="Room settings"
+			class="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
+		>
+			<SettingsIcon class="h-4 w-4" />
 		</DropdownMenu.Trigger>
 		<DropdownMenu.Content align="end" class="">
 			{#if currentScene === 'main' || currentScene === 'endGame'}

@@ -7,19 +7,27 @@
 	interface ChooseDifficultyProps {
 		difficulties: Array<string>;
 		role: string;
+		deadlineAt: number;
 		submitAnswer: (difficulty: string) => void;
 	}
 
-	const { difficulties, role, submitAnswer }: ChooseDifficultyProps = $props();
+	const { difficulties, role, deadlineAt, submitAnswer }: ChooseDifficultyProps = $props();
+	let submitted = $state(false);
 	let selectedOption = $state(difficulties[0]);
 
 	const submit = (): void => {
+		if (role !== 'guesser' || submitted) return;
+		submitted = true;
 		submitAnswer(selectedOption);
 	};
 </script>
 
 <div class="space-y-6">
-	<Timer count={defaultTimer} submitAnswer={role === 'guesser' ? () => submit() : () => {}} />
+	<Timer
+		{deadlineAt}
+		count={defaultTimer}
+		submitAnswer={role === 'guesser' ? () => submit() : () => {}}
+	/>
 
 	{#if role == 'guesser'}
 		<div class="space-y-4 text-center">
@@ -38,7 +46,9 @@
 				</RadioGroup.Root>
 			</div>
 
-			<Button onclick={() => submit()} class="px-8">Select Difficulty</Button>
+			<Button disabled={submitted} onclick={() => submit()} class="px-8"
+				>{submitted ? 'Difficulty selected' : 'Select Difficulty'}</Button
+			>
 		</div>
 	{:else}
 		<div class="space-y-4 text-center">

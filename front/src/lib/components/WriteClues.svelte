@@ -7,44 +7,36 @@
 	interface WriteCluesProps {
 		word: string;
 		role: string;
+		deadlineAt: number;
 		submitAnswer: (clue: string) => void;
 		currentGuesser: string;
 	}
 
-	const { word, role, submitAnswer, currentGuesser }: WriteCluesProps = $props();
+	const { word, role, deadlineAt, submitAnswer, currentGuesser }: WriteCluesProps = $props();
 	let clue = $state('');
 	let submitted = $state(false);
 
-	// clue must be one word!
-	let invalid = $derived(clue.includes(' '));
+	const invalid = $derived(
+		/\s/.test(clue.trim()) || clue.trim().toLowerCase() === word.trim().toLowerCase()
+	);
 
-	const submit = (submitType = 'auto') => {
-		const strippedClue: string = clue.trim();
-		if (strippedClue === word || strippedClue.includes(' ')) {
-			// no point prompting user if it was an auto-submit. Just do not submit it in this case
-			if (!(submitType === 'auto')) {
-				alert('you cannot write the secret as a clue!');
-			} else {
-				//submit an empty string if the autosubmission would be invalid
-				submitAnswer('');
-			}
-		} else {
-			submitted = true;
-			submitAnswer(strippedClue);
-		}
+	const submit = () => {
+		if (submitted || role === 'guesser') return;
+		submitted = true;
+		submitAnswer(invalid ? '' : clue.trim());
 	};
 </script>
 
 <div class="space-y-6">
 	{#if role && role == 'guesser'}
 		<div class="space-y-4 text-center">
-			<Timer count={defaultTimer} submitAnswer={() => {}} />
+			<Timer {deadlineAt} count={defaultTimer} submitAnswer={() => {}} />
 			<h2 class="text-muted-foreground text-lg font-medium">
 				Everyone is busy writing clues for the secret word
 			</h2>
 		</div>
 	{:else}
-		<Timer count={defaultTimer} submitAnswer={submit} />
+		<Timer {deadlineAt} count={defaultTimer} submitAnswer={submit} />
 
 		<div class="bg-card space-y-2 rounded-lg border p-4 text-center">
 			<div class="text-muted-foreground text-sm">The secret word is</div>
@@ -65,15 +57,17 @@
 				type="text"
 				placeholder="Enter a one word clue..."
 				bind:value={clue}
+				maxlength={60}
+				disabled={submitted}
 			/>
 
 			{#if invalid}
 				<div class="text-sm text-orange-600 dark:text-orange-400">
-					⚠️ Your clue must be one word only!
+					Use one word that is different from the secret word.
 				</div>
 			{/if}
 
-			<Button disabled={submitted || invalid} onclick={() => submit('manual')} class="px-8">
+			<Button disabled={submitted || invalid || !clue.trim()} onclick={submit} class="px-8">
 				{submitted ? 'Clue submitted' : 'Submit Clue'}
 			</Button>
 		</div>

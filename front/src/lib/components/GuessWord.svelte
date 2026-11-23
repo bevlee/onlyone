@@ -3,17 +3,19 @@
 	import { Input } from '$lib/components/ui/input';
 	import { defaultTimer } from '$lib/config';
 	import Timer from '$lib/components/Timer.svelte';
-	const { dedupedClues, clues, role, submitAnswer }: Props = $props();
+	const { dedupedClues, clues, role, deadlineAt, submitAnswer }: Props = $props();
 
 	type Props = {
 		dedupedClues: string[];
 		clues: string[];
 		role: string;
+		deadlineAt: number;
 		submitAnswer: (answer: string) => void;
 		currentGuesser?: string;
 	};
 
 	let text = $state('');
+	let submitted = $state(false);
 
 	let displayedClues = $state(dedupedClues);
 	let hidden = $state(false);
@@ -22,12 +24,14 @@
 		displayedClues = hidden ? clues : dedupedClues;
 	};
 	const submit = () => {
-		submitAnswer(text);
+		if (role !== 'guesser' || submitted) return;
+		submitted = true;
+		submitAnswer(text.trim());
 	};
 </script>
 
 <div class="space-y-6">
-	<Timer count={defaultTimer} submitAnswer={() => submit()} />
+	<Timer {deadlineAt} count={defaultTimer} submitAnswer={() => submit()} />
 
 	<div class="bg-card space-y-3 rounded-lg border p-4">
 		<div class="flex items-center justify-between">
@@ -56,8 +60,12 @@
 				type="text"
 				placeholder="Enter your guess..."
 				bind:value={text}
+				maxlength={60}
+				disabled={submitted}
 			/>
-			<Button onclick={() => submitAnswer(text)} class="px-8">Submit Guess</Button>
+			<Button disabled={submitted} onclick={submit} class="px-8"
+				>{submitted ? 'Guess submitted' : 'Submit Guess'}</Button
+			>
 		</div>
 	{/if}
 </div>

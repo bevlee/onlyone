@@ -39,7 +39,7 @@
 		if (success) {
 			open = false;
 		} else {
-			error = 'This name is already taken. Please try another.';
+			error = 'Could not change your name. Please try again.';
 		}
 	};
 
@@ -56,9 +56,7 @@
 	<Dialog.Content class="sm:max-w-md">
 		<Dialog.Header>
 			<Dialog.Title>Change Username</Dialog.Title>
-			<Dialog.Description>
-				Enter a new username. It must be unique in this room.
-			</Dialog.Description>
+			<Dialog.Description>Choose the name other players will see.</Dialog.Description>
 		</Dialog.Header>
 
 		<div class="space-y-4">
@@ -66,6 +64,7 @@
 				<Input
 					bind:value={newName}
 					placeholder="Enter new username"
+					maxlength={40}
 					class={error ? 'border-red-500 focus-visible:ring-red-500' : ''}
 					disabled={isSubmitting}
 					onkeydown={(e) => {

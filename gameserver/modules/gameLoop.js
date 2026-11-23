@@ -1,6 +1,10 @@
-import { dedupeClues } from "../wordOperations.js";
 import { logger } from '../config/logger.js';
 import database from './database.js';
+import { randomUUID } from 'node:crypto';
+import { SubmittedWords } from './submittedWords.js';
+import { RepeatVotes } from './repeatVotes.js';
+
+const submissionGraceSeconds = 2;
 
 /**
  * Manages the main game loop
@@ -15,6 +19,7 @@ export class GameLoop {
   constructor(gameStateManager, connectionManager) {
     this.gameStateManager = gameStateManager;
     this.connectionManager = connectionManager;
+    this.sessions = new Map();
   }
 
   /**
@@ -28,7 +33,28 @@ export class GameLoop {
    * @param {Object} secretWords - Secret words organized by difficulty
    * @param {Function} getStem - Function to get word stem for comparison
    */
-  async startGameLoop(io, room, timeLimit, difficulties, secretWords, getStem) {
+  async startGameLoop(io, room, timeLimit, difficulties, secretWords, getStem, mode = 'classic') {
+    const session = { mode, active: true, pool: null };
+    this.sessions.set(room, session);
+    try {
+      if (mode === 'yourWords') {
+        await this.startSubmittedGame(io, room, timeLimit, getStem, session);
+      } else {
+        await this.startClassicGame(io, room, timeLimit, difficulties, secretWords, getStem, session);
+      }
+    } finally {
+      if (this.sessions.get(room) === session) {
+        this.sessions.delete(room);
+        await this.gameStateManager.deleteGame(room);
+        io.to(room + '.writer').socketsLeave(room + '.writer');
+        io.to(room + '.guesser').socketsLeave(room + '.guesser');
+        io.to(room).emit('changeScene', 'main', '');
+      }
+    }
+  }
+
+  /** Run the original word-list mode. */
+  async startClassicGame(io, room, timeLimit, difficulties, secretWords, getStem, session) {
     let round = 0;
     let winCount = 0;
     const writerRoom = room + ".writer";   // Room for clue writers
@@ -39,7 +65,7 @@ export class GameLoop {
     let currentPlayerIndex = 0;
 
     // Continue until no players remain in room
-    while (this.connectionManager.getConnections(room) && 
+    while (session.active && this.connectionManager.getConnections(room) &&
            Object.keys(this.connectionManager.getConnections(room)).length > 0) {
       
       // Refresh player list in case people joined/left
@@ -68,11 +94,15 @@ export class GameLoop {
       
       // Run through all game phases
       await this.difficultyPhase(io, room, writerRoom, guesserRoom, difficulties, timeLimit);
-      await this.cluePhase(io, room, writerRoom, guesserRoom, secretWords, timeLimit, writers, getStem);
-      await this.votingPhase(io, room, writerRoom, guesserRoom, timeLimit);
+      if (!session.active) return;
+      await this.cluePhase(io, room, writerRoom, guesserRoom, secretWords, timeLimit, writers);
+      if (!session.active) return;
+      await this.votingPhase(io, room, writerRoom, guesserRoom, timeLimit, writers);
+      if (!session.active) return;
       const success = await this.guessingPhase(io, room, writerRoom, guesserRoom, timeLimit, getStem);
       
       // Record round results
+      if (!session.active) return;
       await this.gameStateManager.setGameResult(room, success, this.gameStateManager.getGame(room).dedupedClues);
       round++;
       if (success) winCount++;
@@ -80,19 +110,93 @@ export class GameLoop {
       // Show results and wait for next round signal
       io.to(room).emit("endGame", this.gameStateManager.getGame(room));
       await this.waitForNextRound(io, room);
+      if (!session.active) return;
       
       // Move to next player, cycle back to start when reaching end
       currentPlayerIndex = (currentPlayerIndex + 1) % currentPlayers.length;
     }
     
-    // Clean up when room is empty
-    await this.gameStateManager.deleteGame(room);
+  }
+
+  /** Start a server-owned deadline, with a unique ID to reject delayed prior-phase input. */
+  startPhaseTimer(room, seconds) {
+    const game = this.gameStateManager.getGame(room);
+    const serverNow = Date.now();
+    game.phaseId = randomUUID();
+    game.deadlineAt = serverNow + seconds * 1000;
+    return { phaseId: game.phaseId, deadlineAt: game.deadlineAt, serverNow };
+  }
+
+  /** Allow a short delivery grace period for answers sent when the countdown reaches zero. */
+  acceptsSubmission(room, phaseId) {
+    const game = this.gameStateManager.getGame(room);
+    return Boolean(game && game.phaseId === phaseId && Date.now() <= game.deadlineAt + submissionGraceSeconds * 1000);
+  }
+
+  /** Collect private answers once, then reuse the existing clue/vote/guess phases. */
+  async startSubmittedGame(io, room, timeLimit, getStem, session) {
+    const connections = () => Object.entries(this.connectionManager.getConnections(room));
+    const ids = () => connections().map(([, connection]) => connection.playerId);
+    session.pool = new SubmittedWords(ids());
+    await this.gameStateManager.createGame(room, ids().length);
+    await this.gameStateManager.transitionToStage(room, 'submitWords');
+    const timing = this.startPhaseTimer(room, 180);
+    io.to(room).emit('submitWords', session.pool.progress(ids()), timing);
+    await this.waitForCondition(() => {
+      const progress = session.pool.progress(ids());
+      io.to(room).emit('wordSubmissionProgress', progress);
+      return !session.active || ids().length < 3 || progress.submitted === progress.total;
+    }, 180 + submissionGraceSeconds);
+    let round = 0;
+    let wins = 0;
+    const writerRoom = room + '.writer';
+    const guesserRoom = room + '.guesser';
+    while (session.active && ids().length >= 3) {
+      const selected = session.pool.draw(ids());
+      if (!selected) break;
+      const guesser = selected.guesserId;
+      await this.gameStateManager.createGame(room, ids().length);
+      await this.gameStateManager.setGameProgress(room, round, wins);
+      const game = this.gameStateManager.getGame(room);
+      game.mode = 'yourWords';
+      game.submittedByIds = selected.authorIds;
+      this.gameStateManager.setCurrentGuesser(room, guesser);
+      io.to(writerRoom).socketsLeave(writerRoom);
+      io.to(guesserRoom).socketsLeave(guesserRoom);
+      this.setupGuesserRoom(this.connectionManager.getConnections(room), guesser, guesserRoom);
+      const writers = this.getWriters(this.connectionManager.getConnections(room), guesser);
+      this.setupWriterRooms(writers, writerRoom);
+      await this.cluePhase(io, room, writerRoom, guesserRoom, {}, timeLimit, writers, selected.word);
+      if (!session.active) return;
+      await this.votingPhase(io, room, writerRoom, guesserRoom, timeLimit, writers);
+      if (!session.active) return;
+      const success = await this.guessingPhase(io, room, writerRoom, guesserRoom, timeLimit, getStem);
+      if (!session.active) return;
+      await this.gameStateManager.setGameResult(room, success, game.dedupedClues);
+      round++;
+      if (success) wins++;
+      game.poolRemaining = session.pool.remaining(ids());
+      game.poolFinished = game.poolRemaining === 0;
+      io.to(room).emit('endGame', game);
+      await this.waitForNextRound(io, room);
+      if (game.poolFinished) break;
+    }
+    if (session.active) {
+      io.to(room).emit('gameNotice', ids().length < 3 ? 'Not enough players to continue. At least 3 players are needed.' : round ? 'Your words game finished. Start another game to add new words.' :
+        'No playable words. Answers submitted by everyone are excluded. Try again with different answers.');
+    }
+  }
+
+  /** Cancel the current loop before its state is deleted. */
+  cancel(room) {
+    const session = this.sessions.get(room);
+    if (session) session.active = false;
   }
 
   /**
    * Move the current guesser to the guesser room
    * @param {Object} connections - Player connections object
-   * @param {string} guesser - Username of current guesser
+   * @param {string} guesser - Stable ID of current guesser
    * @param {string} guesserRoom - Guesser room name
    */
   setupGuesserRoom(connections, guesser, guesserRoom) {
@@ -102,8 +206,8 @@ export class GameLoop {
   /**
    * Get all non-guessing players
    * @param {Object} connections - Player connections object
-   * @param {string} guesser - Username of current guesser
-   * @returns {Array} Array of [username, connection] pairs for writers
+   * @param {string} guesser - Stable ID of current guesser
+   * @returns {Array} Array of [playerId, connection] pairs for writers
    */
   getWriters(connections, guesser) {
     const writers = [];
@@ -121,7 +225,7 @@ export class GameLoop {
 
   /**
    * Move writers to the writer room and out of guesser room
-   * @param {Array} writers - Array of [username, connection] pairs
+   * @param {Array} writers - Array of [playerId, connection] pairs
    * @param {string} writerRoom - Writer room name
    */
   setupWriterRooms(writers, writerRoom) {
@@ -142,14 +246,15 @@ export class GameLoop {
   async difficultyPhase(io, room, writerRoom, guesserRoom, difficulties, timeLimit) {
     // Send different states to writers vs guesser
     const game = this.gameStateManager.getGame(room);
-    const currentGuesser = game.currentGuesser;
-    io.to(writerRoom).emit("chooseDifficulty", "writer", [], currentGuesser);
-    io.to(guesserRoom).emit("chooseDifficulty", "guesser", difficulties, currentGuesser);
+    const currentGuesser = game.currentGuesserId;
+    const timing = this.startPhaseTimer(room, timeLimit);
+    io.to(writerRoom).emit("chooseDifficulty", "writer", [], currentGuesser, timing);
+    io.to(guesserRoom).emit("chooseDifficulty", "guesser", difficulties, currentGuesser, timing);
     
     // Wait for guesser to select difficulty or timeout
     await this.waitForCondition(() => {
-      return this.gameStateManager.getGame(room)?.difficulty !== "";
-    }, timeLimit);
+      return !this.gameStateManager.getGame(room) || this.gameStateManager.getGame(room).difficulty !== "";
+    }, timeLimit + submissionGraceSeconds);
     
     logger.debug({ room }, 'Choose difficulty condition finished');
     
@@ -170,30 +275,32 @@ export class GameLoop {
    * @param {number} timeLimit - Time limit in seconds
    * @param {Array} writers - Array of writer connections
    */
-  async cluePhase(io, room, writerRoom, guesserRoom, secretWords, timeLimit, writers) {
+  async cluePhase(io, room, writerRoom, guesserRoom, secretWords, timeLimit, writers, submittedWord) {
     const game = this.gameStateManager.getGame(room);
     const difficulty = game.difficulty;
     
     await this.gameStateManager.transitionToStage(room, "writeClues");
     
     // Select secret word using database tracking to avoid repeats
-    const secretWord = database.getNextWord(room, difficulty, secretWords[difficulty]);
+    const secretWord = submittedWord ?? database.getNextWord(room, difficulty, secretWords[difficulty]);
     this.gameStateManager.setSecretWord(room, secretWord);
     
-    logger.debug({ secretWord, difficulty, room }, 'Selected secret word from database');
+    logger.debug({ secretWord, difficulty, room }, 'Selected secret word');
     
     // Writers see the secret word, guesser sees nothing
-    const currentGuesser = game.currentGuesser;
-    io.to(writerRoom).emit("writeClues", "writer", secretWord, currentGuesser);
-    io.to(guesserRoom).emit("writeClues", "guesser", "", currentGuesser);
+    const currentGuesser = game.currentGuesserId;
+    const timing = this.startPhaseTimer(room, timeLimit);
+    io.to(writerRoom).emit("writeClues", "writer", secretWord, currentGuesser, timing);
+    io.to(guesserRoom).emit("writeClues", "guesser", "", currentGuesser, timing);
 
     // Wait for all writers to submit clues
     await this.waitForCondition(() => {
-      return this.gameStateManager.getGame(room)?.clues?.length >= writers.length;
-    }, timeLimit);
+      return !this.gameStateManager.getGame(room) || this.gameStateManager.getGame(room).clues?.length >= writers.length;
+    }, timeLimit + submissionGraceSeconds);
 
     // Fill in missing clues if some writers didn't submit in time
     const currentGame = this.gameStateManager.getGame(room);
+    if (!currentGame) return;
     if (currentGame.clues.length < writers.length) {
       for (let i = currentGame.clues.length; i < writers.length; i++) {
         await this.gameStateManager.addClue(room, "<no answer>");
@@ -202,40 +309,33 @@ export class GameLoop {
   }
 
   /**
-   * Voting phase - writers vote to eliminate duplicate/invalid clues
+   * Voting phase - writers mark repeated clues; a majority vote removes a clue
    * @param {Object} io - Socket.IO server instance
    * @param {string} room - Room name
    * @param {string} writerRoom - Writer room name
    * @param {string} guesserRoom - Guesser room name
    * @param {number} timeLimit - Time limit in seconds
+   * @param {Array} writers - Array of [playerId, connection] pairs for this round's writers
    */
-  async votingPhase(io, room, writerRoom, guesserRoom, timeLimit) {
+  async votingPhase(io, room, writerRoom, guesserRoom, timeLimit, writers) {
     const game = this.gameStateManager.getGame(room);
     const clues = game.clues;
-    
-    // Hide duplicate clues
-    const machineDedupedClues = dedupeClues(clues);
-    
-    // Initialize vote array (0 = keep, -1 = already eliminated)
-    const clueVotes = machineDedupedClues.map((clue) =>
-      clue !== "<redacted>" ? 0 : -1
-    );
-    
-    this.gameStateManager.setVotes(room, clueVotes);
-    this.gameStateManager.setFinishedVoting(room, false);
-    
-    logger.debug({ clueVotes }, 'Clue votes array');
-    
-    // Writers see voting interface, guesser waits
-    const currentGuesser = game.currentGuesser;
-    io.to(writerRoom).emit("filterClues", "writer", clueVotes, clues, currentGuesser);
-    io.to(guesserRoom).emit("filterClues", "guesser", [], [], currentGuesser);
-    await this.gameStateManager.transitionToStage(room, "filterClues");
 
-    // Wait for voting to complete
+    await this.gameStateManager.transitionToStage(room, "filterClues");
+    game.repeatVotes = new RepeatVotes(clues, writers.map(([playerId]) => playerId));
+
+    const currentGuesser = game.currentGuesserId;
+    const timing = this.startPhaseTimer(room, timeLimit);
+    io.to(writerRoom).emit("filterClues", "writer", game.repeatVotes.publicState(), clues, currentGuesser, timing);
+    io.to(guesserRoom).emit("filterClues", "guesser", null, [], currentGuesser, timing);
+
+    // Finish when every connected writer has pressed Done, or on timeout
     await this.waitForCondition(() => {
-      return this.gameStateManager.getGame(room)?.finishedVoting;
-    }, timeLimit);
+      const current = this.gameStateManager.getGame(room);
+      if (!current) return true;
+      const connectedIds = Object.values(this.connectionManager.getConnections(room)).map((c) => c.playerId);
+      return current.repeatVotes.allDone(connectedIds);
+    }, timeLimit + submissionGraceSeconds);
   }
 
   /**
@@ -251,32 +351,31 @@ export class GameLoop {
   async guessingPhase(io, room, writerRoom, guesserRoom, timeLimit, getStem) {
     const game = this.gameStateManager.getGame(room);
     const clues = game.clues;
-    const clueVotes = game.votes;
-    
-    // Apply voting results to remove duplicate clues from guesser
-    let dedupedClues = clues.slice();
-    for (let i = 0; i < clues.length; i++) {
-      dedupedClues[i] = clueVotes[i] >= 0 ? dedupedClues[i] : "<redacted>";
-    }
+    const removed = game.repeatVotes.removed();
+
+    // Hide clues the writers marked as repeated
+    const dedupedClues = clues.map((clue, i) => (removed[i] ? "<redacted>" : clue));
 
     logger.debug({ dedupedClues, originalClues: clues }, 'Deduped clues vs original clues');
 
-    // Writers see both filtered and original clues, guesser only sees filtered
-    const currentGuesser = game.currentGuesser;
-    io.to(writerRoom).emit("guessWord", "writer", dedupedClues, clues, currentGuesser);
-    io.to(guesserRoom).emit("guessWord", "guesser", dedupedClues, [], currentGuesser);
-    
     await this.gameStateManager.transitionToStage(room, "guessWord");
+
+    // Writers see both filtered and original clues, guesser only sees filtered
+    const currentGuesser = game.currentGuesserId;
+    const timing = this.startPhaseTimer(room, timeLimit);
+    io.to(writerRoom).emit("guessWord", "writer", dedupedClues, clues, currentGuesser, timing);
+    io.to(guesserRoom).emit("guessWord", "guesser", dedupedClues, [], currentGuesser, timing);
     
     // Wait for guesser to submit their guess
     await this.waitForCondition(() => {
-      return this.gameStateManager.getGame(room)?.guess !== "";
-    }, timeLimit);
+      return !this.gameStateManager.getGame(room) || this.gameStateManager.getGame(room).guess !== "";
+    }, timeLimit + submissionGraceSeconds);
     
     // Evaluate the guess against the secret word
     const currentGame = this.gameStateManager.getGame(room);
+    if (!currentGame) return false;
     const guess = currentGame.guess !== "" ? currentGame.guess : "<no guess>";
-    const success = getStem(guess) === currentGame.secretWord;
+    const success = getStem(guess) === getStem(currentGame.secretWord);
     
     // Store final clues for end game display
     game.dedupedClues = dedupedClues;
@@ -307,12 +406,13 @@ export class GameLoop {
         logger.debug('Checking for condition in game loop');
         if (checkCondition()) {
           clearInterval(intervalId);
+          clearTimeout(timeoutId);
           resolve("Condition met!");
         }
       }, 1000);
 
       // Timeout after specified time
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         clearInterval(intervalId);
         resolve("Timeout: Condition not met within the given time");
       }, timeout);
@@ -327,34 +427,26 @@ export class GameLoop {
    */
   waitForNextRound(io, room) {
     return new Promise((resolve) => {
+      const listeners = new Map();
       let resolved = false;
-      
-      // Set up a one-time listener for the next round event
-      const handler = (socket) => {
-        socket.once('nextRound', () => {
-          if (!resolved) {
-            resolved = true;
-            io.off('connection', handler);
-            resolve();
-          }
-        });
+      const finish = () => {
+        if (resolved) return;
+        resolved = true;
+        clearInterval(interval);
+        io.off('connection', attach);
+        for (const [socket, listener] of listeners) socket.off('nextRound', listener);
+        resolve();
       };
-
-      // Listen for any player in the room to trigger next round
-      io.on('connection', handler);
-      
-      // Also listen on existing sockets in the room
-      io.in(room).fetchSockets().then(sockets => {
-        sockets.forEach(socket => {
-          socket.once('nextRound', () => {
-            if (!resolved) {
-              resolved = true;
-              io.off('connection', handler);
-              resolve();
-            }
-          });
-        });
-      });
+      const attach = socket => {
+        if (resolved || socket.handshake.auth.room !== room) return;
+        listeners.set(socket, finish);
+        socket.once('nextRound', finish);
+      };
+      const interval = setInterval(() => {
+        if (!this.sessions.get(room)?.active || !Object.keys(this.connectionManager.getConnections(room)).length) finish();
+      }, 250);
+      io.on('connection', attach);
+      io.in(room).fetchSockets().then(sockets => sockets.forEach(attach));
     });
   }
 }

@@ -1,111 +1,62 @@
-import { render, screen } from '@testing-library/svelte';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import '@testing-library/jest-dom';
-import Timer from '$lib/components/Timer.svelte';
+import { act, cleanup, render, screen } from '@testing-library/svelte';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import Timer from './Timer.svelte';
 
-describe('Timer Component', () => {
-    beforeEach(() => {
-        vi.clearAllTimers();
-    });
+describe('phase timer', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+	});
+	afterEach(() => {
+		cleanup();
+		vi.useRealTimers();
+	});
 
-    it('should display initial countdown value', () => {
-        const mockSubmitAnswer = vi.fn();
-        render(Timer, {
-            props: {
-                count: 10,
-                submitAnswer: mockSubmitAnswer,
-                timerText: 'Time left:'
-            }
-        });
+	it('expires exactly at zero and submits only once', async () => {
+		const submitAnswer = vi.fn();
+		render(Timer, { count: 2, submitAnswer });
+		expect(screen.getByText('2')).toBeInTheDocument();
+		await act(() => vi.advanceTimersByTime(2000));
+		expect(screen.getByText("Time's up!")).toBeInTheDocument();
+		expect(submitAnswer).toHaveBeenCalledTimes(1);
+		await act(() => vi.advanceTimersByTime(5000));
+		expect(submitAnswer).toHaveBeenCalledTimes(1);
+	});
 
-        expect(screen.getByText('Time left:')).toBeInTheDocument();
-        expect(screen.getByText('10')).toBeInTheDocument();
-    });
+	it('stops when the phase is unmounted', async () => {
+		const submitAnswer = vi.fn();
+		const view = render(Timer, { count: 2, submitAnswer });
+		view.unmount();
+		await act(() => vi.advanceTimersByTime(3000));
+		expect(submitAnswer).not.toHaveBeenCalled();
+	});
 
-    it('should handle custom timer text', () => {
-        const mockSubmitAnswer = vi.fn();
-        render(Timer, {
-            props: {
-                count: 30,
-                submitAnswer: mockSubmitAnswer,
-                timerText: 'Custom Timer Text:'
-            }
-        });
+	it('uses the phase deadline instead of starting a fresh countdown', async () => {
+		const submitAnswer = vi.fn();
+		render(Timer, {
+			count: 30,
+			deadlineAt: Date.now() + 1000,
+			submitAnswer,
+			timerText: 'Remaining'
+		});
+		expect(screen.getByText('Remaining')).toBeInTheDocument();
+		expect(screen.getByText('1')).toBeInTheDocument();
+		await act(() => vi.advanceTimersByTime(1000));
+		expect(submitAnswer).toHaveBeenCalledTimes(1);
+	});
 
-        expect(screen.getByText('Custom Timer Text:')).toBeInTheDocument();
-        expect(screen.getByText('30')).toBeInTheDocument();
-    });
+	it('catches up after the browser misses ticks', async () => {
+		const submitAnswer = vi.fn();
+		render(Timer, { count: 30, submitAnswer });
+		vi.setSystemTime(Date.now() + 40000);
+		await act(() => vi.advanceTimersByTime(100));
+		expect(submitAnswer).toHaveBeenCalledTimes(1);
+		expect(screen.getByText("Time's up!")).toBeInTheDocument();
+	});
 
-    it('should display timer with different initial values', () => {
-        const mockSubmitAnswer = vi.fn();
-        render(Timer, {
-            props: {
-                count: 60,
-                submitAnswer: mockSubmitAnswer,
-                timerText: 'Time left:'
-            }
-        });
-
-        expect(screen.getByText('Time left:')).toBeInTheDocument();
-        expect(screen.getByText('60')).toBeInTheDocument();
-    });
-
-    it('should render timer with zero count (shows countdown)', () => {
-        const mockSubmitAnswer = vi.fn();
-        render(Timer, {
-            props: {
-                count: 0,
-                submitAnswer: mockSubmitAnswer,
-                timerText: 'Time left:'
-            }
-        });
-
-        // When count is 0 initially, it should still show the countdown
-        expect(screen.getByText('Time left:')).toBeInTheDocument();
-        expect(screen.getByText('0')).toBeInTheDocument();
-    });
-
-    it('should render timer with negative count (shows countdown)', () => {
-        const mockSubmitAnswer = vi.fn();
-        render(Timer, {
-            props: {
-                count: -5,
-                submitAnswer: mockSubmitAnswer,
-                timerText: 'Time left:'
-            }
-        });
-
-        // When count is negative initially, it should still show the countdown
-        expect(screen.getByText('Time left:')).toBeInTheDocument();
-        expect(screen.getByText('-5')).toBeInTheDocument();
-    });
-
-    it('should accept submitAnswer function as prop', () => {
-        const mockSubmitAnswer = vi.fn();
-        render(Timer, {
-            props: {
-                count: 10,
-                submitAnswer: mockSubmitAnswer,
-                timerText: 'Time left:'
-            }
-        });
-
-        // Component should render without errors
-        expect(screen.getByText('Time left:')).toBeInTheDocument();
-        expect(screen.getByText('10')).toBeInTheDocument();
-    });
-
-    it('should render with default timer text when not provided', () => {
-        const mockSubmitAnswer = vi.fn();
-        render(Timer, {
-            props: {
-                count: 15,
-                submitAnswer: mockSubmitAnswer
-                // timerText not provided, should use default
-            }
-        });
-
-        expect(screen.getByText('Time left:')).toBeInTheDocument();
-        expect(screen.getByText('15')).toBeInTheDocument();
-    });
-}); 
+	it('expires immediately if mounted after the deadline', () => {
+		const submitAnswer = vi.fn();
+		render(Timer, { count: 30, deadlineAt: Date.now() - 1000, submitAnswer });
+		expect(submitAnswer).toHaveBeenCalledTimes(1);
+		expect(screen.getByText("Time's up!")).toBeInTheDocument();
+	});
+});

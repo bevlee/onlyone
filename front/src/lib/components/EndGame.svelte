@@ -3,6 +3,10 @@
 
 	interface EndGameProps {
 		difficulty: string;
+		mode: string;
+		submittedBy: string[];
+		poolRemaining: number;
+		poolFinished: boolean;
 		dedupedClues: Array<string>;
 		clues: Array<string>;
 		guess: string;
@@ -16,6 +20,10 @@
 
 	const {
 		difficulty,
+		mode,
+		submittedBy,
+		poolRemaining,
+		poolFinished,
 		dedupedClues,
 		clues,
 		guess,
@@ -53,8 +61,20 @@
 	<div class="space-y-4">
 		<div class="bg-card space-y-2 rounded-lg border p-4">
 			<div class="space-y-2 text-center">
-				<div class="text-muted-foreground text-sm">Difficulty</div>
-				<div class="font-medium">{difficulty}</div>
+				{#if mode === 'yourWords'}
+					<div class="font-medium">Your words</div>
+					<p class="text-muted-foreground text-sm">
+						Submitted by {submittedBy.join(', ') || 'a former player'}
+					</p>
+					<p class="text-muted-foreground text-sm">
+						{poolFinished
+							? 'All playable words played. Game complete!'
+							: `${poolRemaining} words remaining`}
+					</p>
+				{:else}
+					<div class="text-muted-foreground text-sm">Difficulty</div>
+					<div class="font-medium">{difficulty}</div>
+				{/if}
 			</div>
 
 			<div class="space-y-2 border-t pt-3">
@@ -98,6 +118,12 @@
 	</div>
 
 	<div class="text-center">
-		<Button onclick={playAgain} class="px-8">Play Again</Button>
+		<Button onclick={playAgain} class="px-8"
+			>{mode === 'yourWords'
+				? poolFinished
+					? 'Back to lobby'
+					: 'Next word'
+				: 'Play Again'}</Button
+		>
 	</div>
 </div>

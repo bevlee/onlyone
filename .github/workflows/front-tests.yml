@@ -5,6 +5,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - "front/**"
+      - "gameserver/**"
 jobs:
   test:
     timeout-minutes: 60
@@ -17,6 +18,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
         working-directory: front
+      - name: Install gameserver dependencies (needed by e2e tests)
+        run: npm ci
+        working-directory: gameserver
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
         working-directory: front

@@ -14,6 +14,7 @@ import { getStem } from "./wordOperations.js";
 
 // Modular components
 import { createExpressServer, createSocketServer, startServer } from "./config/serverConfig.js";
+import { playerIdFromToken } from './modules/playerIdentity.js';
 import { ConnectionManager } from "./modules/connectionManager.js";
 import { GameStateManager } from "./modules/gameStateManager.js";
 import { GameLoop } from "./modules/gameLoop.js";
@@ -30,91 +31,122 @@ const connectionManager = new ConnectionManager();
 const gameStateManager = new GameStateManager();
 const gameLoop = new GameLoop(gameStateManager, connectionManager);
 
+io.use((socket, next) => {
+  try {
+    socket.data.playerId = playerIdFromToken(socket.handshake.auth.resumeToken);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Handle new socket connections
 io.on("connection", async (socket) => {
   // Clean up any existing listeners to prevent duplicates
   socket.removeAllListeners("startGame");
 
-  // Add connection to our connection manager
-  connectionManager.addConnection(socket);
+  const previous = connectionManager.addConnection(socket);
   const room = socket.handshake.auth.room;
-  const username = socket.handshake.auth.username;
+  const playerId = socket.data.playerId;
+  if (previous && previous.socketId !== socket.id) {
+    io.sockets.sockets.get(previous.socketId)?.disconnect(true);
+  }
   socket.join(room);
+  socket.emit('playerIdentity', playerId);
+  io.to(room).emit('roomPlayers', connectionManager.getRoster(room));
 
-  // Setup chat event handlers
-  socket.on("chat message", handleChatMessage());
-  
-  // Notify other players in room about new player
-  socket.to(room).emit("playerJoined", username);
-  let rooms = io.sockets.adapter.rooms;
-  logger.debug({ rooms, room, username }, 'New client connected');
-  
-  // Send current room state to the new player
-  socket.emit("joinRoom", connectionManager.getConnections(room));
-
-  // Handle player name changes
-  socket.on("changeName", handleChangeName(connectionManager.getAllConnections(), io));
-
-  // Handle player disconnections
-  socket.on("disconnect", handleDisconnect(connectionManager.removeConnection.bind(connectionManager), socket, room, username, io));
-
-  // Setup game event handlers
-  // Bind the game loop with required dependencies
-  const startGameLoopBound = (io, room, timeLimit) => {
-    return gameLoop.startGameLoop(io, room, timeLimit, difficulties, secretWords, getStem);
-  };
+  socket.on('chat message', handleChatMessage());
+  socket.on('changeName', handleChangeName(connectionManager, io, socket));
+  socket.on('disconnect', handleDisconnect(connectionManager, socket));
 
   // Game flow event handlers
-  socket.on("startGame", (callback) => {
-    try {
-      if (!(room in gameStateManager.activeGames)) {
-        startGameLoopBound(io, room, 30);
-        if (callback && typeof callback === 'function') {
-          callback({ status: 'ok', message: 'Game started successfully' });
-        }
-      } else {
-        if (callback && typeof callback === 'function') {
-          callback({ status: 'error', message: 'Game already in progress' });
-        }
-      }
-    } catch (error) {
-      console.error('Error starting game:', error);
-      if (callback && typeof callback === 'function') {
-        callback({ status: 'error', message: 'Failed to start game' });
-      }
+  socket.on("startGame", (options, callback) => {
+    if (typeof options === 'function') {
+      callback = options;
+      options = { mode: 'classic' };
+    }
+    const reply = response => { if (typeof callback === 'function') callback(response); };
+    const mode = options?.mode ?? 'classic';
+    if (!['classic', 'yourWords'].includes(mode)) {
+      return reply({ status: 'error', message: 'Choose a valid game mode.' });
+    }
+    if (gameLoop.sessions.has(room) || gameStateManager.gameExists(room)) {
+      return reply({ status: 'error', message: 'Game already in progress' });
+    }
+    if (Object.keys(connectionManager.getConnections(room)).length < 3) {
+      return reply({ status: 'error', message: 'At least 3 players are needed.' });
+    }
+    gameLoop.startGameLoop(io, room, 30, difficulties, secretWords, getStem, mode).catch(error => {
+      logger.error({ room, error }, 'Game loop failed');
+      io.to(room).emit('gameNotice', 'The game stopped unexpectedly. Please start another game.');
+    });
+    reply({ status: 'ok' });
+  });
+
+  socket.on('submitWords', (answers, phaseId, callback) => {
+    const session = gameLoop.sessions.get(room);
+    const result = session?.active && gameStateManager.getGame(room)?.stage === 'submitWords' && gameLoop.acceptsSubmission(room, phaseId)
+      ? session.pool.submit(playerId, answers)
+      : { success: false, reason: 'Word submission has finished.' };
+    if (typeof callback === 'function') callback(result);
+    if (result.success) {
+      const ids = Object.values(connectionManager.getConnections(room)).map(c => c.playerId);
+      io.to(room).emit('wordSubmissionProgress', session.pool.progress(ids));
     }
   });
-  
-  socket.on("stopGame", async (roomName) => await gameStateManager.stopGame(io, roomName, connectionManager));
-  
-  socket.on("chooseDifficulty", (difficulty) => {
+
+  socket.on("stopGame", async () => {
+    gameLoop.cancel(room);
+    await gameStateManager.stopGame(io, room, connectionManager);
+  });
+
+  const isGuesser = () => {
+    const game = gameStateManager.getGame(room);
+    return game?.currentGuesserId === playerId;
+  };
+
+  socket.on("chooseDifficulty", (difficulty, phaseId) => {
+    if (!gameLoop.acceptsSubmission(room, phaseId) || !isGuesser() || !difficulties.includes(difficulty)) return;
     gameStateManager.setDifficulty(room, difficulty);
   });
   
-  socket.on("submitClue", async (clue) => {
-    const result = await gameStateManager.addValidatedClue(room, clue, getStem);
+  socket.on("submitClue", async (clue, phaseId) => {
+    if (!gameLoop.acceptsSubmission(room, phaseId) || isGuesser() || typeof clue !== 'string' || clue.length > 60) return;
+    const game = gameStateManager.getGame(room);
+    if (!game || game.stage !== 'writeClues') return;
+    game.clueAuthors ??= new Set();
+    if (game.clueAuthors.has(playerId)) return;
+    game.clueAuthors.add(playerId);
+    const result = await gameStateManager.addValidatedClue(room, clue.trim() || '<no answer>', getStem);
+    if (!result.success) game.clueAuthors.delete(playerId);
     // Note: Could emit validation result back to client if needed
     // socket.emit("clueValidationResult", result);
   });
   
-  socket.on("updateVotes", async (index, value) => {
-    const result = await gameStateManager.updateVote(room, index, value);
-    if (result.success) {
-      const writerRoom = room + ".writer";
-      socket.to(writerRoom).emit("updateVotes", index, value);
-    }
+  const broadcastRepeatVotes = () => {
+    const votes = gameStateManager.getGame(room).repeatVotes;
+    io.to(room + ".writer").emit("repeatVotes", votes.publicState());
+  };
+
+  socket.on("markRepeated", (index, marked, phaseId) => {
+    if (!gameLoop.acceptsSubmission(room, phaseId)) return;
+    const votes = gameStateManager.getGame(room)?.repeatVotes;
+    if (votes?.setMark(playerId, index, marked)) broadcastRepeatVotes();
   });
-  
-  socket.on("finishVoting", () => {
-    gameStateManager.setFinishedVoting(room, true);
+
+  socket.on("finishVoting", (phaseId) => {
+    if (!gameLoop.acceptsSubmission(room, phaseId)) return;
+    const votes = gameStateManager.getGame(room)?.repeatVotes;
+    if (votes?.finish(playerId)) broadcastRepeatVotes();
   });
-  
-  socket.on("guessWord", (guess) => {
+
+  socket.on("guessWord", (guess, phaseId) => {
+    if (!gameLoop.acceptsSubmission(room, phaseId) || !isGuesser() || typeof guess !== 'string' || guess.length > 60) return;
     gameStateManager.setGuess(room, guess);
   });
   
   socket.on("nextRound", () => {
-    logger.debug({ room, username }, 'Player triggered next round');
+    logger.debug({ room, playerId }, 'Player triggered next round');
     // Event is handled by the waitForNextRound Promise in gameLoop
   });
 

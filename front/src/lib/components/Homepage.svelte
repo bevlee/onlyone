@@ -7,7 +7,7 @@
 
 	const { joinRoom }: HomepageProps = $props();
 	let roomName = $state('');
-	const submit = (e) => {
+	const submit = (e: SubmitEvent) => {
 		e.preventDefault();
 		joinRoom(roomName);
 	};

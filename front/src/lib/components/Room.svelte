@@ -2,7 +2,8 @@
 	import { env } from '$env/dynamic/public';
 	import { Button } from '$lib/components/ui/button';
 	import { io } from 'socket.io-client';
-	import { SvelteSet } from 'svelte/reactivity';
+	import type { Player } from '$lib/player';
+	import SubmitWords from '$lib/components/SubmitWords.svelte';
 	import ChooseDifficulty from '$lib/components/ChooseDifficulty.svelte';
 	import EndGame from '$lib/components/EndGame.svelte';
 	import FilterClues from '$lib/components/FilterClues.svelte';
@@ -13,6 +14,7 @@
 	import GameInstructions from '$lib/components/GameInstructions.svelte';
 	import ChangeNameModal from '$lib/components/ChangeNameModal.svelte';
 	import LeaveRoomModal from '$lib/components/LeaveRoomModal.svelte';
+	import { emptyRepeatVotes, type RepeatVoteState } from '$lib/repeatVotes';
 
 	interface RoomProps {
 		roomName: string;
@@ -26,6 +28,10 @@
 		localStorage.getItem('username') || 'user' + Math.floor(Math.random() * 10000);
 
 	let username: string = $state<string>(initialUsername);
+	let playerId = $state('');
+	let players = $state<Player[]>([]);
+	const resumeToken = sessionStorage.getItem('playerResumeToken') || crypto.randomUUID();
+	sessionStorage.setItem('playerResumeToken', resumeToken);
 
 	// Modal states
 	let showChangeNameModal: boolean = $state(false);
@@ -34,8 +40,11 @@
 
 	// These need $state because they're mutated in callbacks/socket events
 	let role: string = $state('');
-	let votes: Array<number> = $state<Array<number>>([]);
-	let currentGuesser: string = $state('');
+	let repeatVotes: RepeatVoteState = $state(emptyRepeatVotes);
+	let currentGuesserId = $state('');
+	const currentGuesser = $derived(
+		players.find((player) => player.playerId === currentGuesserId)?.username || 'A player who left'
+	);
 
 	let difficulties: Array<string> = $state(['a', 'b', 'c']);
 	let difficulty: string = $state('');
@@ -52,8 +61,30 @@
 	if (initialUsername.startsWith('user')) {
 		setUsername(initialUsername);
 	}
+	interface PhaseTiming {
+		phaseId: string;
+		deadlineAt: number;
+		serverNow: number;
+	}
+	let phaseId = '';
+	let deadlineAt = $state(0);
+	function receiveTiming(timing: PhaseTiming) {
+		phaseId = timing.phaseId;
+		deadlineAt = Date.now() + Math.max(0, timing.deadlineAt - timing.serverNow);
+	}
+	let mode = $state('classic');
+	let submitted = $state(0);
+	let submissionTotal = $state(0);
+	let submittedByIds = $state<string[]>([]);
+	const submittedBy = $derived(
+		submittedByIds.map(
+			(id) => players.find((player) => player.playerId === id)?.username || 'a former player'
+		)
+	);
+	let poolRemaining = $state(0);
+	let poolFinished = $state(false);
+	let notice = $state('');
 	let currentScene = $state<string>('main');
-	let players = $derived(new SvelteSet([username]));
 
 	function setUsername(newUsername: string): void {
 		localStorage.setItem('username', newUsername);
@@ -65,35 +96,17 @@
 		? 'http://localhost:3000'
 		: window.location.origin;
 
-	// init socket
 	const socket = io(backendUrl, {
-		auth: {
-			serverOffset: 0,
-			username: username,
-			room: roomName
-		}
+		auth: (callback) => callback({ username, room: roomName, resumeToken })
 	});
 
-	socket.on('disconnect', () => {
-		//send the username to the server
+	socket.on('playerIdentity', (id: string) => {
+		playerId = id;
 	});
-	socket.on('connect', () => {});
-	socket.on('joinRoom', (roomDetails: Object) => {
-		for (let player of Object.keys(roomDetails)) {
-			players.add(player);
-		}
-	});
-
-	socket.on('playerJoined', (player: string) => {
-		players.add(player);
-	});
-	socket.on('playerLeft', (player: string) => {
-		players.delete(player);
-	});
-
-	socket.on('playerNameChanged', ({ oldName, newName }: { oldName: string; newName: string }) => {
-		players.delete(oldName);
-		players.add(newName);
+	socket.on('roomPlayers', (roster: Player[]) => {
+		players = roster;
+		const currentPlayer = roster.find((player) => player.playerId === playerId);
+		if (currentPlayer) setUsername(currentPlayer.username);
 	});
 
 	socket.on('changeScene', (scene, gameRole: string) => {
@@ -101,36 +114,61 @@
 		currentScene = scene;
 	});
 
-	socket.on('chooseDifficulty', (gameRole: string, wordDifficulties = [], guesser = '') => {
-		role = gameRole;
-		difficulties = wordDifficulties;
-		currentGuesser = guesser;
-		currentScene = 'chooseDifficulty';
+	socket.on(
+		'submitWords',
+		(progress: { submitted: number; total: number }, timing: PhaseTiming) => {
+			receiveTiming(timing);
+			mode = 'yourWords';
+			role = '';
+			currentGuesserId = '';
+			submitted = progress.submitted;
+			submissionTotal = progress.total;
+			currentScene = 'submitWords';
+		}
+	);
+	socket.on('wordSubmissionProgress', (progress: { submitted: number; total: number }) => {
+		submitted = progress.submitted;
+		submissionTotal = progress.total;
 	});
-	socket.on('writeClues', (gameRole: string, word: string = '', guesser = '') => {
-		role = gameRole;
-		secretWord = word;
-		currentGuesser = guesser;
-		currentScene = 'writeClues';
+	socket.on('gameNotice', (message: string) => {
+		notice = message;
 	});
+
+	socket.on(
+		'chooseDifficulty',
+		(gameRole: string, wordDifficulties = [], guesser = '', timing: PhaseTiming) => {
+			receiveTiming(timing);
+			role = gameRole;
+			difficulties = wordDifficulties;
+			currentGuesserId = guesser;
+			currentScene = 'chooseDifficulty';
+		}
+	);
+	socket.on(
+		'writeClues',
+		(gameRole: string, word: string = '', guesser = '', timing: PhaseTiming) => {
+			receiveTiming(timing);
+			role = gameRole;
+			secretWord = word;
+			currentGuesserId = guesser;
+			currentScene = 'writeClues';
+		}
+	);
 	socket.on(
 		'filterClues',
 		(
 			gameRole: string,
-			votesForDuplicate: Array<number> = [],
+			voteState: RepeatVoteState | null,
 			writerClues: Array<string> = [],
-			guesser = ''
+			guesser = '',
+			timing: PhaseTiming
 		) => {
+			receiveTiming(timing);
 			role = gameRole;
 			clues = writerClues;
-			votes = votesForDuplicate;
-			currentGuesser = guesser;
+			repeatVotes = voteState ?? emptyRepeatVotes;
+			currentGuesserId = guesser;
 			currentScene = 'filterClues';
-			socket.on('updateVotes', (index, vote: number) => {
-				if (votes && votes.length > 0) {
-					votes[index] += vote;
-				}
-			});
 		}
 	);
 	socket.on(
@@ -139,13 +177,14 @@
 			gameRole: string,
 			guesserClues: Array<string>,
 			writerClues: Array<string> = [],
-			guesser = ''
+			guesser = '',
+			timing: PhaseTiming
 		) => {
-			socket.off('updateVotes');
+			receiveTiming(timing);
 			role = gameRole;
 			clues = writerClues;
 			dedupedClues = guesserClues;
-			currentGuesser = guesser;
+			currentGuesserId = guesser;
 			currentScene = 'guessWord';
 		}
 	);
@@ -162,7 +201,11 @@
 			gamesWon: number;
 			gamesPlayed: number;
 			playerCount: number;
-			currentGuesser: string;
+			currentGuesserId: string;
+			mode?: string;
+			submittedByIds?: string[];
+			poolRemaining?: number;
+			poolFinished?: boolean;
 		}) => {
 			try {
 				clues = gameState.clues;
@@ -170,12 +213,16 @@
 				guess = gameState.guess;
 				secretWord = gameState.secretWord;
 				difficulty = gameState.difficulty;
+				mode = gameState.mode || 'classic';
+				submittedByIds = gameState.submittedByIds || [];
+				poolRemaining = gameState.poolRemaining || 0;
+				poolFinished = gameState.poolFinished || false;
 				currentScene = 'endGame';
 				wordGuessed = gameState.success;
 				gamesWon = gameState.gamesWon;
 				gamesPlayed = gameState.gamesPlayed;
 				totalRounds = gameState.playerCount;
-				currentGuesser = gameState.currentGuesser;
+				currentGuesserId = gameState.currentGuesserId;
 			} catch (error) {}
 		}
 	);
@@ -185,7 +232,7 @@
 		isChangingName = true;
 		try {
 			const success = await new Promise<boolean>((resolve) => {
-				socket.emit('changeName', username, newName, roomName, (response: { status: string }) => {
+				socket.emit('changeName', newName, (response: { status: string; username?: string }) => {
 					if (response) {
 						resolve(response.status === 'ok');
 					}
@@ -210,13 +257,13 @@
 	// submit event to server and proceed to next scene
 	const submitAnswer = (input: string) => {
 		if (currentScene === 'chooseDifficulty') {
-			socket.emit('chooseDifficulty', input);
+			socket.emit('chooseDifficulty', input, phaseId);
 		} else if (currentScene === 'writeClues') {
-			socket.emit('submitClue', input);
+			socket.emit('submitClue', input, phaseId);
 		} else if (currentScene === 'filterClues') {
-			socket.emit('finishVoting');
+			socket.emit('finishVoting', phaseId);
 		} else if (currentScene === 'guessWord') {
-			socket.emit('guessWord', input);
+			socket.emit('guessWord', input, phaseId);
 		}
 		difficulties = [];
 	};
@@ -231,12 +278,13 @@
 	};
 
 	const startGame = async () => {
-		if (players.size < 3) {
+		if (players.length < 3) {
 			alert('must have at least 3 players to play!');
 		} else {
 			try {
 				await new Promise<boolean>((resolve) => {
-					socket.emit('startGame', (response: { status: string; message?: string }) => {
+					notice = '';
+					socket.emit('startGame', { mode }, (response: { status: string; message?: string }) => {
 						if (response.status === 'ok') {
 							resolve(true);
 						} else {
@@ -253,9 +301,28 @@
 		}
 	};
 
-	const updateVotes = (index: number, value: number) => {
-		socket.emit('updateVotes', index, value);
+	socket.on('repeatVotes', (voteState: RepeatVoteState) => {
+		repeatVotes = voteState;
+	});
+
+	const markRepeated = (index: number, marked: boolean) => {
+		socket.emit('markRepeated', index, marked, phaseId);
 	};
+
+	const submitWords = (words: string[]): Promise<{ success: boolean; reason?: string }> =>
+		new Promise((resolve, reject) => {
+			socket
+				.timeout(10000)
+				.emit(
+					'submitWords',
+					words,
+					phaseId,
+					(error: Error | null, response: { success: boolean; reason?: string }) => {
+						if (error) reject(error);
+						else resolve(response);
+					}
+				);
+		});
 
 	const nextRound = () => {
 		socket.emit('nextRound');
@@ -278,27 +345,50 @@
 	/>
 
 	<div class="container mx-auto max-w-4xl space-y-1 p-1">
-		<PlayerList {players} currentUser={username} />
+		<PlayerList {players} currentPlayerId={playerId} />
 	</div>
 
 	{#if currentScene == 'main'}
 		<div class="container mx-auto max-w-4xl space-y-6 p-4">
 			<GameInstructions />
+			{#if notice}<p role="status" class="text-center text-sm">{notice}</p>{/if}
+			<fieldset class="bg-card space-y-3 rounded-lg border p-4">
+				<legend class="px-1 font-medium">Game mode</legend>
+				<label class="flex cursor-pointer items-start gap-3">
+					<input type="radio" bind:group={mode} value="classic" class="mt-1" />
+					<span
+						><span class="font-medium">Classic</span><br />
+						<span class="text-muted-foreground text-sm"
+							>Use the game's words. The guesser chooses a difficulty each turn.</span
+						></span
+					>
+				</label>
+				<label class="flex cursor-pointer items-start gap-3">
+					<input type="radio" bind:group={mode} value="yourWords" class="mt-1" />
+					<span
+						><span class="font-medium">Your words</span><br />
+						<span class="text-muted-foreground text-sm"
+							>Everyone secretly adds answers before play. Bring your shared references and
+							in-jokes.</span
+						></span
+					>
+				</label>
+			</fieldset>
 
 			<div class="flex justify-center">
 				<Button
 					class="px-8 py-3 text-lg font-semibold"
 					variant="default"
 					onclick={startGame}
-					disabled={players.size < 3}
+					disabled={players.length < 3}
 				>
-					{players.size < 3 ? `Need ${3 - players.size} more players` : 'Start Game'}
+					{players.length < 3 ? `Need ${3 - players.length} more players` : 'Start Game'}
 				</Button>
 			</div>
 		</div>
 	{:else}
 		<div class="container mx-auto max-w-4xl p-4">
-			{#if currentScene != 'endGame'}
+			{#if currentScene != 'endGame' && currentScene != 'submitWords'}
 				<div class="mb-6 text-center">
 					{#if role !== 'guesser'}
 						<p class="text-muted-foreground mt-1 text-sm">
@@ -311,24 +401,32 @@
 					</p>
 				</div>
 			{/if}
-			{#if currentScene == 'chooseDifficulty'}
-				<ChooseDifficulty {difficulties} {role} {submitAnswer} />
+			{#if currentScene == 'submitWords'}
+				<SubmitWords {deadlineAt} {submitted} total={submissionTotal} onSubmit={submitWords} />
+			{:else if currentScene == 'chooseDifficulty'}
+				<ChooseDifficulty {deadlineAt} {difficulties} {role} {submitAnswer} />
 			{:else if currentScene == 'writeClues'}
-				<WriteClues word={secretWord} {role} {submitAnswer} {currentGuesser} />
+				<WriteClues {deadlineAt} word={secretWord} {role} {submitAnswer} {currentGuesser} />
 			{:else if currentScene == 'filterClues'}
 				<FilterClues
-					bind:votes
+					{deadlineAt}
+					{repeatVotes}
 					{clues}
 					{secretWord}
 					{role}
-					{updateVotes}
+					{currentGuesser}
+					{markRepeated}
 					submitAnswer={() => submitAnswer('')}
 				/>
 			{:else if currentScene == 'guessWord'}
-				<GuessWord {dedupedClues} {clues} {role} {submitAnswer} {currentGuesser} />
+				<GuessWord {deadlineAt} {dedupedClues} {clues} {role} {submitAnswer} {currentGuesser} />
 			{:else if currentScene == 'endGame'}
 				<EndGame
 					{difficulty}
+					{mode}
+					{submittedBy}
+					{poolRemaining}
+					{poolFinished}
 					{dedupedClues}
 					{clues}
 					{guess}
