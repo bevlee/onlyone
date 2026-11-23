@@ -73,3 +73,19 @@ SERVER_NAME=your-domain.com
 - Collaborative clue writing with duplicate elimination
 - Vote on whether clues are duplicates
 - See how many you can guess right as a team
+
+## Production releases
+
+Production runs in the `onlyone` Kubernetes namespace, in deployment `onlyone`.
+The tag workflow tests the code and publishes ARM64 and AMD64 images. The former
+ECS deployment target has been retired; publishing images does not roll out Kubernetes.
+
+After the tag workflow passes, update both containers together (replace VERSION):
+
+```bash
+kubectl -n onlyone set image deployment/onlyone nginx=docker.io/bevdev1/onlyone-nginx:VERSION gameserver=docker.io/bevdev1/onlyone-gameserver:VERSION
+kubectl -n onlyone rollout status deployment/onlyone
+```
+
+The nginx container uses `GAMESERVER_HOST=127.0.0.1` because both containers share
+a pod. Docker Compose defaults to the `gameserver` service hostname.

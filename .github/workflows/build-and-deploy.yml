@@ -1,4 +1,4 @@
-name: Build images and deploy
+name: Test and publish images
 
 on:
   push:
@@ -15,12 +15,6 @@ on:
           - production
 
 env:
-  AWS_REGION: ap-southeast-2 # set this to your preferred AWS region, e.g. us-west-1
-  ECS_SERVICE: onlyone # set this to your Amazon ECS service name
-  ECS_CLUSTER: onlyone-service-2d70yetx # set this to your Amazon ECS cluster name
-  ECS_TASK_DEFINITION: .aws/onlyone-task-definition.json
-  CONTAINER_NAME: bevdev1/onlyone-gameserver:${{ github.ref_name }}
-
   GAMESERVER_IMAGE: bevdev1/onlyone-gameserver:${{ github.ref_name }}
   NGINX_IMAGE: bevdev1/onlyone-nginx:${{ github.ref_name }}
 
@@ -69,6 +63,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -84,6 +81,7 @@ jobs:
         with:
           context: .
           file: ./nginx/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ${{ env.NGINX_IMAGE }}
@@ -94,6 +92,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -109,45 +110,7 @@ jobs:
         with:
           context: ./gameserver
           file: ./gameserver/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ${{ env.GAMESERVER_IMAGE }}
-  deploy:
-    needs: [build-frontend-nginx, build-gameserver]
-    runs-on: ubuntu-latest
-    environment: production
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@0e613a0980cbf65ed5b322eb7a1e075d28913a83
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ECS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_ECS_SECRET_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Fill in the Nginx image id in the Amazon ECS task definition
-        id: render-nginx-container
-        uses: aws-actions/amazon-ecs-render-task-definition@c804dfbdd57f713b6c079302a4c01db7017a36fc
-        with:
-          task-definition: ${{ env.ECS_TASK_DEFINITION }}
-          container-name: nginx
-          image: ${{ env.NGINX_IMAGE }}
-
-      - name: Fill in the Gameserver image id in the Amazon ECS task definition
-        id: render-gameserver-container
-        uses: aws-actions/amazon-ecs-render-task-definition@c804dfbdd57f713b6c079302a4c01db7017a36fc
-        with:
-          task-definition: ${{ steps.render-nginx-container.outputs.task-definition }}
-          container-name: gameserver
-          image: ${{ env.GAMESERVER_IMAGE }}
-
-      - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@df9643053eda01f169e64a0e60233aacca83799a
-        with:
-          task-definition: ${{ steps.render-gameserver-container.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: true
