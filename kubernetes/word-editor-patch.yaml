@@ -1,0 +1,27 @@
+# Strategic merge patch for deployment/onlyone. Keep one writer for the word-list file.
+spec:
+  strategy:
+    type: Recreate
+    rollingUpdate: null
+  template:
+    spec:
+      securityContext:
+        fsGroup: 1001
+        fsGroupChangePolicy: OnRootMismatch
+      volumes:
+        - name: word-lists
+          persistentVolumeClaim:
+            claimName: onlyone-word-lists
+      containers:
+        - name: gameserver
+          env:
+            - name: ORIGINAL_WORDS_PATH
+              value: /app/persistent/original-word-lists.json
+            - name: ORIGINAL_WORDS_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: onlyone-word-editor
+                  key: ORIGINAL_WORDS_ADMIN_PASSWORD
+          volumeMounts:
+            - name: word-lists
+              mountPath: /app/persistent

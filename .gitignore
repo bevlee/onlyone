@@ -173,3 +173,7 @@ blob-report/
 playwright/.cache/
 # Local game verification evidence
 .audit/game-verify/
+
+# Runtime Original word list overrides
+/gameserver/data/original-word-lists.json
+/gameserver/data/original-word-lists.json.*.tmp

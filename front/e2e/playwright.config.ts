@@ -1,3 +1,6 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
@@ -17,6 +20,10 @@ export default defineConfig({
         {
             command: 'npm start',
             cwd: '../../gameserver',
+            env: {
+                ORIGINAL_WORDS_ADMIN_PASSWORD: 'test-editor-password',
+                ORIGINAL_WORDS_PATH: join(tmpdir(), `onlyone-editor-e2e-${randomUUID()}.json`),
+            },
             port: 3000,
             reuseExistingServer: true,
             stdout: 'pipe',

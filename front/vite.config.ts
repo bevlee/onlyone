@@ -7,9 +7,13 @@ import { defineConfig } from 'vite';
 /// <reference types="vitest/config" />
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit(), svelteTesting()],
-	resolve: { 
+	resolve: {
 		alias: { $lib: path.resolve('./src/lib') }
 	},
+	server: {
+		proxy: { '/api': { target: `http://127.0.0.1:${process.env.GAMESERVER_PORT || '3000'}` } }
+	},
+
 	test: {
 		projects: [
 			{
@@ -45,6 +49,6 @@ export default defineConfig({
 		],
 		coverage: {
 			provider: 'v8'
-		},
+		}
 	}
 });

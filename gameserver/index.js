@@ -1,3 +1,6 @@
+import { fileURLToPath } from 'node:url';
+import { OriginalWordLists } from './modules/originalWordLists.js';
+import { createOriginalWordListsApi } from './handlers/originalWordListsApi.js';
 // Core server imports
 import { createServer } from "node:http";
 
@@ -22,7 +25,17 @@ import { logger } from "./config/logger.js";
 import database from "./modules/database.js";
 
 // Initialize Express app and HTTP server
+const originalWordLists = new OriginalWordLists({
+  filePath: process.env.ORIGINAL_WORDS_PATH || fileURLToPath(new URL('./data/original-word-lists.json', import.meta.url)),
+  defaults: secretWords,
+});
 const app = createExpressServer();
+app.use('/api/original-words', createOriginalWordListsApi({
+  store: originalWordLists,
+  apiKey: process.env.ORIGINAL_WORDS_API_KEY,
+  adminPassword: process.env.ORIGINAL_WORDS_ADMIN_PASSWORD,
+  logger,
+}));
 const server = createServer(app);
 const io = createSocketServer(server);
 
@@ -76,7 +89,7 @@ io.on("connection", async (socket) => {
     if (Object.keys(connectionManager.getConnections(room)).length < 3) {
       return reply({ status: 'error', message: 'At least 3 players are needed.' });
     }
-    gameLoop.startGameLoop(io, room, 30, difficulties, secretWords, getStem, mode).catch(error => {
+    gameLoop.startGameLoop(io, room, 30, difficulties, originalWordLists.words, getStem, mode).catch(error => {
       logger.error({ room, error }, 'Game loop failed');
       io.to(room).emit('gameNotice', 'The game stopped unexpectedly. Please start another game.');
     });

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "mocha test/**/*.test.js",
-    "start": "node index.js"
+    "start": "node --env-file-if-exists=.env.local index.js"
   },
   "author": "",
   "license": "ISC",
