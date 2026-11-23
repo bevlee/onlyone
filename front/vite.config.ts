@@ -7,6 +7,7 @@ import { defineConfig } from 'vite';
 /// <reference types="vitest/config" />
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit(), svelteTesting()],
+	optimizeDeps: { include: ['style-to-object'] },
 	resolve: {
 		alias: { $lib: path.resolve('./src/lib') }
 	},
